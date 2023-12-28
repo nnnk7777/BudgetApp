@@ -9,6 +9,7 @@ export class OutcomeData extends MonthlyDataBase {
   private initialRowNumber: number;
   private initialCalcRowNumber: number;
   private calcColumnNumber: number;
+  private outcomeCategoryList: OutcomeCategoryList;
 
   constructor(
     sheet: GoogleAppsScript.Spreadsheet.Sheet,
@@ -21,6 +22,7 @@ export class OutcomeData extends MonthlyDataBase {
     this.initialColumnNumber = initialColumnNumber;
     this.calcColumnNumber = initialColumnNumber + 3;
     this.outcomeDetailRowCount = 150;
+    this.outcomeCategoryList = new OutcomeCategoryList();
 
     this.init();
   }
@@ -56,7 +58,7 @@ export class OutcomeData extends MonthlyDataBase {
 
     // プルダウンメニューの作成
     const rule = SpreadsheetApp.newDataValidation()
-      .requireValueInList(new OutcomeCategoryList().getCategoryNames())
+      .requireValueInList(this.outcomeCategoryList.getCategoryNames())
       .build();
 
     let range = this.sheet.getRange(
@@ -67,8 +69,17 @@ export class OutcomeData extends MonthlyDataBase {
     );
     range.setDataValidation(rule).setFontSize(8);
 
+    // 金額によって背景色が変わるように設定
     this.setMoneyRangeBackgroundColor(
       this.initialColumnNumber + 3,
+      this.initialRowNumber + 1,
+      this.outcomeDetailRowCount
+    );
+
+    // ラベルによって背景色が変わるように設定
+    this.setLabelBackgroundColor(
+      this.outcomeCategoryList,
+      this.initialColumnNumber + 1,
       this.initialRowNumber + 1,
       this.outcomeDetailRowCount
     );
