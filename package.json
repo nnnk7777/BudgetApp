@@ -1,0 +1,14 @@
+{
+  "scripts": {
+    "build": "npx esbuild main.ts --bundle --outdir=dist --format=iife --global-name=_entry",
+    "ts-node": "npx ts-node -T build.ts"
+  },
+  "devDependencies": {
+    "@types/google-apps-script": "^1.0.78",
+    "esbuild": "^0.19.10",
+    "ts-node": "^10.9.2"
+  },
+  "dependencies": {
+    "typescript": "^5.3.3"
+  }
+}
