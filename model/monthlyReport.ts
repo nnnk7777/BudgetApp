@@ -67,6 +67,17 @@ export class MonthlyReport extends MonthlyDataBase {
 
     await this.initInOut();
     await this.setColumnsWidth();
+
+    // カスタム日付フォーマットを設定
+    const dateColumn = this.sheet.getRange(
+      1,
+      this.initialColumnNumber,
+      maxRows
+    );
+    dateColumn
+      .setNumberFormat("MM/dd")
+      .setHorizontalAlignment("center")
+      .setVerticalAlignment("middle");
   }
 
   private async initInOut() {
