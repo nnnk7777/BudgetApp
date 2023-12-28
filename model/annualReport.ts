@@ -77,6 +77,7 @@ export class AnnualReport {
         new MonthlyReport(this.sheet, i + 1, this.columnOffset + i * 4)
       );
       this.monthList.push(`${i + 1}月`);
+      console.log(`${i + 1}月 done`);
     }
   }
 
@@ -113,5 +114,6 @@ export class AnnualReport {
       this.outcomeMonthlySummaryList,
       this.monthList
     );
+    console.log("グラフ作成 done");
   }
 }
