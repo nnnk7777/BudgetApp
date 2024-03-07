@@ -12,6 +12,7 @@ export class OutcomeCategoryList implements CategoryList {
       new Category("漫画・本", "#e3c852"),
       new Category("交通費", "#adfff6"),
       new Category("スーパー・食品など", "#f7c3ef"),
+      new Category("ふるさと納税", "#d2691e"),
       new Category("外食", "#ff9e9e"),
       new Category("映画館・美術館など", "#7d50cc", "#ffffff"),
       new Category("服", "#65dbcc"),
