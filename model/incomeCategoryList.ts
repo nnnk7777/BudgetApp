@@ -7,7 +7,7 @@ export class IncomeCategoryList implements CategoryList {
   constructor() {
     this.list = [
       new Category("給料", "#f58f7f"),
-      new Category("立て替え", "#f5d97f"),
+      new Category("割り勘・立て替え", "#f5d97f"),
       new Category("売却", "#7fb8f5"),
       new Category("その他", "#ededed"),
     ];
