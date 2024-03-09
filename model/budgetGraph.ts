@@ -56,7 +56,7 @@ export class BudgetGraph {
             this.sheet
                 .newChart()
                 .setChartType(Charts.ChartType.LINE)
-                .addRange(this.sheet.getRange("A1:D12"))
+                .addRange(tempRange)
                 .setPosition(1, this.initialColumnNumber, 0, 0) // グラフの位置を設定（1行目の6列目から開始）
                 .setOption("useFirstColumnAsDomain", true) // 最初の列（A列）をX軸のラベルとして使用
                 .setOption("series", {

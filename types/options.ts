@@ -26,3 +26,8 @@ export type CategorySummaryOption = {
     columnOffset: number;
     rowOffset: number;
 };
+
+export type MonthlyCategoryReportOption = {
+    initialColumnNumber: number;
+    initialRowNumber: number;
+};

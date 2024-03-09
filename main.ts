@@ -2,7 +2,7 @@ import { BudgetReportService } from "./service/budgetReportService";
 import { Options } from "./types/options";
 
 export function main() {
-    const speadSheetName = "金銭メモ2024_5";
+    const speadSheetName = "金銭メモ2024";
     const budgetReportSheetName = "🐖 家計簿";
     const categorySummaryReportSheetName = "🦦 カテゴリ別";
 
@@ -17,7 +17,7 @@ export function main() {
         },
         categorySummaryOption: {
             columnOffset: 2,
-            rowOffset: 25,
+            rowOffset: 3,
         },
     };
 

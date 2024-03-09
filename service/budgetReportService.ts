@@ -50,7 +50,19 @@ export class BudgetReportService {
                 // スプレッドシートが存在する場合、そのスプレッドシートを取得
                 spreadsheet = SpreadsheetApp.open(files.next());
                 this.budgetReportSheet = spreadsheet.getSheets()[0];
-                this.categorySummarySheet = spreadsheet.getSheets()[1];
+
+                // シート「🦦カテゴリ別」が存在しない場合は、新しいシートとして追加
+                if (
+                    !spreadsheet.getSheetByName(
+                        this.categorySummaryReportSheetName
+                    )
+                ) {
+                    this.categorySummarySheet = spreadsheet.insertSheet(
+                        this.categorySummaryReportSheetName
+                    );
+                } else {
+                    this.categorySummarySheet = spreadsheet.getSheets()[1];
+                }
                 break;
             case false:
                 console.log("同一名称のシートが存在しない");
@@ -113,6 +125,7 @@ export class BudgetReportService {
         new CategorySummaryReport(
             this.categorySummarySheet,
             this.monthlyBudgetReportList,
+            this.budgetReportSheetName,
             this.options.categorySummaryOption
         );
     }

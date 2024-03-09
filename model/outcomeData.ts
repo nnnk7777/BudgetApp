@@ -61,13 +61,13 @@ export class OutcomeData extends MonthlyDataBase {
             .requireValueInList(this.outcomeCategoryList.getCategoryNames())
             .build();
 
-        let range = this.sheet.getRange(
+        let categoryLabelRange = this.sheet.getRange(
             this.initialRowNumber + 1,
             this.initialColumnNumber + 1,
             this.outcomeDetailRowCount,
             1
         );
-        range.setDataValidation(rule).setFontSize(8);
+        categoryLabelRange.setDataValidation(rule).setFontSize(8);
 
         // 金額によって背景色が変わるように設定
         this.setMoneyRangeBackgroundColor(
@@ -87,5 +87,13 @@ export class OutcomeData extends MonthlyDataBase {
 
     public getOutcomeSummaryCellString(): string {
         return columnToLetter(this.calcColumnNumber) + this.initialRowNumber;
+    }
+
+    public getCategoryLabelColumnStr(): string {
+        return columnToLetter(this.initialColumnNumber + 1);
+    }
+
+    public getPriceColumnStr(): string {
+        return columnToLetter(this.initialColumnNumber + 3);
     }
 }
