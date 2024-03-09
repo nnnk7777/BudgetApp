@@ -9,7 +9,7 @@ export class IncomeCategoryList implements CategoryList {
             new Category("給料", "#f58f7f"),
             new Category("割り勘・立て替え", "#f5d97f"),
             new Category("売却", "#7fb8f5"),
-            new Category("その他", "#ededed"),
+            new Category("未分類", "#ededed"),
         ];
     }
 
