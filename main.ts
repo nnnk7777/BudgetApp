@@ -18,14 +18,19 @@ export function main() {
   if (files.hasNext()) {
     console.log("同一名称のシートが存在する");
 
-    // スプレッドシートが存在する場合、そのスプレッドシートを開き中身をクリア
+    // スプレッドシートが存在する場合、そのスプレッドシートを取得
     spreadsheet = SpreadsheetApp.open(files.next());
     sheet = spreadsheet.getSheets()[0];
     // sheet.clear();
   } else {
     console.log("同一名称のシートが存在しない");
 
-    // スプレッドシートが存在しない場合、新しいスプレッドシートを作成
+    /**
+     * 家計簿
+     * 1. スプレッドシートが存在しない場合、新しいスプレッドシートを作成
+     * 2. 新しいスプレッドシートにデフォルトで含まれるシートを取得
+     * 3. シート名を変更
+     */
     spreadsheet = SpreadsheetApp.create(speadSheetName);
     // 新しいスプレッドシートにデフォルトで含まれるシートを取得
     sheet = spreadsheet.getSheets()[0];
