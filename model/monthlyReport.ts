@@ -4,23 +4,23 @@ import { OutcomeData } from "./outcomeData";
 
 import { getCellNotation } from "../util/getCellNotation";
 import { columnToLetter } from "../util/columnToletter";
+import { MonthlyReportOption } from "../types/options";
 
 export class MonthlyReport extends MonthlyDataBase {
     private month: number;
     private incomeData!: IncomeData;
     private outcomeData!: OutcomeData;
-    private initialColumnNumber: number;
-    private initialRowNumber: number;
+
+    private options: MonthlyReportOption;
 
     constructor(
         sheet: GoogleAppsScript.Spreadsheet.Sheet,
         month: number,
-        initialColumnNumber: number
+        options: MonthlyReportOption
     ) {
         super(sheet);
         this.month = month;
-        this.initialColumnNumber = initialColumnNumber;
-        this.initialRowNumber = 15;
+        this.options = options;
 
         this.init();
     }
@@ -31,8 +31,8 @@ export class MonthlyReport extends MonthlyDataBase {
 
         // 月の表示
         const firstCell = this.sheet.getRange(
-            this.initialRowNumber,
-            this.initialColumnNumber,
+            this.options.initialRowNumber,
+            this.options.initialColumnNumber,
             1,
             1
         );
@@ -42,8 +42,8 @@ export class MonthlyReport extends MonthlyDataBase {
             .setFontWeight("bold")
             .setHorizontalAlignment("center");
         const firstRow = this.sheet.getRange(
-            this.initialRowNumber,
-            this.initialColumnNumber,
+            this.options.initialRowNumber,
+            this.options.initialColumnNumber,
             1,
             4
         );
@@ -51,15 +51,15 @@ export class MonthlyReport extends MonthlyDataBase {
 
         // 概算の表示
         const roughEstimateCell = this.sheet.getRange(
-            this.initialRowNumber + 2,
-            this.initialColumnNumber + 3,
+            this.options.initialRowNumber + 2,
+            this.options.initialColumnNumber + 3,
             1,
             1
         );
         this.setRoughEstimateSum(roughEstimateCell);
         const roughEstimateRow = this.sheet.getRange(
-            this.initialRowNumber + 2,
-            this.initialColumnNumber,
+            this.options.initialRowNumber + 2,
+            this.options.initialColumnNumber,
             1,
             4
         );
@@ -68,8 +68,8 @@ export class MonthlyReport extends MonthlyDataBase {
         // 前月との境界に点線をひく
         const maxRows = this.sheet.getMaxRows();
         const range = this.sheet.getRange(
-            this.initialRowNumber,
-            this.initialColumnNumber,
+            this.options.initialRowNumber,
+            this.options.initialColumnNumber,
             maxRows,
             1
         ); // 1行目から最終行までのJ列を取得
@@ -90,7 +90,7 @@ export class MonthlyReport extends MonthlyDataBase {
         // カスタム日付フォーマットを設定
         const dateColumn = this.sheet.getRange(
             1,
-            this.initialColumnNumber,
+            this.options.initialColumnNumber,
             maxRows
         );
         dateColumn
@@ -100,19 +100,19 @@ export class MonthlyReport extends MonthlyDataBase {
     }
 
     private async initInOut() {
-        const initialIncomingRowNumber = this.initialRowNumber + 4;
+        const initialIncomingRowNumber = this.options.initialRowNumber + 4;
         const initialOutcomingRowNumber = initialIncomingRowNumber + 10;
 
         this.incomeData = new IncomeData(
             this.sheet,
             initialIncomingRowNumber,
-            this.initialColumnNumber
+            this.options.initialColumnNumber
         );
 
         this.outcomeData = new OutcomeData(
             this.sheet,
             initialOutcomingRowNumber,
-            this.initialColumnNumber
+            this.options.initialColumnNumber
         );
     }
 
@@ -126,7 +126,7 @@ export class MonthlyReport extends MonthlyDataBase {
         // 列の幅を設定する
         for (let i = 0; i < this.columnWidths.length; i++) {
             this.sheet.setColumnWidth(
-                this.initialColumnNumber + i,
+                this.options.initialColumnNumber + i,
                 this.columnWidths[i]
             );
         }
@@ -134,8 +134,8 @@ export class MonthlyReport extends MonthlyDataBase {
 
     public getRoughEstimateCell(): string {
         return (
-            columnToLetter(this.initialColumnNumber + 3) +
-            (this.initialRowNumber + 2)
+            columnToLetter(this.options.initialColumnNumber + 3) +
+            (this.options.initialRowNumber + 2)
         );
     }
 

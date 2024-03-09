@@ -1,42 +1,30 @@
-import { AnnualReport } from "./model/annualReport";
+import { BudgetReportService } from "./service/budgetReportService";
+import { Options } from "./types/options";
 
 export function main() {
-  const speadSheetName = "金銭メモ2024";
-  const sheetName = "🐖 家計簿";
+    const speadSheetName = "金銭メモ2024_5";
+    const budgetReportSheetName = "🐖 家計簿";
+    const categorySummaryReportSheetName = "🦦 カテゴリ別";
 
-  // スプレッドシート、シートの初期化
-  let spreadsheet;
-  let sheet;
-  // シート検索のための初期化
-  const files = DriveApp.getFilesByName(speadSheetName);
+    const options: Options = {
+        budgetReportOption: {
+            columnOffset: 7,
+            rowOffset: 14,
+            monthNumberRowNum: 15,
+            roughEstimateSummaryRowNum: 17,
+            incomeSummaryRowNum: 19,
+            outcomeSummaryRowNum: 29,
+        },
+        categorySummaryOption: {
+            columnOffset: 2,
+            rowOffset: 25,
+        },
+    };
 
-  /**
-   * シートの存在有無によって処理を分岐させる
-   * - 存在する： 既存のシートに対してスタイルやバリデーションルールの再適用のみをする
-   * - 存在しない： 新規シートを作成する
-   */
-  if (files.hasNext()) {
-    console.log("同一名称のシートが存在する");
-
-    // スプレッドシートが存在する場合、そのスプレッドシートを取得
-    spreadsheet = SpreadsheetApp.open(files.next());
-    sheet = spreadsheet.getSheets()[0];
-    // sheet.clear();
-  } else {
-    console.log("同一名称のシートが存在しない");
-
-    /**
-     * 家計簿
-     * 1. スプレッドシートが存在しない場合、新しいスプレッドシートを作成
-     * 2. 新しいスプレッドシートにデフォルトで含まれるシートを取得
-     * 3. シート名を変更
-     */
-    spreadsheet = SpreadsheetApp.create(speadSheetName);
-    // 新しいスプレッドシートにデフォルトで含まれるシートを取得
-    sheet = spreadsheet.getSheets()[0];
-    // シート名を変更
-    sheet.setName(sheetName);
-  }
-
-  new AnnualReport(sheet);
+    new BudgetReportService(
+        speadSheetName,
+        budgetReportSheetName,
+        categorySummaryReportSheetName,
+        options
+    );
 }

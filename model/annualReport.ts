@@ -1,52 +1,44 @@
+import { BudgetReportOption } from "../types/options";
 import { BudgetGraph } from "./budgetGraph";
 import { MonthlyReport } from "./monthlyReport";
 
 export class AnnualReport {
     private sheet: GoogleAppsScript.Spreadsheet.Sheet;
-    private rowOffset: number;
-    private columnOffset!: number;
+    private options: BudgetReportOption;
 
     private monthlyReports!: MonthlyReport[];
     private monthNumberRow!: GoogleAppsScript.Spreadsheet.Range;
-    private monthNumberRowNum: number;
-    private monthList!: string[];
+    private monthList: string[];
 
-    private roughEstimateSummaryRowNum: number;
     private roughEstimateSummaryRow!: GoogleAppsScript.Spreadsheet.Range;
     private roughEstimateSummaryCell!: GoogleAppsScript.Spreadsheet.Range;
-    private roughEstimateSummaryList!: string[];
+    private roughEstimateSummaryList: string[] = [];
 
-    private incomeSummaryRowNum: number;
     private incomeSummaryRow!: GoogleAppsScript.Spreadsheet.Range;
     private incomeSummaryCell!: GoogleAppsScript.Spreadsheet.Range;
     private incomeSummaryLabelCell!: GoogleAppsScript.Spreadsheet.Range;
-    private incomeMonthlySummaryList!: string[];
+    private incomeMonthlySummaryList: string[] = [];
 
-    private outcomeSummaryRowNum: number;
     private outcomeSummaryRow!: GoogleAppsScript.Spreadsheet.Range;
     private outcomeSummaryCell!: GoogleAppsScript.Spreadsheet.Range;
     private outcomeSummaryLabelCell!: GoogleAppsScript.Spreadsheet.Range;
-    private outcomeMonthlySummaryList!: string[];
+    private outcomeMonthlySummaryList: string[] = [];
 
     constructor(
         sheet: GoogleAppsScript.Spreadsheet.Sheet,
-        columnOffset: number = 7,
-        rowOffset: number = 14
+        monthlyReports: MonthlyReport[],
+        monthList: string[],
+        options: BudgetReportOption
     ) {
         this.sheet = sheet;
-        this.columnOffset = columnOffset;
-        this.rowOffset = rowOffset;
-
-        this.monthNumberRowNum = 15;
-        this.roughEstimateSummaryRowNum = 17;
-        this.incomeSummaryRowNum = 19;
-        this.outcomeSummaryRowNum = 29;
+        this.monthlyReports = monthlyReports;
+        this.monthList = monthList;
+        this.options = options;
 
         this.init();
     }
 
     private async init() {
-        await this.initMonthlyReport();
         await this.initAnnualReportStyle();
         await this.initAnnualSummaryCells();
         await this.initAnnualReportGraph();
@@ -59,13 +51,13 @@ export class AnnualReport {
 
         // 年次レポート左部の色を指定
         this.roughEstimateSummaryRow = this.sheet.getRange(
-            this.roughEstimateSummaryRowNum,
+            this.options.roughEstimateSummaryRowNum,
             1,
             1,
-            this.columnOffset
+            this.options.columnOffset
         );
         this.roughEstimateSummaryCell = this.sheet.getRange(
-            this.roughEstimateSummaryRowNum,
+            this.options.roughEstimateSummaryRowNum,
             3,
             1,
             1
@@ -74,27 +66,27 @@ export class AnnualReport {
         this.roughEstimateSummaryCell.setFontSize(14).setFontWeight("bold");
 
         this.monthNumberRow = this.sheet.getRange(
-            this.monthNumberRowNum,
+            this.options.monthNumberRowNum,
             1,
             1,
-            this.columnOffset
+            this.options.columnOffset
         );
         this.monthNumberRow.setBackground("#E08A8A");
 
         this.incomeSummaryRow = this.sheet.getRange(
-            this.incomeSummaryRowNum,
+            this.options.incomeSummaryRowNum,
             1,
             1,
-            this.columnOffset
+            this.options.columnOffset
         );
         this.incomeSummaryCell = this.sheet.getRange(
-            this.incomeSummaryRowNum,
+            this.options.incomeSummaryRowNum,
             3,
             1,
             1
         );
         this.incomeSummaryLabelCell = this.sheet.getRange(
-            this.incomeSummaryRowNum,
+            this.options.incomeSummaryRowNum,
             2,
             1,
             1
@@ -107,19 +99,19 @@ export class AnnualReport {
             .setVerticalAlignment("middle");
 
         this.outcomeSummaryRow = this.sheet.getRange(
-            this.outcomeSummaryRowNum,
+            this.options.outcomeSummaryRowNum,
             1,
             1,
-            this.columnOffset
+            this.options.columnOffset
         );
         this.outcomeSummaryCell = this.sheet.getRange(
-            this.outcomeSummaryRowNum,
+            this.options.outcomeSummaryRowNum,
             3,
             1,
             1
         );
         this.outcomeSummaryLabelCell = this.sheet.getRange(
-            this.outcomeSummaryRowNum,
+            this.options.outcomeSummaryRowNum,
             2,
             1,
             1
@@ -132,22 +124,7 @@ export class AnnualReport {
             .setVerticalAlignment("middle");
     }
 
-    private async initMonthlyReport() {
-        this.monthList = [];
-        this.monthlyReports = [];
-        for (let i = 0; i < 12; i++) {
-            this.monthlyReports.push(
-                new MonthlyReport(this.sheet, i + 1, this.columnOffset + i * 4)
-            );
-            this.monthList.push(`${i + 1}月`);
-            console.log(`-- ${i + 1}月 done`);
-        }
-    }
-
     private async initAnnualSummaryCells() {
-        this.roughEstimateSummaryList = [];
-        this.incomeMonthlySummaryList = [];
-        this.outcomeMonthlySummaryList = [];
         for (let i = 0; i < 12; i++) {
             this.roughEstimateSummaryList.push(
                 this.monthlyReports[i].getRoughEstimateCell()
@@ -181,7 +158,7 @@ export class AnnualReport {
     private async initAnnualReportGraph() {
         new BudgetGraph(
             this.sheet,
-            this.columnOffset,
+            this.options.columnOffset,
             this.roughEstimateSummaryList,
             this.incomeMonthlySummaryList,
             this.outcomeMonthlySummaryList,
