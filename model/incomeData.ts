@@ -21,7 +21,7 @@ export class IncomeData extends MonthlyDataBase {
         this.initialCalcRowNumber = initialRowNumber + 1;
         this.initialColumnNumber = initialColumnNumber;
         this.calcColumnNumber = initialColumnNumber + 3;
-        this.incomeDetailRowCount = 9;
+        this.incomeDetailRowCount = 14;
         this.incomeCategoryList = new IncomeCategoryList();
 
         this.init();

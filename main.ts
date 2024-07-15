@@ -13,7 +13,7 @@ export function main() {
             monthNumberRowNum: 15,
             roughEstimateSummaryRowNum: 17,
             incomeSummaryRowNum: 19,
-            outcomeSummaryRowNum: 29,
+            outcomeSummaryRowNum: 34,
         },
         categorySummaryOption: {
             columnOffset: 2,

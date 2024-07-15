@@ -101,7 +101,7 @@ export class MonthlyReport extends MonthlyDataBase {
 
     private async initInOut() {
         const initialIncomingRowNumber = this.options.initialRowNumber + 4;
-        const initialOutcomingRowNumber = initialIncomingRowNumber + 10;
+        const initialOutcomingRowNumber = initialIncomingRowNumber + 15;
 
         this.incomeData = new IncomeData(
             this.sheet,
@@ -162,7 +162,7 @@ export class MonthlyReport extends MonthlyDataBase {
             " + " + // 4つ左のセル
             getCellNotation(column, row + 2) +
             " - " + // 2つ下のセル
-            getCellNotation(column, row + 12); // 12個下のセル
+            getCellNotation(column, row + 17); // 12個下のセル
 
         // SUM関数を基準セルに設定する
         baseCell.setFormula(formula);
