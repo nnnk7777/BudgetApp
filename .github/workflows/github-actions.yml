@@ -25,3 +25,6 @@ jobs:
 
             - name: スクリプト群のコピー
               run: make copy
+
+            - name: アプリのビルド
+              run: make build
