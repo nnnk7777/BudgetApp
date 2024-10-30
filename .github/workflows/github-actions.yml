@@ -1,5 +1,5 @@
-name: GitHub Actions Demo
-run-name: ${{ github.actor }} is testing out GitHub Actions 🚀
+name: Budget App Deploy Workflow
+
 on: [push]
 jobs:
     Explore-GitHub-Actions:
@@ -26,5 +26,5 @@ jobs:
             - name: スクリプト群のコピー
               run: make copy
 
-            - name: アプリのビルド
-              run: make build
+            - name: アプリのビルドとGASへのデプロイ
+              run: make build-and-deploy
