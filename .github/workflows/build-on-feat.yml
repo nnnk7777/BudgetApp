@@ -1,0 +1,33 @@
+name: Build App
+
+on:
+    push:
+        branches:
+            - "feat/**"
+
+jobs:
+    Build-Budget-App:
+        runs-on: ubuntu-latest
+        timeout-minutes: 1
+
+        steps:
+            - name: リポジトリのチェックアウト
+              uses: actions/checkout@v3
+
+            - name: Node.jsのセットアップ
+              uses: actions/setup-node@v3
+              with:
+                  node-version: "21"
+
+            - name: 依存関係のキャッシュの復元
+              uses: actions/cache@v3
+              with:
+                  path: |
+                      **/node_modules
+                  key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+
+            - name: 依存関係のインストール
+              run: npm install
+
+            - name: アプリのビルド
+              run: make build

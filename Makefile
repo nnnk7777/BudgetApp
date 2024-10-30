@@ -1,5 +1,18 @@
+.PHONY: all build copy deploy open
+
 build:
 	npm run build && npm run ts-node
 
-deploy:
-	npm run build && npm run ts-node && clasp push && clasp open
+build-and-deploy:
+	npm run build && npm run ts-node && clasp push --force
+
+open:
+	clasp open
+
+copy:
+	cp scripts/*.js dist/
+
+all:
+	make copy
+	make build-and-deploy
+	make open

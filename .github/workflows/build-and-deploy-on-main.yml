@@ -1,0 +1,55 @@
+name: Budget App Deploy Workflow
+
+on:
+    push:
+        branches:
+            - main
+
+jobs:
+    Build-And-Deploy-Budget-App:
+        runs-on: ubuntu-latest
+        timeout-minutes: 5
+
+        env:
+            ACCESS_TOKEN: ${{ secrets.ACCESS_TOKEN }}
+            ID_TOKEN: ${{ secrets.ID_TOKEN }}
+            REFRESH_TOKEN: ${{ secrets.REFRESH_TOKEN }}
+            CLIENT_ID: ${{ secrets.CLIENT_ID }}
+            CLIENT_SECRET: ${{ secrets.CLIENT_SECRET }}
+            SCRIPT_ID: ${{ secrets.SCRIPT_ID }}
+
+        steps:
+            - name: リポジトリのチェックアウト
+              uses: actions/checkout@v3
+
+            - name: Node.jsのセットアップ
+              uses: actions/setup-node@v3
+              with:
+                  node-version: "21"
+
+            - name: 依存関係のキャッシュの復元
+              uses: actions/cache@v3
+              with:
+                  path: |
+                      **/node_modules
+                  key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+
+            - name: 依存関係のインストール
+              run: npm install
+
+            - name: claspのインストール
+              run: npm install -g @google/clasp
+
+            - name: .clasprc.json の生成
+              run: |
+                  bash scripts/deployment/setup_clasprcjson.sh
+
+            - name: .clasp.json の生成
+              run: |
+                  bash scripts/deployment/setup_claspjson.sh
+
+            - name: スクリプト群のコピー
+              run: make copy
+
+            - name: アプリのビルドとGASへのデプロイ
+              run: make build-and-deploy
