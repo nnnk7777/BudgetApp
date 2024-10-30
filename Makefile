@@ -4,7 +4,7 @@ build:
 	npm run build && npm run ts-node
 
 build-and-deploy:
-	npm run build && npm run ts-node && clasp push
+	npm run build && npm run ts-node && clasp push --force
 
 open:
 	clasp open
@@ -14,6 +14,5 @@ copy:
 
 all:
 	make copy
-	make build
-	make deploy
+	make build-and-deploy
 	make open
