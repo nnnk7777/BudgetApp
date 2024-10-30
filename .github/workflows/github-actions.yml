@@ -1,6 +1,10 @@
 name: Budget App Deploy Workflow
 
-on: [push]
+on:
+    push:
+        branches:
+            - main
+
 jobs:
     Build-And-Deploy-Budget-App:
         runs-on: ubuntu-latest
