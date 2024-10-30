@@ -214,7 +214,7 @@ function sendWeeklySummaryEmail(dateRangeStr, totalAmount, dataEntries, differen
     });
 
     // メールを送信
-    MailApp.sendEmail(emailAddress, "週次サマリー（" + dateRangeStr + "）", body);
+    MailApp.sendEmail(emailAddress, "家計簿週次レポート（" + dateRangeStr + "）", body);
 }
 
 // 日曜日以外に日次進捗をメールで送信するメソッド
@@ -235,7 +235,7 @@ function sendDailyProgressEmail(currentDate, budget, datesInWeek) {
     var percentage = (totalAmount / budget) * 100;
 
     // メールの件名と本文を作成
-    var subject = "日次進捗（" + formatDate(datesInWeek[0]) + "〜" + formatDate(currentDate) + "）";
+    var subject = "家計簿日次レポート（" + formatDate(currentDate) + "）";
     var body = formatDate(datesInWeek[0]) + " から " + formatDate(currentDate) + " までの合計支出は " + totalAmount + " 円です。\n";
     body += "予算の " + percentage.toFixed(2) + "% を使用しました。\n\n";
 
