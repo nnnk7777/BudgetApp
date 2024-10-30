@@ -4,6 +4,7 @@ on: [push]
 jobs:
     Explore-GitHub-Actions:
         runs-on: ubuntu-latest
+        timeout-minutes: 15
         steps:
             - name: リポジトリのチェックアウト
               uses: actions/checkout@v3
@@ -22,6 +23,18 @@ jobs:
 
             - name: 依存関係のインストール
               run: npm install
+
+            - name: claspのインストール
+              run: npm install -g @google/clasp
+
+            - name: 認証情報の設定
+              env:
+                  CLASP_CREDENTIALS: ${{ secrets.CLASP_CREDENTIALS }}
+              run: |
+                  echo "$CLASP_CREDENTIALS" > ./credentials.json
+
+            - name: claspでログイン
+              run: clasp login --creds ./credentials.json
 
             - name: スクリプト群のコピー
               run: make copy
