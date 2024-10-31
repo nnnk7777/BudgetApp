@@ -4,8 +4,11 @@ Google スプレッドシートの家計簿を生成・管理するための GAS
 
 ## 準備
 
+-   家計簿をつけるスプレッドシートを作成しておいてください。また、シート名を指定してください。
+    -   例. `金銭メモ2024`
+-   シートの「拡張機能 -> App Script」から GAS プロジェクトを作成しておいてください。
 -   clasp と Typescript をインストールしてください。
--   `main.ts` の `speadSheetName` を任意の名前に変更してください。
+-   `main.ts` の `speadSheetName` を作成したシートと同様の名称にしてください。
     -   例. `金銭メモ2024`
 -   ローカルで `clasp login` を実行しておき、`~/.clasprc.json` が生成されていることを確認してください。
 -   `~/.clasprc.json` 内の以下の値をそれぞれ Github の Secret として登録してください。
@@ -30,7 +33,7 @@ Google スプレッドシートの家計簿を生成・管理するための GAS
 }
 ```
 
--   また、すでに利用している GAS のスクリプトがある場合、URL に含まれる script_id を Secret として登録してください。
+-   作成済みの GAS プロジェクトの URL に含まれる script_id を Secret として登録してください。
     -   例. `https://script.google.com/u/0/home/projects/<SCRIPT_ID として登録>`
     -   この ID で指定したシートに対してデプロイされます。
 
