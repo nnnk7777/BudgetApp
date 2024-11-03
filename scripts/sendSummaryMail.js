@@ -37,12 +37,11 @@ function calculateWeeklyExpenses() {
     // 現在の曜日を取得（0:日曜日, 1:月曜日, ..., 6:土曜日）
     var dayOfWeek = currentDate.getDay();
 
+    // 週の開始から現在までのデータを取得し、メールで送信
+    sendDailyProgressEmail(currentDate, budget, datesInWeek);
     if (dayOfWeek === 0) {
         // 日曜日の場合、週次サマリーを送信
         sendWeeklySummaryEmail(dateRangeStr, totalAmount, dataEntries, difference, percentage);
-    } else {
-        // 日曜日以外の場合、週の開始から現在までのデータを取得し、メールで送信
-        sendDailyProgressEmail(currentDate, budget, datesInWeek);
     }
 }
 
