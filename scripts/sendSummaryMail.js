@@ -4,8 +4,9 @@ function calculateWeeklyExpenses() {
 
     var currentDate;
     var testDateStr = "TEST_DATE_PLACEHOLDER"
+    var isStaging = testDateStr ? true : false
 
-    if (testDateStr) {
+    if (isStaging) {
         // テスト用の日付が指定されている場合、その日付を使用
         // YYYYMMDD フォーマットをパースして Date オブジェクトを作成
         currentDate = parseYYYYMMDD(testDateStr);
@@ -57,10 +58,10 @@ function calculateWeeklyExpenses() {
 
     if (dayOfWeek === 0) {
         // 日曜日の場合、週次サマリーを送信
-        sendWeeklySummaryEmail(dateRangeStr, totalAmount, dataEntries, difference, percentage, adjustedBudget);
+        sendWeeklySummaryEmail(dateRangeStr, totalAmount, dataEntries, difference, percentage, adjustedBudget, isStaging);
     } else {
         // 日曜日以外の場合、週の開始から現在までのデータを取得し、メールで送信
-        sendDailyProgressEmail(currentDate, budgetPerWeek, datesInWeek);
+        sendDailyProgressEmail(currentDate, datesInWeek, adjustedBudget, isStaging);
     }
 }
 
@@ -112,7 +113,10 @@ function getDatesInWeek(date) {
 // その週に含まれる日付内データを一覧で取得するメソッド
 function getDataForDates(dates) {
     var ss = SpreadsheetApp.getActiveSpreadsheet();
-    var sheet = ss.getActiveSheet(); // 必要に応じてシート名を指定
+    var sheet = ss.getSheetByName("🐖 家計簿");
+    if (!sheet) {
+        throw new Error('シート「🐖 家計簿」が見つかりません。');
+    }
     var startRow = 35; // データが開始する行
 
     var lastRow = sheet.getLastRow();
@@ -220,7 +224,7 @@ function calculateTotalAmount(dataEntries) {
 }
 
 // 週次サマリーをメールで送信するメソッド（毎週日曜日）
-function sendWeeklySummaryEmail(dateRangeStr, totalAmount, dataEntries, difference, percentage) {
+function sendWeeklySummaryEmail(dateRangeStr, totalAmount, dataEntries, difference, percentage, adjustedBudget, isStaging) {
     var emailAddress = "TARGET_EMAIL_ADDRESS";
 
     // 予算差分の符号を設定
@@ -240,9 +244,10 @@ function sendWeeklySummaryEmail(dateRangeStr, totalAmount, dataEntries, differen
     // メール本文を指定のフォーマットで作成
     var body = "";
     body += "◆ " + dateRangeStr + " の週次サマリー\n\n";
-    body += "合計支出は " + totalAmount + " 円です。\n";
-    body += "予算差分：" + differenceSign + differenceAbs + "円\n";
-    body += "予算割合：" + percentageStr + "%\n";
+    body += "合計支出は " + totalAmount + " 円です。\n\n";
+    body += "* 設定予算： " + adjustedBudget + " 円\n";
+    body += "* 予算差分：" + differenceSign + differenceAbs + "円\n";
+    body += "* 予算割合：" + percentageStr + "%\n\n";
     body += "支出TOP5\n";
 
     top5Entries.forEach(function (entry) {
@@ -250,11 +255,13 @@ function sendWeeklySummaryEmail(dateRangeStr, totalAmount, dataEntries, differen
     });
 
     // メールを送信
-    MailApp.sendEmail(emailAddress, "家計簿週次レポート（" + dateRangeStr + "）", body);
+    var subject = isStaging ? "<test>" : ""
+        + "家計簿週次レポート" + "（" + dateRangeStr + "）";
+    MailApp.sendEmail(emailAddress, subject, body);
 }
 
 // 日曜日以外に日次進捗をメールで送信するメソッド
-function sendDailyProgressEmail(currentDate, budgetPerWeek, datesInWeek) {
+function sendDailyProgressEmail(currentDate, datesInWeek, adjustedBudget, isStaging) {
     var emailAddress = "TARGET_EMAIL_ADDRESS";
 
     // 週の開始日から現在の日付までのデータを取得
@@ -267,17 +274,15 @@ function sendDailyProgressEmail(currentDate, budgetPerWeek, datesInWeek) {
     // 合計金額を算出
     var totalAmount = calculateTotalAmount(dataEntries);
 
-    // 予算を含まれる日数に応じて調整
-    var numberOfDays = datesUpToToday.length;
-    var adjustedBudget = Math.round((budgetPerWeek * numberOfDays / 7) / 100) * 100; // 100円単位で丸め込み
-
     // 予算に対する割合を計算
     var percentage = (totalAmount / adjustedBudget) * 100;
 
     // メールの件名と本文を作成
-    var subject = "家計簿日次レポート（" + formatDate(currentDate) + "）";
+    var subject = isStaging ? "<test>" : ""
+        + "家計簿日次レポート（" + formatDate(currentDate) + "）";
     var body = formatDate(datesInWeek[0]) + " から " + formatDate(currentDate) + " までの合計支出は " + totalAmount + " 円です。\n";
-    body += "予算の " + percentage.toFixed(2) + "% を使用しました。\n\n";
+    body += "予算の " + percentage.toFixed(2) + "% を使用しました。\n";
+    body += "（設定予算：" + adjustedBudget + "円）\n\n";
 
     body += "詳細:\n";
     dataEntries.forEach(function (entry) {
