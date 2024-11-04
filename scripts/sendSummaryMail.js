@@ -113,7 +113,10 @@ function getDatesInWeek(date) {
 // その週に含まれる日付内データを一覧で取得するメソッド
 function getDataForDates(dates) {
     var ss = SpreadsheetApp.getActiveSpreadsheet();
-    var sheet = ss.getActiveSheet(); // 必要に応じてシート名を指定
+    var sheet = ss.getSheetByName("🐖 家計簿");
+    if (!sheet) {
+        throw new Error('シート「🐖 家計簿」が見つかりません。');
+    }
     var startRow = 35; // データが開始する行
 
     var lastRow = sheet.getLastRow();
