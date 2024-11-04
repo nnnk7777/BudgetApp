@@ -1,12 +1,12 @@
 function calculateWeeklyExpenses() {
     // 共通設定
-    var budget = 45000; // 週ごとの予算
+    var budgetPerWeek = 45000; // 週ごとの予算
     var currentDate = new Date();
 
-    // その週の日付一覧を取得
+    // その週の日付一覧を取得し、年内の日付のみを含める
     var datesInWeek = getDatesInWeek(currentDate);
     var startOfWeek = datesInWeek[0]; // 週の開始日（月曜日）
-    var endOfWeek = datesInWeek[6];   // 週の終了日（日曜日）
+    var endOfWeek = datesInWeek[datesInWeek.length - 1];   // 週の終了日
 
     // 日付範囲の文字列を作成
     var dateRangeStr = formatDate(startOfWeek) + "〜" + formatDate(endOfWeek);
@@ -17,9 +17,13 @@ function calculateWeeklyExpenses() {
     // 合計金額を算出
     var totalAmount = calculateTotalAmount(dataEntries);
 
+    // 予算を含まれる日数に応じて調整
+    var numberOfDays = datesInWeek.length;
+    var adjustedBudget = Math.round((budgetPerWeek * numberOfDays / 7) / 100) * 100; // 100円単位で丸め込み
+
     // 予算との差分を計算
-    var difference = totalAmount - budget;
-    var percentage = (totalAmount / budget) * 100;
+    var difference = totalAmount - adjustedBudget;
+    var percentage = (totalAmount / adjustedBudget) * 100;
 
     // デバッグ用出力
     Logger.log("データエントリ一覧:");
@@ -39,10 +43,10 @@ function calculateWeeklyExpenses() {
 
     if (dayOfWeek === 0) {
         // 日曜日の場合、週次サマリーを送信
-        sendWeeklySummaryEmail(dateRangeStr, totalAmount, dataEntries, difference, percentage);
+        sendWeeklySummaryEmail(dateRangeStr, totalAmount, dataEntries, difference, percentage, adjustedBudget);
     } else {
         // 日曜日以外の場合、週の開始から現在までのデータを取得し、メールで送信
-        sendDailyProgressEmail(currentDate, budget, datesInWeek);
+        sendDailyProgressEmail(currentDate, budgetPerWeek, datesInWeek);
     }
 }
 
@@ -53,19 +57,28 @@ function formatDate(date) {
     return month + "/" + day;
 }
 
-// その週に含まれる日付一覧を求めるメソッド
+// その週に含まれる日付一覧を求めるメソッド（年内の日付のみを含める）
 function getDatesInWeek(date) {
     var dates = [];
+    var currentYear = date.getFullYear();
+
     // 週の始まり（月曜日）を取得
     var day = date.getDay(); // 0（日曜）から6（土曜）
     var diff = date.getDate() - day + (day === 0 ? -6 : 1); // 日曜の場合は-6
     var monday = new Date(date);
     monday.setDate(diff);
+    monday.setHours(0, 0, 0, 0);
+
     // 月曜日から日曜日までの日付を取得
     for (var i = 0; i < 7; i++) {
         var d = new Date(monday);
         d.setDate(monday.getDate() + i);
-        dates.push(new Date(d.getFullYear(), d.getMonth(), d.getDate())); // 時間を00:00:00に設定
+        d.setHours(0, 0, 0, 0);
+
+        // 年が同じ場合のみ追加
+        if (d.getFullYear() === currentYear) {
+            dates.push(new Date(d.getFullYear(), d.getMonth(), d.getDate()));
+        }
     }
     return dates;
 }
@@ -181,11 +194,8 @@ function calculateTotalAmount(dataEntries) {
 }
 
 // 週次サマリーをメールで送信するメソッド（毎週日曜日）
-function sendWeeklySummaryEmail(dateRangeStr, totalAmount, dataEntries, difference, percentage) {
+function sendWeeklySummaryEmail(dateRangeStr, totalAmount, dataEntries, difference, percentage, adjustedBudget) {
     var emailAddress = "electro0701+budgetapp@gmail.com";
-
-    // 予算の設定
-    var budget = 45000; // 週ごとの予算
 
     // 予算差分の符号を設定
     var differenceSign = difference >= 0 ? "+" : "-";
@@ -218,7 +228,7 @@ function sendWeeklySummaryEmail(dateRangeStr, totalAmount, dataEntries, differen
 }
 
 // 日曜日以外に日次進捗をメールで送信するメソッド
-function sendDailyProgressEmail(currentDate, budget, datesInWeek) {
+function sendDailyProgressEmail(currentDate, budgetPerWeek, datesInWeek) {
     var emailAddress = "electro0701+budgetapp@gmail.com";
 
     // 週の開始日から現在の日付までのデータを取得
@@ -231,8 +241,12 @@ function sendDailyProgressEmail(currentDate, budget, datesInWeek) {
     // 合計金額を算出
     var totalAmount = calculateTotalAmount(dataEntries);
 
+    // 予算を含まれる日数に応じて調整
+    var numberOfDays = datesUpToToday.length;
+    var adjustedBudget = Math.round((budgetPerWeek * numberOfDays / 7) / 100) * 100; // 100円単位で丸め込み
+
     // 予算に対する割合を計算
-    var percentage = (totalAmount / budget) * 100;
+    var percentage = (totalAmount / adjustedBudget) * 100;
 
     // メールの件名と本文を作成
     var subject = "家計簿日次レポート（" + formatDate(currentDate) + "）";
