@@ -1,4 +1,4 @@
-name: Build App
+name: Build App on Staging
 
 on:
     push:
@@ -6,9 +6,22 @@ on:
             - "feat/**"
 
 jobs:
-    Build-Budget-App:
+    Build-Budget-App-on-Staging:
         runs-on: ubuntu-latest
         timeout-minutes: 1
+
+        env:
+            # GASプロジェクトやclaspに関わる変数
+            ACCESS_TOKEN: ${{ secrets.ACCESS_TOKEN }}
+            ID_TOKEN: ${{ secrets.ID_TOKEN }}
+            REFRESH_TOKEN: ${{ secrets.REFRESH_TOKEN }}
+            CLIENT_ID: ${{ secrets.CLIENT_ID }}
+            CLIENT_SECRET: ${{ secrets.CLIENT_SECRET }}
+            SCRIPT_ID: ${{ secrets.SCRIPT_ID_STG }}
+            # コード内で置換される変数
+            TARGET_EMAIL_ADDRESS: ${{ secrets.TARGET_EMAIL_ADDRESS_STG }}
+            TARGET_SHEET_NAME: "金銭メモstg"
+            TEST_DATE: "20220101"
 
         steps:
             - name: リポジトリのチェックアウト
@@ -29,5 +42,31 @@ jobs:
             - name: 依存関係のインストール
               run: npm install
 
-            - name: アプリのビルド
-              run: make build
+            - name: claspのインストール
+              run: npm install -g @google/clasp
+
+            - name: .clasprc.json の生成
+              run: |
+                  bash scripts/deployment/setup_clasprcjson.sh
+
+            - name: .clasp.json の生成
+              run: |
+                  bash scripts/deployment/setup_claspjson.sh
+
+            - name: メール送信先の変数置換
+              run: |
+                  sed -i 's/TARGET_EMAIL_ADDRESS/'"${TARGET_EMAIL_ADDRESS}"'/g' scripts/sendSummaryMail.js
+
+            - name: TEST_DATE の置換
+              run: |
+                  sed -i 's/"TEST_DATE_PLACEHOLDER"/"${{ env.TEST_DATE }}"/g' scripts/sendSummaryMail.js
+
+            - name: メインスクリプトの変数置換
+              run: |
+                  sed -i 's/TARGET_SHEET_NAME/'"${TARGET_SHEET_NAME}"'/g' main.ts
+
+            - name: スクリプト群のコピー
+              run: make copy
+
+            - name: アプリのビルドとstg環境GASへのデプロイ
+              run: make build-and-deploy

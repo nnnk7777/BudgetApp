@@ -2,7 +2,7 @@ import { BudgetReportService } from "./service/budgetReportService";
 import { Options } from "./types/options";
 
 export function main() {
-    const speadSheetName = "金銭メモ2024";
+    const speadSheetName = "TARGET_SHEET_NAME";
     const budgetReportSheetName = "🐖 家計簿";
     const categorySummaryReportSheetName = "🦦 カテゴリ別";
 

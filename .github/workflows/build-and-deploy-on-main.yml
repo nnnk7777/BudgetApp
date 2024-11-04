@@ -11,12 +11,16 @@ jobs:
         timeout-minutes: 5
 
         env:
+            # GASプロジェクトやclaspに関わる変数
             ACCESS_TOKEN: ${{ secrets.ACCESS_TOKEN }}
             ID_TOKEN: ${{ secrets.ID_TOKEN }}
             REFRESH_TOKEN: ${{ secrets.REFRESH_TOKEN }}
             CLIENT_ID: ${{ secrets.CLIENT_ID }}
             CLIENT_SECRET: ${{ secrets.CLIENT_SECRET }}
             SCRIPT_ID: ${{ secrets.SCRIPT_ID }}
+            # コード内で置換される変数
+            TARGET_EMAIL_ADDRESS: ${{ secrets.TARGET_EMAIL_ADDRESS }}
+            TARGET_SHEET_NAME: "金銭メモ2024"
 
         steps:
             - name: リポジトリのチェックアウト
@@ -47,6 +51,18 @@ jobs:
             - name: .clasp.json の生成
               run: |
                   bash scripts/deployment/setup_claspjson.sh
+
+            - name: メール送信先の変数置換
+              run: |
+                  sed -i 's/TARGET_EMAIL_ADDRESS/'"${TARGET_EMAIL_ADDRESS}"'/g' scripts/sendSummaryMail.js
+
+            - name: TEST_DATE_PLACEHOLDER の置換
+              run: |
+                  sed -i 's/"TEST_DATE_PLACEHOLDER"/false/g' scripts/sendSummaryMail.js
+
+            - name: メインスクリプトの変数置換
+              run: |
+                  sed -i 's/TARGET_SHEET_NAME/'"${TARGET_SHEET_NAME}"'/g' main.ts
 
             - name: スクリプト群のコピー
               run: make copy
