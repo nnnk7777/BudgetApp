@@ -255,7 +255,7 @@ function sendWeeklySummaryEmail(dateRangeStr, totalAmount, dataEntries, differen
     });
 
     // メールを送信
-    var subject = isStaging ? "<test>" : ""
+    var subject = (isStaging ? "<test>" : "")
         + "家計簿週次レポート" + "（" + dateRangeStr + "）";
     MailApp.sendEmail(emailAddress, subject, body);
 }
@@ -278,7 +278,7 @@ function sendDailyProgressEmail(currentDate, datesInWeek, adjustedBudget, isStag
     var percentage = (totalAmount / adjustedBudget) * 100;
 
     // メールの件名と本文を作成
-    var subject = isStaging ? "<test>" : ""
+    var subject = (isStaging ? "<test>" : "")
         + "家計簿日次レポート（" + formatDate(currentDate) + "）";
     var body = formatDate(datesInWeek[0]) + " から " + formatDate(currentDate) + " までの合計支出は " + totalAmount + " 円です。\n";
     body += "予算の " + percentage.toFixed(2) + "% を使用しました。\n";
