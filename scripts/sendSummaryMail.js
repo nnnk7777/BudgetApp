@@ -4,8 +4,9 @@ function calculateWeeklyExpenses() {
 
     var currentDate;
     var testDateStr = "TEST_DATE_PLACEHOLDER"
+    var isStaging = testDateStr ? true : false
 
-    if (testDateStr) {
+    if (isStaging) {
         // テスト用の日付が指定されている場合、その日付を使用
         // YYYYMMDD フォーマットをパースして Date オブジェクトを作成
         currentDate = parseYYYYMMDD(testDateStr);
@@ -57,10 +58,10 @@ function calculateWeeklyExpenses() {
 
     if (dayOfWeek === 0) {
         // 日曜日の場合、週次サマリーを送信
-        sendWeeklySummaryEmail(dateRangeStr, totalAmount, dataEntries, difference, percentage, adjustedBudget);
+        sendWeeklySummaryEmail(dateRangeStr, totalAmount, dataEntries, difference, percentage, adjustedBudget, isStaging);
     } else {
         // 日曜日以外の場合、週の開始から現在までのデータを取得し、メールで送信
-        sendDailyProgressEmail(currentDate, budgetPerWeek, datesInWeek, adjustedBudget);
+        sendDailyProgressEmail(currentDate, datesInWeek, adjustedBudget, isStaging);
     }
 }
 
@@ -220,7 +221,7 @@ function calculateTotalAmount(dataEntries) {
 }
 
 // 週次サマリーをメールで送信するメソッド（毎週日曜日）
-function sendWeeklySummaryEmail(dateRangeStr, totalAmount, dataEntries, difference, percentage, adjustedBudget) {
+function sendWeeklySummaryEmail(dateRangeStr, totalAmount, dataEntries, difference, percentage, adjustedBudget, isStaging) {
     var emailAddress = "TARGET_EMAIL_ADDRESS";
 
     // 予算差分の符号を設定
@@ -251,11 +252,13 @@ function sendWeeklySummaryEmail(dateRangeStr, totalAmount, dataEntries, differen
     });
 
     // メールを送信
-    MailApp.sendEmail(emailAddress, "家計簿週次レポート（" + dateRangeStr + "）", body);
+    var subject = isStaging ? "<test>" : ""
+        + "家計簿週次レポート" + "（" + dateRangeStr + "）";
+    MailApp.sendEmail(emailAddress, subject, body);
 }
 
 // 日曜日以外に日次進捗をメールで送信するメソッド
-function sendDailyProgressEmail(currentDate, budgetPerWeek, datesInWeek, adjustedBudget) {
+function sendDailyProgressEmail(currentDate, datesInWeek, adjustedBudget, isStaging) {
     var emailAddress = "TARGET_EMAIL_ADDRESS";
 
     // 週の開始日から現在の日付までのデータを取得
@@ -272,7 +275,8 @@ function sendDailyProgressEmail(currentDate, budgetPerWeek, datesInWeek, adjuste
     var percentage = (totalAmount / adjustedBudget) * 100;
 
     // メールの件名と本文を作成
-    var subject = "家計簿日次レポート（" + formatDate(currentDate) + "）";
+    var subject = isStaging ? "<test>" : ""
+        + "家計簿日次レポート（" + formatDate(currentDate) + "）";
     var body = formatDate(datesInWeek[0]) + " から " + formatDate(currentDate) + " までの合計支出は " + totalAmount + " 円です。\n";
     body += "予算の " + percentage.toFixed(2) + "% を使用しました。\n";
     body += "（設定予算：" + adjustedBudget + "円）\n\n";
