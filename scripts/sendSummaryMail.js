@@ -60,7 +60,7 @@ function calculateWeeklyExpenses() {
         sendWeeklySummaryEmail(dateRangeStr, totalAmount, dataEntries, difference, percentage, adjustedBudget);
     } else {
         // 日曜日以外の場合、週の開始から現在までのデータを取得し、メールで送信
-        sendDailyProgressEmail(currentDate, budgetPerWeek, datesInWeek);
+        sendDailyProgressEmail(currentDate, budgetPerWeek, datesInWeek, adjustedBudget);
     }
 }
 
@@ -220,7 +220,7 @@ function calculateTotalAmount(dataEntries) {
 }
 
 // 週次サマリーをメールで送信するメソッド（毎週日曜日）
-function sendWeeklySummaryEmail(dateRangeStr, totalAmount, dataEntries, difference, percentage) {
+function sendWeeklySummaryEmail(dateRangeStr, totalAmount, dataEntries, difference, percentage, adjustedBudget) {
     var emailAddress = "TARGET_EMAIL_ADDRESS";
 
     // 予算差分の符号を設定
@@ -240,9 +240,10 @@ function sendWeeklySummaryEmail(dateRangeStr, totalAmount, dataEntries, differen
     // メール本文を指定のフォーマットで作成
     var body = "";
     body += "◆ " + dateRangeStr + " の週次サマリー\n\n";
-    body += "合計支出は " + totalAmount + " 円です。\n";
-    body += "予算差分：" + differenceSign + differenceAbs + "円\n";
-    body += "予算割合：" + percentageStr + "%\n";
+    body += "合計支出は " + totalAmount + " 円です。\n\n";
+    body += "* 設定予算： " + adjustedBudget + " 円\n";
+    body += "* 予算差分：" + differenceSign + differenceAbs + "円\n";
+    body += "* 予算割合：" + percentageStr + "%\n\n";
     body += "支出TOP5\n";
 
     top5Entries.forEach(function (entry) {
@@ -254,7 +255,7 @@ function sendWeeklySummaryEmail(dateRangeStr, totalAmount, dataEntries, differen
 }
 
 // 日曜日以外に日次進捗をメールで送信するメソッド
-function sendDailyProgressEmail(currentDate, budgetPerWeek, datesInWeek) {
+function sendDailyProgressEmail(currentDate, budgetPerWeek, datesInWeek, adjustedBudget) {
     var emailAddress = "TARGET_EMAIL_ADDRESS";
 
     // 週の開始日から現在の日付までのデータを取得
@@ -267,17 +268,14 @@ function sendDailyProgressEmail(currentDate, budgetPerWeek, datesInWeek) {
     // 合計金額を算出
     var totalAmount = calculateTotalAmount(dataEntries);
 
-    // 予算を含まれる日数に応じて調整
-    var numberOfDays = datesUpToToday.length;
-    var adjustedBudget = Math.round((budgetPerWeek * numberOfDays / 7) / 100) * 100; // 100円単位で丸め込み
-
     // 予算に対する割合を計算
     var percentage = (totalAmount / adjustedBudget) * 100;
 
     // メールの件名と本文を作成
     var subject = "家計簿日次レポート（" + formatDate(currentDate) + "）";
     var body = formatDate(datesInWeek[0]) + " から " + formatDate(currentDate) + " までの合計支出は " + totalAmount + " 円です。\n";
-    body += "予算の " + percentage.toFixed(2) + "% を使用しました。\n\n";
+    body += "予算の " + percentage.toFixed(2) + "% を使用しました。\n";
+    body += "（設定予算：" + adjustedBudget + "円）\n\n";
 
     body += "詳細:\n";
     dataEntries.forEach(function (entry) {
