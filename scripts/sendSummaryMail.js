@@ -194,8 +194,8 @@ function calculateTotalAmount(dataEntries) {
 }
 
 // 週次サマリーをメールで送信するメソッド（毎週日曜日）
-function sendWeeklySummaryEmail(dateRangeStr, totalAmount, dataEntries, difference, percentage, adjustedBudget) {
-    var emailAddress = "electro0701+budgetapp@gmail.com";
+function sendWeeklySummaryEmail(dateRangeStr, totalAmount, dataEntries, difference, percentage) {
+    var emailAddress = "TARGET_EMAIL_ADDRESS";
 
     // 予算差分の符号を設定
     var differenceSign = difference >= 0 ? "+" : "-";
@@ -229,7 +229,7 @@ function sendWeeklySummaryEmail(dateRangeStr, totalAmount, dataEntries, differen
 
 // 日曜日以外に日次進捗をメールで送信するメソッド
 function sendDailyProgressEmail(currentDate, budgetPerWeek, datesInWeek) {
-    var emailAddress = "electro0701+budgetapp@gmail.com";
+    var emailAddress = "TARGET_EMAIL_ADDRESS";
 
     // 週の開始日から現在の日付までのデータを取得
     var datesUpToToday = datesInWeek.filter(function (date) {
