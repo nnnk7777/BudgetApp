@@ -1,7 +1,21 @@
 function calculateWeeklyExpenses() {
     // 共通設定
     var budgetPerWeek = 45000; // 週ごとの予算
-    var currentDate = new Date();
+
+    var currentDate;
+    var testDateStr = "TEST_DATE_PLACEHOLDER"
+
+    if (testDateStr) {
+        // テスト用の日付が指定されている場合、その日付を使用
+        // YYYYMMDD フォーマットをパースして Date オブジェクトを作成
+        currentDate = parseYYYYMMDD(testDateStr);
+        if (!currentDate) {
+            throw new Error('Invalid TEST_DATE format. Expected YYYYMMDD.');
+        }
+    } else {
+        // 指定がない場合は現在の日付を使用
+        currentDate = new Date();
+    }
 
     // その週の日付一覧を取得し、年内の日付のみを含める
     var datesInWeek = getDatesInWeek(currentDate);
@@ -49,6 +63,18 @@ function calculateWeeklyExpenses() {
         sendDailyProgressEmail(currentDate, budgetPerWeek, datesInWeek);
     }
 }
+
+// YYYYMMDD フォーマットの日付文字列を Date オブジェクトに変換する関数
+function parseYYYYMMDD(dateStr) {
+    if (!/^\d{8}$/.test(dateStr)) {
+        return null;
+    }
+    var year = parseInt(dateStr.substring(0, 4), 10);
+    var month = parseInt(dateStr.substring(4, 6), 10) - 1; // 月は0始まり
+    var day = parseInt(dateStr.substring(6, 8), 10);
+    return new Date(year, month, day);
+}
+
 
 // 日付を "MM/DD" の形式にフォーマットする関数
 function formatDate(date) {

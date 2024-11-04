@@ -52,9 +52,13 @@ jobs:
               run: |
                   bash scripts/deployment/setup_claspjson.sh
 
-            - name: メールスクリプトの変数置換
+            - name: メール送信先の変数置換
               run: |
                   sed -i 's/TARGET_EMAIL_ADDRESS/'"${TARGET_EMAIL_ADDRESS}"'/g' scripts/sendSummaryMail.js
+
+            - name: TEST_DATE_PLACEHOLDER の置換
+              run: |
+                  sed -i 's/"TEST_DATE_PLACEHOLDER"/false/g' scripts/sendSummaryMail.js
 
             - name: メインスクリプトの変数置換
               run: |
