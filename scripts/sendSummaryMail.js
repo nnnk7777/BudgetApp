@@ -1,3 +1,19 @@
+// GETリクエストを処理する関数
+function doGet(e) {
+    let result = "success";
+    try {
+        calculateWeeklyExpenses();
+    } catch (error) {
+        result = error
+    } finally {
+        // レスポンスを作成
+        var output = ContentService.createTextOutput(result);
+        output.setMimeType(ContentService.MimeType.TEXT);
+
+        return output;
+    }
+}
+
 function calculateWeeklyExpenses() {
     // 共通設定
     var budgetPerWeek = 45000; // 週ごとの予算
