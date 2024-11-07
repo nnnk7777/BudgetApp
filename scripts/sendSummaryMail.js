@@ -1,8 +1,15 @@
-// GETリクエストを処理する関数
-function doGet(e) {
+function doPost(e) {
     let result = "success";
+
     try {
-        calculateWeeklyExpenses();
+        const jsonString = e.postData.contents;
+        const data = JSON.parse(jsonString);
+        const hash = data.hash;
+
+        // 受け取ったハッシュが想定通りの値だった場合、メールサマリ生成を実行
+        if (hash === "MAIL_SUMMARY_API_AUTH_HASH") {
+            calculateWeeklyExpenses();
+        }
     } catch (error) {
         result = error
     } finally {
