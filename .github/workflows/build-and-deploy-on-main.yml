@@ -19,6 +19,7 @@ jobs:
             CLIENT_SECRET: ${{ secrets.CLIENT_SECRET }}
             SCRIPT_ID: ${{ secrets.SCRIPT_ID }}
             # コード内で置換される変数
+            MAIL_SUMMARY_API_AUTH_HASH: ${{ secrets.MAIL_SUMMARY_API_AUTH_HASH }}
             TARGET_EMAIL_ADDRESS: ${{ secrets.TARGET_EMAIL_ADDRESS }}
             TARGET_SHEET_NAME: "金銭メモ2024"
 
@@ -51,6 +52,10 @@ jobs:
             - name: .clasp.json の生成
               run: |
                   bash scripts/deployment/setup_claspjson.sh
+
+            - name: API実行用のハッシュの変数置換
+              run: |
+                  sed -i 's/MAIL_SUMMARY_API_AUTH_HASH/'"${MAIL_SUMMARY_API_AUTH_HASH}"'/g' scripts/sendSummaryMail.js
 
             - name: メール送信先の変数置換
               run: |
