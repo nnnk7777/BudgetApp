@@ -1,3 +1,26 @@
+function doPost(e) {
+    let result = "success";
+
+    try {
+        const jsonString = e.postData.contents;
+        const data = JSON.parse(jsonString);
+        const hash = data.hash;
+
+        // 受け取ったハッシュが想定通りの値だった場合、メールサマリ生成を実行
+        if (hash === "MAIL_SUMMARY_API_AUTH_HASH") {
+            calculateWeeklyExpenses();
+        }
+    } catch (error) {
+        result = error
+    } finally {
+        // レスポンスを作成
+        var output = ContentService.createTextOutput(result);
+        output.setMimeType(ContentService.MimeType.TEXT);
+
+        return output;
+    }
+}
+
 function calculateWeeklyExpenses() {
     // 共通設定
     var budgetPerWeek = 45000; // 週ごとの予算
