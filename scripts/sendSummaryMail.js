@@ -6,8 +6,10 @@ function doPost(e) {
         const data = JSON.parse(jsonString);
         const hash = data.hash;
 
+        const scriptHash = PropertiesService.getScriptProperties().getProperty("HASH");
+
         // 受け取ったハッシュが想定通りの値だった場合、メールサマリ生成を実行
-        if (hash === "MAIL_SUMMARY_API_AUTH_HASH") {
+        if (hash === scriptHash) {
             calculateWeeklyExpenses();
         }
     } catch (error) {
