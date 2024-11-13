@@ -13,7 +13,8 @@ function doPost(e) {
             calculateWeeklyExpenses();
         }
     } catch (error) {
-        result = error
+        result = "error"
+        Logger.log(error);
     } finally {
         // レスポンスを作成
         var output = ContentService.createTextOutput(result);
