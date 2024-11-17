@@ -21,7 +21,7 @@ jobs:
             # コード内で置換される変数
             TARGET_EMAIL_ADDRESS: ${{ secrets.TARGET_EMAIL_ADDRESS_STG }}
             TARGET_SHEET_NAME: "金銭メモstg"
-            TEST_DATE: "20220101"
+            TEST_DATE: "20220207"
 
         steps:
             - name: リポジトリのチェックアウト
@@ -57,9 +57,13 @@ jobs:
               run: |
                   sed -i 's/TARGET_EMAIL_ADDRESS/'"${TARGET_EMAIL_ADDRESS}"'/g' scripts/sendSummaryMail.js
 
-            - name: TEST_DATE の置換
+            - name: TEST_DATE_PLACEHOLDER の置換(sendSummaryMail.js)
               run: |
                   sed -i 's/"TEST_DATE_PLACEHOLDER"/"${{ env.TEST_DATE }}"/g' scripts/sendSummaryMail.js
+
+            - name: TEST_DATE_PLACEHOLDER の置換(addNewExpense.js)
+              run: |
+                  sed -i 's/"TEST_DATE_PLACEHOLDER"/"${{ env.TEST_DATE }}"/g' scripts/addNewExpense.js
 
             - name: メインスクリプトの変数置換
               run: |
