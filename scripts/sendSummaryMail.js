@@ -1,5 +1,5 @@
 // 行いたい操作を引数actionで受け取る
-function calculateWeeklyExpenses(action) {
+function calculateWeeklyExpenses(action = 'mail') {
     // 共通設定
     var budgetPerWeek = 45000; // 週ごとの予算
 
