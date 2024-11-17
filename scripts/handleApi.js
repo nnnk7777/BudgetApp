@@ -16,6 +16,7 @@ function doPost(e) {
                 case 'text':
                 case 'mail':
                     result = calculateWeeklyExpenses(action);
+                    break;
                 case 'add':
                     item = data.item;
 
