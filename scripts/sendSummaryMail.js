@@ -14,7 +14,7 @@ function doPost(e) {
             result = calculateWeeklyExpenses(action);
         }
     } catch (error) {
-        result = "error"
+        result = error.message;
         Logger.log(error);
     } finally {
         // レスポンスを作成
@@ -288,7 +288,7 @@ function sendWeeklySummaryEmail(dateRangeStr, totalAmount, dataEntries, differen
             var subject = (isStaging ? "<test>" : "")
                 + "家計簿週次レポート" + "（" + dateRangeStr + "）";
             MailApp.sendEmail(emailAddress, subject, body);
-            return "success";
+            return "Successfully sent mail";
         case 'text':
             return body;
         default:
