@@ -1,30 +1,3 @@
-function doPost(e) {
-    let result = "success";
-
-    try {
-        const jsonString = e.postData.contents;
-        const data = JSON.parse(jsonString);
-        const hash = data.hash;
-        const action = data.action;
-
-        const scriptHash = PropertiesService.getScriptProperties().getProperty("HASH");
-
-        // 受け取ったハッシュが想定通りの値だった場合、メールサマリ生成を実行
-        if (hash === scriptHash) {
-            result = calculateWeeklyExpenses(action);
-        }
-    } catch (error) {
-        result = error.message;
-        Logger.log(error);
-    } finally {
-        // レスポンスを作成
-        var output = ContentService.createTextOutput(result);
-        output.setMimeType(ContentService.MimeType.TEXT);
-
-        return output;
-    }
-}
-
 // 行いたい操作を引数actionで受け取る
 function calculateWeeklyExpenses(action) {
     // 共通設定
