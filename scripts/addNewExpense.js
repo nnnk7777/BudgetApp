@@ -88,7 +88,7 @@ function addExpenseRecord(title, amount) {
 
     // 日付の文字列を作成
     const dateString = Utilities.formatDate(currentDate, "Asia/Tokyo", "MM/dd");
-    const dateValue = includeDate ? dateString : "";
+    const dateValue = includeDate ? ("'" + dateString) : "";
 
     // 新しい支出記録を作成
     const newRowValues = [
