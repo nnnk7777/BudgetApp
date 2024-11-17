@@ -21,7 +21,7 @@ jobs:
             # コード内で置換される変数
             TARGET_EMAIL_ADDRESS: ${{ secrets.TARGET_EMAIL_ADDRESS_STG }}
             TARGET_SHEET_NAME: "金銭メモstg"
-            TEST_DATE: "20220101"
+            TEST_DATE: "20220207"
 
         steps:
             - name: リポジトリのチェックアウト
