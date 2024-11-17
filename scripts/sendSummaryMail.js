@@ -5,12 +5,13 @@ function doPost(e) {
         const jsonString = e.postData.contents;
         const data = JSON.parse(jsonString);
         const hash = data.hash;
+        const action = data.action;
 
         const scriptHash = PropertiesService.getScriptProperties().getProperty("HASH");
 
         // 受け取ったハッシュが想定通りの値だった場合、メールサマリ生成を実行
         if (hash === scriptHash) {
-            calculateWeeklyExpenses();
+            result = calculateWeeklyExpenses(action);
         }
     } catch (error) {
         result = "error"
@@ -24,7 +25,8 @@ function doPost(e) {
     }
 }
 
-function calculateWeeklyExpenses() {
+// 行いたい操作を引数actionで受け取る
+function calculateWeeklyExpenses(action) {
     // 共通設定
     var budgetPerWeek = 45000; // 週ごとの予算
 
@@ -84,10 +86,10 @@ function calculateWeeklyExpenses() {
 
     if (dayOfWeek === 0) {
         // 日曜日の場合、週次サマリーを送信
-        sendWeeklySummaryEmail(dateRangeStr, totalAmount, dataEntries, difference, percentage, adjustedBudget, isStaging);
+        return sendWeeklySummaryEmail(dateRangeStr, totalAmount, dataEntries, difference, percentage, adjustedBudget, isStaging, action);
     } else {
         // 日曜日以外の場合、週の開始から現在までのデータを取得し、メールで送信
-        sendDailyProgressEmail(currentDate, datesInWeek, adjustedBudget, isStaging);
+        return sendDailyProgressEmail(currentDate, datesInWeek, adjustedBudget, isStaging, action);
     }
 }
 
@@ -250,7 +252,7 @@ function calculateTotalAmount(dataEntries) {
 }
 
 // 週次サマリーをメールで送信するメソッド（毎週日曜日）
-function sendWeeklySummaryEmail(dateRangeStr, totalAmount, dataEntries, difference, percentage, adjustedBudget, isStaging) {
+function sendWeeklySummaryEmail(dateRangeStr, totalAmount, dataEntries, difference, percentage, adjustedBudget, isStaging, action) {
     var emailAddress = "TARGET_EMAIL_ADDRESS";
 
     // 予算差分の符号を設定
@@ -280,14 +282,22 @@ function sendWeeklySummaryEmail(dateRangeStr, totalAmount, dataEntries, differen
         body += "・" + formatDate(entry.date) + " - " + entry.name + ": " + entry.amount + "円\n";
     });
 
-    // メールを送信
-    var subject = (isStaging ? "<test>" : "")
-        + "家計簿週次レポート" + "（" + dateRangeStr + "）";
-    MailApp.sendEmail(emailAddress, subject, body);
+    switch (action) {
+        case 'mail':
+            // メールを送信
+            var subject = (isStaging ? "<test>" : "")
+                + "家計簿週次レポート" + "（" + dateRangeStr + "）";
+            MailApp.sendEmail(emailAddress, subject, body);
+            return "success";
+        case 'text':
+            return body;
+        default:
+            throw new Error('actionが定義されていません');
+    }
 }
 
 // 日曜日以外に日次進捗をメールで送信するメソッド
-function sendDailyProgressEmail(currentDate, datesInWeek, adjustedBudget, isStaging) {
+function sendDailyProgressEmail(currentDate, datesInWeek, adjustedBudget, isStaging, action) {
     var emailAddress = "TARGET_EMAIL_ADDRESS";
 
     // 週の開始日から現在の日付までのデータを取得
@@ -315,6 +325,14 @@ function sendDailyProgressEmail(currentDate, datesInWeek, adjustedBudget, isStag
         body += "・" + formatDate(entry.date) + " - " + entry.name + ": " + entry.amount + "円\n";
     });
 
-    // メールを送信
-    MailApp.sendEmail(emailAddress, subject, body);
+    switch (action) {
+        case 'mail':
+            // メールを送信
+            MailApp.sendEmail(emailAddress, subject, body);
+            return "Successfully sent mail";
+        case 'text':
+            return body;
+        default:
+            throw new Error('actionが定義されていません');
+    }
 }
