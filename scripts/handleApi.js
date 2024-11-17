@@ -16,6 +16,14 @@ function doPost(e) {
                 case 'text':
                 case 'mail':
                     result = calculateWeeklyExpenses(action);
+                case 'add':
+                    item = data.item;
+
+                    title = item.title;
+                    amount = item.amount;
+
+                    result = addExpenseRecord(title, amount);
+                    break;
                 default:
                     throw new Error('actionが定義されていません');
             }
