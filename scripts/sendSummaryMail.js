@@ -1,5 +1,10 @@
+// 時間設定トリガーで実行される際に、引数を渡されるようにする
+function handleCalculateExpensesSummaryTrigger() {
+    calculateExpensesSummary('mail');
+}
+
 // 行いたい操作を引数actionで受け取る
-function calculateWeeklyExpenses(action = 'mail') {
+function calculateExpensesSummary(action) {
     // 共通設定
     var budgetPerWeek = 45000; // 週ごとの予算
 
