@@ -1,8 +1,35 @@
 # BudgetApp
 
+## 概要
+
 Google スプレッドシートの家計簿を生成・管理するための GAS スクリプト
 
-## 準備
+## ディレクトリ構成
+
+-   Typescript のファイルは、`build.ts`で Javascript に変換した上で GAS にデプロイされます。
+-   `/scripts`直下のファイルはそのまま GAS にデプロイされ、API や編集時のトリガーとして利用されます。
+
+```
+.
+├── main.ts
+├── build.ts
+├── Makefile
+├── scripts
+│   ├── deployment
+│   │   ├── setup_claspjson.sh
+│   │   └── setup_clasprcjson.sh
+│   ├── addNewExpense.js
+│   ├── formatDateAndPriceNumbers.js
+│   ├── handleApi.js
+│   └── sendSummaryMail.js
+├── service
+├── model
+├── types
+├── config
+└── util
+```
+
+## 開発準備
 
 -   家計簿をつけるスプレッドシートを作成しておいてください。また、シート名を指定してください。
     -   例. `金銭メモ2024`

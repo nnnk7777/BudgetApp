@@ -1,11 +1,25 @@
 # 概要
 
-## [sendSummaryMail.js](sendSummaryMail.js)
+## API
 
+### [handleApi.js](handleApi.js)
+
+-   `doPost`で POST リクエストを受け付けて、指定されたパラメータによって後続処理を決定する。
+
+### [addNewExpense.js](addNewExpense.js)
+
+-   `add`アクションによって実行される。
+-   金額と内容を受け取って該当の日付の直下にデータを追加する。
+
+### [sendSummaryMail.js](sendSummaryMail.js)
+
+-   `mail`または`text`アクションによって実行される。
 -   予算（45000 円/週）に対する割合や差分を取得する。
--   メールの設定は GAS の Web 画面側から手動で設定する。
+-   メールとして送信または文字列をレスポンスとして返却する。
 
-## [formatDateAndPriceNumbers.js](formatDateAndPriceNumbers.js)
+## 編集をトリガーとした処理
+
+### [formatDateAndPriceNumbers.js](formatDateAndPriceNumbers.js)
 
 -   onEdit を利用して、日付と金額の列に修正があった際に必要に応じて自動でフォーマットを行う
 -   日付
@@ -13,7 +27,9 @@
 -   金額
     -   全角数字で入力されたものを半角に変換する
 
-## /deployment
+## デプロイ用スクリプト
+
+### /deployment
 
 Github Actions 上から利用されるスクリプト
 
