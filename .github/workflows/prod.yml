@@ -71,5 +71,17 @@ jobs:
             - name: スクリプト群のコピー
               run: make copy
 
-            - name: アプリのビルドとGASへのデプロイ
-              run: make build-and-deploy
+            - name: アプリのビルドとGASへのプッシュ
+              run: make build-and-push
+
+            - name: デプロイの新バージョンを作成
+              run: |
+                  VERSION_OUTPUT=$(clasp version "Auto-deploy from GitHub Actions")
+                  echo "VERSION_OUTPUT: $VERSION_OUTPUT"
+                  VERSION_NUMBER=$(echo $VERSION_OUTPUT | grep -oP '(?<=Created version )\d+')
+                  echo "Version number: '$VERSION_NUMBER'"
+                  echo "VERSION_NUMBER=$VERSION_NUMBER" >> $GITHUB_ENV
+
+            - name: GASへデプロイ
+              run: |
+                  clasp deploy --deploymentId '${{ secrets.GAS_DEPLOYMENT_ID }}' --versionNumber ${{ env.VERSION_NUMBER }}
