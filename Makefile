@@ -3,7 +3,7 @@
 build:
 	npm run build && npm run ts-node
 
-build-and-deploy:
+build-and-push:
 	npm run build && npm run ts-node && clasp push --force
 
 open:
