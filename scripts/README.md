@@ -17,6 +17,11 @@
 -   予算（45000 円/週）に対する割合や差分を取得する。
 -   メールとして送信または文字列をレスポンスとして返却する。
 
+### [fetchCategories.js](fetchCategories.js)
+
+-   `categoreis`アクションによって実行される。
+-   `categories.js`内のデータから名称の一覧を取得する
+
 ## 編集をトリガーとした処理
 
 ### [formatDateAndPriceNumbers.js](formatDateAndPriceNumbers.js)
