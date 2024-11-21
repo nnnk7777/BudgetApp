@@ -3,7 +3,7 @@ name: Build App on Staging
 on:
     push:
         branches:
-            - "feat/**"
+            - "feat**"
 
 jobs:
     Build-Budget-App-on-Staging:
