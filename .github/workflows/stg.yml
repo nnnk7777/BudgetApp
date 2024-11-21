@@ -3,7 +3,7 @@ name: Build App on Staging
 on:
     push:
         branches:
-            - "feat/**"
+            - "feat**"
 
 jobs:
     Build-Budget-App-on-Staging:
@@ -71,6 +71,14 @@ jobs:
 
             - name: スクリプト群のコピー
               run: make copy
+
+            - name: カテゴリ一覧のコピー
+              run: |
+                  cp config/categories.js dist/categories.js
+
+            - name: カテゴリ一覧スクリプトから不要文字列の削除
+              run: |
+                  sed -i '/^export default categories;/d' dist/categories.js
 
             - name: アプリのビルドとstg環境GASへのプッシュ
               run: make build-and-push
