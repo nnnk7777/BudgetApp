@@ -1,4 +1,4 @@
-function addExpenseRecord(title, amount) {
+function addExpenseRecord(title, amount, category) {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
     const sheet = ss.getSheetByName("🐖 家計簿");
     if (!sheet) {
@@ -34,7 +34,6 @@ function addExpenseRecord(title, amount) {
     const startRow = 35;    // 支出記録の開始行
     const maxExpenseRow = 149; // 支出記録の最大行（固定費用の手前）
 
-    const category = ""; // カテゴリーはから文字列で登録する
 
     // 支出記録の最後の行を特定
     let lastRow = startRow - 1;

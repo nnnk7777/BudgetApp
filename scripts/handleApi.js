@@ -22,8 +22,9 @@ function doPost(e) {
 
                     title = item.title;
                     amount = item.amount;
+                    category = item.category;
 
-                    result = addExpenseRecord(title, amount);
+                    result = addExpenseRecord(title, amount, category);
                     break;
                 case 'categories':
                     result = fetchCategories();
