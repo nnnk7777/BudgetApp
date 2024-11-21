@@ -25,6 +25,9 @@ function doPost(e) {
 
                     result = addExpenseRecord(title, amount);
                     break;
+                case 'categories':
+                    result = fetchCategories();
+                    break;
                 default:
                     throw new Error('actionが定義されていません');
             }
