@@ -283,8 +283,12 @@ function sendDailyProgressEmail(currentDate, datesInWeek, adjustedBudget, isStag
         return date <= currentDate;
     });
 
-    var dataEntries = getDataForDates(datesUpToToday);
-
+    var dataEntries = getDataForDates(datesUpToToday).reverse().map(entry => {
+        if (entry.name.length >= 16) {
+            entry.name = entry.name.substring(0, 14) + "...";
+        }
+        return entry;
+    });
     // 合計金額を算出
     var totalAmount = calculateTotalAmount(dataEntries);
 
