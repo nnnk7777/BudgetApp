@@ -254,9 +254,13 @@ function sendWeeklySummaryEmail(dateRangeStr, totalAmount, dataEntries, differen
     body += "* 設定予算： " + adjustedBudget + " 円\n";
     body += "* 予算差分：" + differenceSign + differenceAbs + "円\n";
     body += "* 予算割合：" + percentageStr + "%\n\n";
-    body += "支出TOP5\n";
-
+    body += "◆ 支出TOP5\n";
     top5Entries.forEach(function (entry) {
+        body += "・" + formatDate(entry.date) + " - " + entry.name + ": " + entry.amount + "円\n";
+    });
+    body += "\n";
+    body += "◆ 支出一覧\n";
+    dataEntries.forEach(function (entry) {
         body += "・" + formatDate(entry.date) + " - " + entry.name + ": " + entry.amount + "円\n";
     });
 
@@ -283,8 +287,12 @@ function sendDailyProgressEmail(currentDate, datesInWeek, adjustedBudget, isStag
         return date <= currentDate;
     });
 
-    var dataEntries = getDataForDates(datesUpToToday);
-
+    var dataEntries = getDataForDates(datesUpToToday).reverse().map(entry => {
+        if (entry.name.length >= 16) {
+            entry.name = entry.name.substring(0, 14) + "...";
+        }
+        return entry;
+    });
     // 合計金額を算出
     var totalAmount = calculateTotalAmount(dataEntries);
 
