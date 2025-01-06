@@ -20,7 +20,7 @@ jobs:
             SCRIPT_ID: ${{ secrets.SCRIPT_ID }}
             # コード内で置換される変数
             TARGET_EMAIL_ADDRESS: ${{ secrets.TARGET_EMAIL_ADDRESS }}
-            TARGET_SHEET_NAME: "金銭メモ2024"
+            TARGET_SHEET_NAME: "金銭メモ2025"
 
         steps:
             - name: リポジトリのチェックアウト
