@@ -11,7 +11,7 @@ const categories = [
   { name: "服", color: "#65dbcc" },
   { name: "植物", color: "#2fba25", textColor: "#ffffff" },
   { name: "銭湯", color: "#00BFA5", textColor: "#ffffff" },
-  { name: "ゲーム・娯楽", color: "#00796B", textColor: "#ffffff" },
+  { name: "趣味・娯楽", color: "#00796B", textColor: "#ffffff" },
   { name: "アプリ・サブスク", color: "#4039bf", textColor: "#ffffff" },
   { name: "個人アイテム", color: "#3968c6", textColor: "#ffffff" },
   { name: "ホームアイテム", color: "#c63974", textColor: "#ffffff" },
