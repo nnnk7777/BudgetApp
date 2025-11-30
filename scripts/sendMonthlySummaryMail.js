@@ -44,6 +44,17 @@ function calculateMonthlySummary(action) {
         return categoryTotals[b] - categoryTotals[a];
     });
 
+    // デバッグ出力（先頭数件のみを確認用に出力）
+    Logger.log("【MonthlySummary Debug】Expenses (sample):");
+    expenseEntries.slice(0, 5).forEach(function (entry, idx) {
+        Logger.log("  Expense[" + idx + "] " + formatDate(entry.date) + " " + (entry.category || "未分類") + " " + entry.name + " " + entry.amount);
+    });
+    Logger.log("【MonthlySummary Debug】Incomes (sample):");
+    incomeEntries.slice(0, 3).forEach(function (entry, idx) {
+        Logger.log("  Income[" + idx + "] " + formatDate(entry.date) + " " + entry.name + " " + entry.amount);
+    });
+    Logger.log("【MonthlySummary Debug】Category totals (top3): " + sortedCategories.slice(0, 3).map(function (c) { return c + "=" + categoryTotals[c]; }).join(", "));
+
     var subject = "家計簿月次レポート（" + (month + 1) + "月）";
     var body = "";
     body += "◆ " + dateRangeStr + " の月次サマリー\n\n";
