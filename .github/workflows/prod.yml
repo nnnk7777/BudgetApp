@@ -13,8 +13,10 @@ jobs:
         env:
             # GASプロジェクトやclaspに関わる変数
             ACCESS_TOKEN: ${{ secrets.ACCESS_TOKEN }}
+            ACCESS_TOKEN_DEFAULT: ${{ secrets.ACCESS_TOKEN_DEFAULT }}
             ID_TOKEN: ${{ secrets.ID_TOKEN }}
             REFRESH_TOKEN: ${{ secrets.REFRESH_TOKEN }}
+            REFRESH_TOKEN_DEFAULT: ${{ secrets.REFRESH_TOKEN_DEFAULT }}
             CLIENT_ID: ${{ secrets.CLIENTID }}
             CLIENT_SECRET: ${{ secrets.CLIENTSECRET }}
             SCRIPT_ID: ${{ secrets.SCRIPT_ID }}
