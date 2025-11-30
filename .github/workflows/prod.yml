@@ -15,8 +15,8 @@ jobs:
             ACCESS_TOKEN: ${{ secrets.ACCESS_TOKEN }}
             ID_TOKEN: ${{ secrets.ID_TOKEN }}
             REFRESH_TOKEN: ${{ secrets.REFRESH_TOKEN }}
-            CLIENT_ID: ${{ secrets.CLIENT_ID }}
-            CLIENT_SECRET: ${{ secrets.CLIENT_SECRET }}
+            CLIENT_ID: ${{ secrets.CLIENTID }}
+            CLIENT_SECRET: ${{ secrets.CLIENTSECRET }}
             SCRIPT_ID: ${{ secrets.SCRIPT_ID }}
             # コード内で置換される変数
             TARGET_EMAIL_ADDRESS: ${{ secrets.TARGET_EMAIL_ADDRESS }}
