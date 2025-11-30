@@ -190,6 +190,7 @@ function getDataForDates(dates) {
             if (currentDate && currentDate.getTime() === date.getTime()) {
                 dataEntries.push({
                     date: currentDate,
+                    category: category,
                     name: name,
                     amount: amount
                 });
@@ -229,6 +230,67 @@ function calculateTotalAmount(dataEntries) {
     return total;
 }
 
+// Gemini に支出傾向の簡易分析を依頼するメソッド
+function analyzeExpensesWithGemini(dataEntries, totalAmount, adjustedBudget, percentage) {
+    var apiKey = PropertiesService.getScriptProperties().getProperty("GEMINI_API_KEY");
+    if (!apiKey) {
+        Logger.log("Gemini API key is not set in script properties.");
+        return null;
+    }
+
+    var url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=" + apiKey;
+    var expenseLines = dataEntries.map(function (entry) {
+        return formatDate(entry.date) + " " + entry.name + " " + entry.amount + "円";
+    });
+
+    var prompt = [
+        "以下は家計簿の支出データです。短く日本語で今日までの傾向と、次に意識すべき点を2〜3個、箇条書きでまとめてください。",
+        "週予算: " + adjustedBudget + "円 / これまでの支出: " + totalAmount + "円 (" + percentage.toFixed(1) + "%)",
+        "支出一覧:",
+        expenseLines.join("\n")
+    ].join("\n");
+
+    var payload = {
+        contents: [{
+            parts: [{
+                text: prompt
+            }]
+        }],
+        generationConfig: {
+            temperature: 0.4,
+            maxOutputTokens: 256
+        }
+    };
+
+    try {
+        var response = UrlFetchApp.fetch(url, {
+            method: "post",
+            contentType: "application/json",
+            payload: JSON.stringify(payload),
+            muteHttpExceptions: true
+        });
+
+        if (response.getResponseCode() !== 200) {
+            Logger.log("Gemini request failed: " + response.getResponseCode() + " " + response.getContentText());
+            return null;
+        }
+
+        var result = JSON.parse(response.getContentText());
+        if (result && result.candidates && result.candidates.length > 0) {
+            var parts = result.candidates[0].content && result.candidates[0].content.parts;
+            if (parts && parts.length > 0) {
+                return parts.map(function (part) {
+                    return part.text || "";
+                }).join("").trim();
+            }
+        }
+        return null;
+    } catch (error) {
+        Logger.log("Gemini request error: " + error);
+        return null;
+    }
+}
+
 // 週次サマリーをメールで送信するメソッド（毎週日曜日）
 function sendWeeklySummaryEmail(dateRangeStr, totalAmount, dataEntries, difference, percentage, adjustedBudget, isStaging, action) {
     var emailAddress = "TARGET_EMAIL_ADDRESS";
@@ -263,6 +325,14 @@ function sendWeeklySummaryEmail(dateRangeStr, totalAmount, dataEntries, differen
     dataEntries.forEach(function (entry) {
         body += "・" + formatDate(entry.date) + " - " + entry.name + ": " + entry.amount + "円\n";
     });
+    body += "\n";
+
+    var geminiAnalysis = analyzeExpensesWithGemini(dataEntries, totalAmount, adjustedBudget, percentage);
+    if (geminiAnalysis) {
+        body += "◆ Gemini分析\n" + geminiAnalysis + "\n";
+    } else {
+        body += "◆ Gemini分析\n(Geminiからの回答を取得できませんでした。ログを確認してください)\n";
+    }
 
     switch (action) {
         case 'mail':
@@ -299,6 +369,10 @@ function sendDailyProgressEmail(currentDate, datesInWeek, adjustedBudget, isStag
     // 予算に対する割合を計算
     var percentage = (totalAmount / adjustedBudget) * 100;
 
+    // Gemini分析
+    var geminiAnalysis = analyzeExpensesWithGemini(dataEntries, totalAmount, adjustedBudget, percentage);
+
+
     // メールの件名と本文を作成
     var subject = (isStaging ? "<test>" : "")
         + "家計簿日次レポート（" + formatDate(currentDate) + "）";
@@ -310,6 +384,13 @@ function sendDailyProgressEmail(currentDate, datesInWeek, adjustedBudget, isStag
     dataEntries.forEach(function (entry) {
         body += "・" + formatDate(entry.date) + " - " + entry.name + ": " + entry.amount + "円\n";
     });
+    body += "\n";
+
+    if (geminiAnalysis) {
+        body += "◆ Gemini分析\n" + geminiAnalysis + "\n";
+    } else {
+        body += "◆ Gemini分析\n(Geminiからの回答を取得できませんでした。ログを確認してください)\n";
+    }
 
     switch (action) {
         case 'mail':
