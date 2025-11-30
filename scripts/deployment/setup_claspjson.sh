@@ -8,4 +8,5 @@ CLASPJSON=$(cat <<-END
 END
 )
 
-echo $CLASPJSON > ~/.clasp.json
+# プロジェクト直下の .clasp.json を上書きし、意図した scriptId へ push する
+echo "$CLASPJSON" > ./.clasp.json
