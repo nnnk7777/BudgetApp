@@ -7,20 +7,12 @@ function handleCalculateMonthlySummaryTrigger() {
 function calculateMonthlySummary(action) {
     var budgetPerWeek = 45000;
     var currentDate;
-    var testDateStr = "TEST_DATE_PLACEHOLDER"
-    var isStaging = testDateStr ? true : false
+    var testDateStr = "TEST_DATE_PLACEHOLDER";
+    var parsedTestDate = parseYYYYMMDD(testDateStr);
+    var isStaging = !!parsedTestDate;
 
-    if (isStaging) {
-        // テスト用の日付が指定されている場合、その日付を使用
-        // YYYYMMDD フォーマットをパースして Date オブジェクトを作成
-        currentDate = parseYYYYMMDD(testDateStr);
-        if (!currentDate) {
-            throw new Error('Invalid TEST_DATE format. Expected YYYYMMDD.');
-        }
-    } else {
-        // 指定がない場合は現在の日付を使用
-        currentDate = new Date();
-    }
+    // テスト日付が有効ならそれを使用し、無効または空なら現在日付を使用
+    currentDate = parsedTestDate || new Date();
     var year = currentDate.getFullYear();
     var month = currentDate.getMonth(); // 0-based
 
