@@ -37,6 +37,9 @@ function calculateMonthlySummary(action) {
     });
 
     // デバッグ出力（先頭数件のみを確認用に出力）
+    Logger.log("【MonthlySummary Debug】Target sheet: 🐖 家計簿");
+    Logger.log("【MonthlySummary Debug】Expenses range: rows 35-185, cols " + getColumnsForMonth(month).dateCol + "-" + (getColumnsForMonth(month).dateCol + 3));
+    Logger.log("【MonthlySummary Debug】Income range: rows 22-33, cols " + getColumnsForMonth(month).dateCol + "-" + (getColumnsForMonth(month).dateCol + 3));
     Logger.log("【MonthlySummary Debug】Expenses (sample):");
     expenseEntries.slice(0, 5).forEach(function (entry, idx) {
         Logger.log("  Expense[" + idx + "] " + formatDate(entry.date) + " " + (entry.category || "未分類") + " " + entry.name + " " + entry.amount);
