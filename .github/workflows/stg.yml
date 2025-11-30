@@ -59,10 +59,12 @@ jobs:
             - name: メール送信先の変数置換
               run: |
                   sed -i 's/TARGET_EMAIL_ADDRESS/'"${TARGET_EMAIL_ADDRESS}"'/g' scripts/sendSummaryMail.js
+                  sed -i 's/TARGET_EMAIL_ADDRESS/'"${TARGET_EMAIL_ADDRESS}"'/g' scripts/sendMonthlySummaryMail.js
 
-            - name: TEST_DATE_PLACEHOLDER の置換(sendSummaryMail.js)
+            - name: TEST_DATE_PLACEHOLDER の置換(sendSummaryMail.js, sendMonthlySummaryMail.js)
               run: |
                   sed -i 's/"TEST_DATE_PLACEHOLDER"/"${{ env.TEST_DATE }}"/g' scripts/sendSummaryMail.js
+                  sed -i 's/"TEST_DATE_PLACEHOLDER"/"${{ env.TEST_DATE }}"/g' scripts/sendMonthlySummaryMail.js
 
             - name: TEST_DATE_PLACEHOLDER の置換(addNewExpense.js)
               run: |

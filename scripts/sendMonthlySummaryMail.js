@@ -6,7 +6,21 @@ function handleCalculateMonthlySummaryTrigger() {
 // 月次サマリーのメイン処理
 function calculateMonthlySummary(action) {
     var budgetPerWeek = 45000;
-    var currentDate = new Date();
+    var currentDate;
+    var testDateStr = "TEST_DATE_PLACEHOLDER"
+    var isStaging = testDateStr ? true : false
+
+    if (isStaging) {
+        // テスト用の日付が指定されている場合、その日付を使用
+        // YYYYMMDD フォーマットをパースして Date オブジェクトを作成
+        currentDate = parseYYYYMMDD(testDateStr);
+        if (!currentDate) {
+            throw new Error('Invalid TEST_DATE format. Expected YYYYMMDD.');
+        }
+    } else {
+        // 指定がない場合は現在の日付を使用
+        currentDate = new Date();
+    }
     var year = currentDate.getFullYear();
     var month = currentDate.getMonth(); // 0-based
 
@@ -68,6 +82,17 @@ function calculateMonthlySummary(action) {
     }
     MailApp.sendEmail("TARGET_EMAIL_ADDRESS", subject, body);
     return "Successfully sent monthly summary mail";
+}
+
+// YYYYMMDD フォーマットの日付文字列を Date オブジェクトに変換する関数
+function parseYYYYMMDD(dateStr) {
+    if (!/^\d{8}$/.test(dateStr)) {
+        return null;
+    }
+    var year = parseInt(dateStr.substring(0, 4), 10);
+    var month = parseInt(dateStr.substring(4, 6), 10) - 1; // 月は0始まり
+    var day = parseInt(dateStr.substring(6, 8), 10);
+    return new Date(year, month, day);
 }
 
 // 指定月の支出データを取得する
