@@ -21,8 +21,8 @@ LOGIN=$(cat <<-END
             "client_id": "$CLIENT_ID",
             "client_secret": "$CLIENT_SECRET",
             "type": "authorized_user",
-            "refresh_token": "$REFRESH_TOKEN",
-            "access_token": "$ACCESS_TOKEN"
+            "refresh_token": "$REFRESH_TOKEN_DEFAULT",
+            "access_token": "$ACCESS_TOKEN_DEFAULT"
             }
         }
     }
