@@ -259,7 +259,7 @@ function analyzeExpensesWithGemini(dataEntries, totalAmount, adjustedBudget, per
         ];
     }
     var apiVersions = ["v1beta", "v1"];
-    var expenseLines = expenseEntries.map(function (entry) {
+    var expenseLines = dataEntries.map(function (entry) {
         return formatDate(entry.date) + " [" + (entry.category || "未分類") + "] " + entry.name + " " + entry.amount + "円";
     });
 
