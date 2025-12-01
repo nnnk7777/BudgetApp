@@ -260,16 +260,19 @@ function analyzeExpensesWithGemini(dataEntries, totalAmount, adjustedBudget, per
     }
     var apiVersions = ["v1beta", "v1"];
     var expenseLines = dataEntries.map(function (entry) {
-        return formatDate(entry.date) + " " + entry.name + " " + entry.amount + "円";
+        return formatDate(entry.date) + " [" + (entry.category || "未分類") + "] " + entry.name + " " + entry.amount + "円";
     });
 
     var prompt = [
-        "あなたはプロの家計管理アドバイザー兼フィナンシャルプランナーです。金銭感覚の改善を目的としたコーチとして、冷静な分析と、時には優しく、時には厳しく指導してください。単なる分析にとどまらず、「行動に落とし込める改善提案」を重視してください。感情的にならず、客観的かつ現実的な判断で、飴と鞭を使い分けてください。",
-        "1週間は月曜始まり・日曜終わりで考えて、今日までの傾向を数個と、次に意識すべき点を数個、箇条書きでまとめてください。箇条書きは最大3個までにし、それぞれに短い補足を付けてください。Markdown記法は使わず、プレーンな文字と絵文字のみで出力し、全体で400文字以内に収めてください。",
+        "あなたはプロの家計管理アドバイザー兼フィナンシャルプランナーです。金銭感覚の改善を目的としたコーチとして、冷静な分析と、時には優しく、時には厳しく指導してください。私はすでに全ての支出・収入をスプレッドシートに記録しています。単なる分析にとどまらず、「行動に落とし込める改善提案」を重視してください。感情的にならず、客観的かつ現実的な判断で、飴と鞭を使い分けてください。",
+        "1週間は月曜始まり・日曜終わりで考えて、今日までの傾向を数個と、次に意識すべき点を数個、箇条書きでまとめてください。箇条書きは最大5個までにし、それぞれに補足を付けてください。Markdown記法は使わず、プレーンな文字と絵文字のみで出力し、全体で500文字以内に収めてください。",
         "週予算: " + adjustedBudget + "円 / これまでの支出: " + totalAmount + "円 (" + percentage.toFixed(1) + "%)",
-        "支出一覧:",
+        "以下は支出一覧(日付、カテゴリ、名称、金額)です。名称だけで内容が不明瞭な場合はカテゴリから内容を推定してください:",
         expenseLines.join("\n")
     ].join("\n");
+
+    Logger.log("Geminiプロンプト：")
+    Logger.log(prompt)
 
     var payload = {
         contents: [{
