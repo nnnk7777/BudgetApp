@@ -288,7 +288,10 @@ function analyzeMonthlyWithGemini(expenseEntries, categoryTotals, totalExpenses,
         }],
         generationConfig: {
             temperature: 0.4,
-            maxOutputTokens: 768
+            maxOutputTokens: 1000,
+            thinkingConfig: {
+                thinkingBudget: 250
+            }
         }
     };
 

@@ -284,7 +284,10 @@ function analyzeExpensesWithGemini(dataEntries, totalAmount, adjustedBudget, per
         }],
         generationConfig: {
             temperature: 0.4,
-            maxOutputTokens: 512
+            maxOutputTokens: 1000,
+            thinkingConfig: {
+                thinkingBudget: 250
+            }
         }
     };
 
