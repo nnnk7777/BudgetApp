@@ -357,13 +357,14 @@ function getPlannedExpensesInRange(startDate, endDate) {
     );
 
     events.forEach(function (event) {
+        var title = event.getTitle() || "予定";
         var description = sanitizePlannedExpenseMemo(event.getDescription() || "");
-        if (!hasPlannedExpenseMemo(description)) {
+        if (!hasPlannedExpenseMemo(description, title)) {
             return;
         }
 
         plannedExpenses.push({
-            title: event.getTitle() || "予定",
+            title: title,
             date: event.getStartTime(),
             memo: description
         });
@@ -482,11 +483,21 @@ function cleanPlannedExpenseMemosWithGemini(plannedExpenses) {
     return cleanedExpenses;
 }
 
-function hasPlannedExpenseMemo(text) {
-    if (!text) {
+function hasPlannedExpenseMemo(text, title) {
+    var combined = [title || "", text || ""].join(" ").trim();
+    if (!combined) {
         return false;
     }
-    return /予定/.test(text);
+
+    if (/予定/.test(combined)) {
+        return true;
+    }
+
+    if (/[¥￥]/.test(combined) || /\d[\d,]*\s*円/.test(combined)) {
+        return true;
+    }
+
+    return /(交通費|食費|外食|買い物|ランチ|ディナー|飲み|会費|チケット|ホテル|宿|タクシー|電車|バス|飛行機)/.test(combined);
 }
 
 function sanitizePlannedExpenseMemo(text) {
