@@ -283,6 +283,41 @@ function calculateTotalAmount(dataEntries) {
     return total;
 }
 
+function calculateCategoryTotals(dataEntries) {
+    var totals = {};
+    dataEntries.forEach(function (entry) {
+        var key = entry.category || "未分類";
+        var amount = parseFloat(entry.amount);
+        if (isNaN(amount)) {
+            return;
+        }
+        if (!totals[key]) {
+            totals[key] = 0;
+        }
+        totals[key] += amount;
+    });
+    return totals;
+}
+
+function getCategoryRankingLines(dataEntries) {
+    var categoryTotals = calculateCategoryTotals(dataEntries);
+    return Object.keys(categoryTotals)
+        .sort(function (a, b) {
+            return categoryTotals[b] - categoryTotals[a];
+        })
+        .map(function (category, index) {
+            return (
+                "・" +
+                (index + 1) +
+                "位 " +
+                category +
+                ": " +
+                categoryTotals[category] +
+                "円"
+            );
+        });
+}
+
 // Gemini に支出傾向の簡易分析を依頼するメソッド
 function analyzeExpensesWithGemini(dataEntries, totalAmount, adjustedBudget, percentage, baseDate) {
     var apiKey = getGeminiApiKey();
@@ -296,6 +331,7 @@ function analyzeExpensesWithGemini(dataEntries, totalAmount, adjustedBudget, per
     var upcomingExpenseLines = upcomingPlannedExpenses.map(function (entry) {
         return formatDate(entry.date) + " [" + entry.title + "] " + entry.memo;
     });
+    var categoryRankingLines = getCategoryRankingLines(dataEntries);
 
     var prompt = [
         "あなたはプロの家計管理アドバイザーです。挨拶や自己紹介は禁止です。金銭感覚の改善を目的としたコーチとして、冷静な分析と、時には優しく、時には厳しく指導してください。1週間分の支出について、予算を超えないようアドバイスをください。カジュアルな敬語て対応してください。",
@@ -304,6 +340,7 @@ function analyzeExpensesWithGemini(dataEntries, totalAmount, adjustedBudget, per
         "Googleカレンダーの今後の予定メモに書かれた支出予定も考慮して助言してください。近いうちに大きな支出予定があるなら、今週の節約を強めに促してください。",
         "1週間は月曜始まり・日曜終わりで考えて、今日までの傾向を数個と、次に意識すべき点を数個、箇条書きでまとめてください。箇条書きは最大5個までにし、それぞれに補足を付けてください。Markdown記法は使わず、プレーンな文字と絵文字のみで出力し、全体で500文字以内に収めてください。",
         "週予算: " + adjustedBudget + "円 / これまでの支出: " + totalAmount + "円 (" + percentage.toFixed(1) + "%)",
+        "カテゴリ別支出ランキング: " + (categoryRankingLines.length ? categoryRankingLines.join(" / ") : "なし"),
         "今後の予定メモ: " + (upcomingExpenseLines.length ? upcomingExpenseLines.join(" / ") : "なし"),
         "以下は支出一覧(日付、カテゴリ、名称、金額)です。名称だけで内容が不明瞭な場合はカテゴリから内容を推定してください:",
         expenseLines.join("\n")
@@ -331,7 +368,10 @@ function getUpcomingPlannedExpenses(baseDate) {
 
 function getPlannedExpensesForCurrentWeek(baseDate) {
     var range = getWeekRange(baseDate);
-    return getPlannedExpensesInRange(range.startDate, range.endDate);
+    var startDate = new Date(baseDate.getFullYear(), baseDate.getMonth(), baseDate.getDate());
+    var endDateExclusive = new Date(range.endDate);
+    endDateExclusive.setDate(endDateExclusive.getDate() + 1);
+    return getPlannedExpensesInRange(startDate, endDateExclusive);
 }
 
 function getPlannedExpensesInRange(startDate, endDate) {
@@ -690,6 +730,7 @@ function sendWeeklySummaryEmail(dateRangeStr, totalAmount, dataEntries, differen
     var projectedPercentage = adjustedBudget
         ? (((totalAmount + plannedExpenseTotal) / adjustedBudget) * 100).toFixed(2)
         : "0.00";
+    var categoryRankingLines = getCategoryRankingLines(dataEntries);
 
     // トップ5の支出を計算
     var top5Entries = dataEntries.slice(); // 配列をコピー
@@ -712,6 +753,15 @@ function sendWeeklySummaryEmail(dateRangeStr, totalAmount, dataEntries, differen
     body += "（設定予算：" + adjustedBudget + "円）\n";
     body += "++++++++++++++++++++++++++++++++++++\n";
     body += "* 予算差分：" + differenceSign + differenceAbs + "円\n\n";
+    body += "◆ カテゴリ別支出ランキング\n";
+    if (categoryRankingLines.length) {
+        categoryRankingLines.forEach(function (line) {
+            body += line + "\n";
+        });
+    } else {
+        body += "・なし\n";
+    }
+    body += "\n";
     body += "◆ 支出TOP5\n";
     top5Entries.forEach(function (entry) {
         body += "・" + formatDate(entry.date) + " - " + entry.name + ": " + entry.amount + "円\n";
@@ -780,6 +830,7 @@ function sendDailyProgressEmail(currentDate, datesInWeek, adjustedBudget, isStag
     var projectedPercentage = adjustedBudget
         ? (((totalAmount + plannedExpenseTotal) / adjustedBudget) * 100).toFixed(2)
         : "0.00";
+    var categoryRankingLines = getCategoryRankingLines(dataEntries);
 
     // Gemini分析
     var geminiAnalysis = analyzeExpensesWithGemini(dataEntries, totalAmount, adjustedBudget, percentage, currentDate);
@@ -798,6 +849,16 @@ function sendDailyProgressEmail(currentDate, datesInWeek, adjustedBudget, isStag
     body += "・合計見込み: " + projectedPercentage + "%\n";
     body += "（設定予算：" + adjustedBudget + "円）\n";
     body += "++++++++++++++++++++++++++++++++++++\n\n";
+
+    body += "◆ カテゴリ別支出ランキング\n";
+    if (categoryRankingLines.length) {
+        categoryRankingLines.forEach(function (line) {
+            body += line + "\n";
+        });
+    } else {
+        body += "・なし\n";
+    }
+    body += "\n";
 
     body += "詳細:\n";
     dataEntries.forEach(function (entry) {
