@@ -5,6 +5,7 @@ import { OutcomeCategoryList } from "./outcomeCategoryList";
 
 export class OutcomeData extends MonthlyDataBase {
     private outcomeDetailRowCount: number;
+    private styleReapplyRowCount: number;
     private initialColumnNumber: number;
     private initialRowNumber: number;
     private initialCalcRowNumber: number;
@@ -22,6 +23,7 @@ export class OutcomeData extends MonthlyDataBase {
         this.initialColumnNumber = initialColumnNumber;
         this.calcColumnNumber = initialColumnNumber + 3;
         this.outcomeDetailRowCount = 150;
+        this.styleReapplyRowCount = 300 - this.initialCalcRowNumber + 1;
         this.outcomeCategoryList = new OutcomeCategoryList();
 
         this.init();
@@ -64,7 +66,7 @@ export class OutcomeData extends MonthlyDataBase {
         let categoryLabelRange = this.sheet.getRange(
             this.initialRowNumber + 1,
             this.initialColumnNumber + 1,
-            this.outcomeDetailRowCount,
+            this.styleReapplyRowCount,
             1
         );
         categoryLabelRange.setDataValidation(rule).setFontSize(8);
@@ -73,7 +75,7 @@ export class OutcomeData extends MonthlyDataBase {
         this.setMoneyRangeBackgroundColor(
             this.initialColumnNumber + 3,
             this.initialRowNumber + 1,
-            this.outcomeDetailRowCount
+            this.styleReapplyRowCount
         );
 
         // ラベルによって背景色が変わるように設定
@@ -81,7 +83,7 @@ export class OutcomeData extends MonthlyDataBase {
             this.outcomeCategoryList,
             this.initialColumnNumber + 1,
             this.initialRowNumber + 1,
-            this.outcomeDetailRowCount
+            this.styleReapplyRowCount
         );
     }
 
