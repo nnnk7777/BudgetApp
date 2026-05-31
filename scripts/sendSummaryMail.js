@@ -64,7 +64,7 @@ function calculateExpensesSummary(action) {
 
     if (dayOfWeek === 0) {
         // 日曜日の場合、週次サマリーを送信
-        return sendWeeklySummaryEmail(dateRangeStr, totalAmount, dataEntries, difference, percentage, adjustedBudget, isStaging, action);
+        return sendWeeklySummaryEmail(dateRangeStr, totalAmount, dataEntries, difference, percentage, adjustedBudget, isStaging, action, currentDate);
     } else {
         // 日曜日以外の場合、週の開始から現在までのデータを取得し、メールで送信
         return sendDailyProgressEmail(currentDate, datesInWeek, adjustedBudget, isStaging, action);
@@ -231,7 +231,7 @@ function calculateTotalAmount(dataEntries) {
 }
 
 // Gemini に支出傾向の簡易分析を依頼するメソッド
-function analyzeExpensesWithGemini(dataEntries, totalAmount, adjustedBudget, percentage) {
+function analyzeExpensesWithGemini(dataEntries, totalAmount, adjustedBudget, percentage, baseDate) {
     var apiKey = PropertiesService.getScriptProperties().getProperty("GEMINI_API_KEY");
     if (!apiKey) {
         Logger.log("Gemini API key is not set in script properties.");
@@ -262,13 +262,19 @@ function analyzeExpensesWithGemini(dataEntries, totalAmount, adjustedBudget, per
     var expenseLines = dataEntries.map(function (entry) {
         return formatDate(entry.date) + " [" + (entry.category || "未分類") + "] " + entry.name + " " + entry.amount + "円";
     });
+    var upcomingPlannedExpenses = getUpcomingPlannedExpenses(baseDate);
+    var upcomingExpenseLines = upcomingPlannedExpenses.map(function (entry) {
+        return formatDate(entry.date) + " [" + entry.title + "] " + entry.amount + "円";
+    });
 
     var prompt = [
         "あなたはプロの家計管理アドバイザーです。挨拶や自己紹介は禁止です。金銭感覚の改善を目的としたコーチとして、冷静な分析と、時には優しく、時には厳しく指導してください。1週間分の支出について、予算を超えないようアドバイスをください。カジュアルな敬語て対応してください。",
         "レシートは保管していませんが、代わりに全ての支出・収入をスプレッドシートに記録しています。単なる分析にとどまらず、「行動に落とし込める改善提案」を重視してください。感情的にならず、客観的かつ現実的な判断で、飴と鞭を使い分けてください。",
         "通勤時（勤務地：永田町）の通勤定期はありませんが、給与で補填されます。食事はスーパーでまとめ買いした上でほぼ自炊しており、外食は友人と会う時が多いです。",
+        "Googleカレンダーの今後の予定に想定支出がある場合は、それも考慮して助言してください。近いうちに大きな支出予定があるなら、今週の節約を強めに促してください。",
         "1週間は月曜始まり・日曜終わりで考えて、今日までの傾向を数個と、次に意識すべき点を数個、箇条書きでまとめてください。箇条書きは最大5個までにし、それぞれに補足を付けてください。Markdown記法は使わず、プレーンな文字と絵文字のみで出力し、全体で500文字以内に収めてください。",
         "週予算: " + adjustedBudget + "円 / これまでの支出: " + totalAmount + "円 (" + percentage.toFixed(1) + "%)",
+        "今後の予定支出: " + (upcomingExpenseLines.length ? upcomingExpenseLines.join(", ") : "なし"),
         "以下は支出一覧(日付、カテゴリ、名称、金額)です。名称だけで内容が不明瞭な場合はカテゴリから内容を推定してください:",
         expenseLines.join("\n")
     ].join("\n");
@@ -328,6 +334,111 @@ function analyzeExpensesWithGemini(dataEntries, totalAmount, adjustedBudget, per
     return null;
 }
 
+function getUpcomingPlannedExpenses(baseDate) {
+    if (typeof CalendarApp === 'undefined') {
+        return [];
+    }
+
+    var calendar = getTargetCalendar();
+    if (!calendar) {
+        return [];
+    }
+
+    var startDate = new Date(baseDate.getFullYear(), baseDate.getMonth(), baseDate.getDate());
+    var lookaheadDays = getUpcomingExpenseLookaheadDays();
+    var endDate = new Date(startDate);
+    endDate.setDate(endDate.getDate() + lookaheadDays);
+
+    var events = calendar.getEvents(startDate, endDate);
+    var plannedExpenses = [];
+
+    events.forEach(function (event) {
+        var description = event.getDescription() || "";
+        var amount = extractPlannedExpenseAmount(description);
+        if (amount === null) {
+            return;
+        }
+
+        plannedExpenses.push({
+            title: event.getTitle() || "予定",
+            date: event.getStartTime(),
+            amount: amount
+        });
+    });
+
+    plannedExpenses.sort(function (a, b) {
+        return a.date.getTime() - b.date.getTime();
+    });
+
+    return plannedExpenses;
+}
+
+function formatUpcomingPlannedExpenseLines(plannedExpenses) {
+    return plannedExpenses.map(function (entry) {
+        return "・" + formatDate(entry.date) + " - " + entry.title + ": " + entry.amount + "円";
+    });
+}
+
+function getTargetCalendar() {
+    try {
+        var calendarId = PropertiesService.getScriptProperties().getProperty("CALENDAR_ID");
+        if (calendarId) {
+            return CalendarApp.getCalendarById(calendarId);
+        }
+        return CalendarApp.getDefaultCalendar();
+    } catch (error) {
+        Logger.log("Failed to access calendar: " + error);
+        return null;
+    }
+}
+
+function getUpcomingExpenseLookaheadDays() {
+    try {
+        var value = PropertiesService.getScriptProperties().getProperty("UPCOMING_EXPENSE_LOOKAHEAD_DAYS");
+        var parsed = parseInt(value, 10);
+        if (!isNaN(parsed) && parsed > 0) {
+            return parsed;
+        }
+    } catch (error) {
+        Logger.log("Failed to read UPCOMING_EXPENSE_LOOKAHEAD_DAYS: " + error);
+    }
+    return 14;
+}
+
+function extractPlannedExpenseAmount(text) {
+    if (!text) {
+        return null;
+    }
+
+    var normalizedText = normalizeFullWidthNumbers(text);
+    var patterns = [
+        /(?:想定支出|予定支出|支出予定|予算|費用|金額)\s*[:：]?\s*[¥￥]?\s*([0-9,]+)\s*円?/i,
+        /[¥￥]\s*([0-9,]+)\s*円?/i
+    ];
+
+    for (var i = 0; i < patterns.length; i++) {
+        var match = normalizedText.match(patterns[i]);
+        if (!match) {
+            continue;
+        }
+
+        var amount = parseInt(match[1].replace(/,/g, ""), 10);
+        if (!isNaN(amount)) {
+            return amount;
+        }
+    }
+
+    return null;
+}
+
+function normalizeFullWidthNumbers(text) {
+    return text
+        .replace(/[０-９]/g, function (char) {
+            return String.fromCharCode(char.charCodeAt(0) - 0xFEE0);
+        })
+        .replace(/，/g, ",");
+}
+
 // listModels から generateContent 可能なモデル一覧を取得する
 function fetchGenerativeModels(apiKey) {
     try {
@@ -356,8 +467,10 @@ function fetchGenerativeModels(apiKey) {
 }
 
 // 週次サマリーをメールで送信するメソッド（毎週日曜日）
-function sendWeeklySummaryEmail(dateRangeStr, totalAmount, dataEntries, difference, percentage, adjustedBudget, isStaging, action) {
+function sendWeeklySummaryEmail(dateRangeStr, totalAmount, dataEntries, difference, percentage, adjustedBudget, isStaging, action, currentDate) {
     var emailAddress = "TARGET_EMAIL_ADDRESS";
+    var upcomingPlannedExpenses = getUpcomingPlannedExpenses(currentDate);
+    var upcomingExpenseLines = formatUpcomingPlannedExpenseLines(upcomingPlannedExpenses);
 
     // 予算差分の符号を設定
     var differenceSign = difference >= 0 ? "+" : "-";
@@ -391,7 +504,17 @@ function sendWeeklySummaryEmail(dateRangeStr, totalAmount, dataEntries, differen
     });
     body += "\n";
 
-    var geminiAnalysis = analyzeExpensesWithGemini(dataEntries, totalAmount, adjustedBudget, percentage);
+    body += "◆ 直近の予定支出\n";
+    if (upcomingExpenseLines.length) {
+        upcomingExpenseLines.forEach(function (line) {
+            body += line + "\n";
+        });
+    } else {
+        body += "・なし\n";
+    }
+    body += "\n";
+
+    var geminiAnalysis = analyzeExpensesWithGemini(dataEntries, totalAmount, adjustedBudget, percentage, currentDate);
     if (geminiAnalysis) {
         body += "◆ Gemini分析\n" + geminiAnalysis + "\n";
     } else {
@@ -415,6 +538,8 @@ function sendWeeklySummaryEmail(dateRangeStr, totalAmount, dataEntries, differen
 // 日曜日以外に日次進捗をメールで送信するメソッド
 function sendDailyProgressEmail(currentDate, datesInWeek, adjustedBudget, isStaging, action) {
     var emailAddress = "TARGET_EMAIL_ADDRESS";
+    var upcomingPlannedExpenses = getUpcomingPlannedExpenses(currentDate);
+    var upcomingExpenseLines = formatUpcomingPlannedExpenseLines(upcomingPlannedExpenses);
 
     // 週の開始日から現在の日付までのデータを取得
     var datesUpToToday = datesInWeek.filter(function (date) {
@@ -434,7 +559,7 @@ function sendDailyProgressEmail(currentDate, datesInWeek, adjustedBudget, isStag
     var percentage = (totalAmount / adjustedBudget) * 100;
 
     // Gemini分析
-    var geminiAnalysis = analyzeExpensesWithGemini(dataEntries, totalAmount, adjustedBudget, percentage);
+    var geminiAnalysis = analyzeExpensesWithGemini(dataEntries, totalAmount, adjustedBudget, percentage, currentDate);
 
 
     // メールの件名と本文を作成
@@ -448,6 +573,16 @@ function sendDailyProgressEmail(currentDate, datesInWeek, adjustedBudget, isStag
     dataEntries.forEach(function (entry) {
         body += "・" + formatDate(entry.date) + " - " + entry.name + ": " + entry.amount + "円\n";
     });
+    body += "\n";
+
+    body += "◆ 直近の予定支出\n";
+    if (upcomingExpenseLines.length) {
+        upcomingExpenseLines.forEach(function (line) {
+            body += line + "\n";
+        });
+    } else {
+        body += "・なし\n";
+    }
     body += "\n";
 
     if (geminiAnalysis) {
