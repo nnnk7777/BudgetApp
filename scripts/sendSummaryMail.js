@@ -576,6 +576,24 @@ function parsePipeResponse(text) {
         });
 }
 
+function calculatePlannedExpenseTotal(plannedExpenses) {
+    var total = 0;
+
+    plannedExpenses.forEach(function (entry) {
+        var memo = entry.memo || "";
+        var matches = memo.match(/([0-9,]+)\s*円/g) || [];
+
+        matches.forEach(function (match) {
+            var amount = parseInt(match.replace(/[^\d]/g, ""), 10);
+            if (!isNaN(amount)) {
+                total += amount;
+            }
+        });
+    });
+
+    return total;
+}
+
 // listModels から generateContent 可能なモデル一覧を取得する
 function fetchGenerativeModels(apiKey) {
     try {
@@ -608,6 +626,7 @@ function sendWeeklySummaryEmail(dateRangeStr, totalAmount, dataEntries, differen
     var emailAddress = "TARGET_EMAIL_ADDRESS";
     var upcomingPlannedExpenses = getUpcomingPlannedExpenses(currentDate);
     var upcomingExpenseLines = formatUpcomingPlannedExpenseLines(upcomingPlannedExpenses);
+    var plannedExpenseTotal = calculatePlannedExpenseTotal(upcomingPlannedExpenses);
 
     // 予算差分の符号を設定
     var differenceSign = difference >= 0 ? "+" : "-";
@@ -627,6 +646,8 @@ function sendWeeklySummaryEmail(dateRangeStr, totalAmount, dataEntries, differen
     var body = "";
     body += "◆ " + dateRangeStr + " の週次サマリー\n\n";
     body += "合計支出は " + totalAmount + " 円です。\n\n";
+    body += "今後の予定金額は " + plannedExpenseTotal + " 円です。\n";
+    body += "（支出＋予定合計: " + (totalAmount + plannedExpenseTotal) + "円）\n\n";
     body += "* 設定予算： " + adjustedBudget + " 円\n";
     body += "* 予算差分：" + differenceSign + differenceAbs + "円\n";
     body += "* 予算割合：" + percentageStr + "%\n\n";
@@ -677,6 +698,7 @@ function sendDailyProgressEmail(currentDate, datesInWeek, adjustedBudget, isStag
     var emailAddress = "TARGET_EMAIL_ADDRESS";
     var upcomingPlannedExpenses = getUpcomingPlannedExpenses(currentDate);
     var upcomingExpenseLines = formatUpcomingPlannedExpenseLines(upcomingPlannedExpenses);
+    var plannedExpenseTotal = calculatePlannedExpenseTotal(upcomingPlannedExpenses);
 
     // 週の開始日から現在の日付までのデータを取得
     var datesUpToToday = datesInWeek.filter(function (date) {
@@ -703,6 +725,8 @@ function sendDailyProgressEmail(currentDate, datesInWeek, adjustedBudget, isStag
     var subject = (isStaging ? "<test>" : "")
         + "家計簿日次レポート（" + formatDate(currentDate) + "）";
     var body = formatDate(datesInWeek[0]) + " から " + formatDate(currentDate) + " までの合計支出は " + totalAmount + " 円です。\n";
+    body += "今後の予定金額は " + plannedExpenseTotal + " 円です。\n";
+    body += "（支出＋予定合計: " + (totalAmount + plannedExpenseTotal) + "円）\n";
     body += "予算の " + percentage.toFixed(2) + "% を使用しました。\n";
     body += "（設定予算：" + adjustedBudget + "円）\n\n";
 
