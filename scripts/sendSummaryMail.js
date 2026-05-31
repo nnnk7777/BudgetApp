@@ -124,78 +124,79 @@ function getDataForDates(dates) {
         throw new Error('シート「🐖 家計簿」が見つかりません。');
     }
     var startRow = 35; // データが開始する行
-
-    var lastRow = sheet.getLastRow();
-    var numRows = lastRow - startRow + 1;
+    var endRow = 184; // 支出明細の終端行
 
     var dataEntries = [];
-    var dateColumnCache = {}; // 月ごとの列情報をキャッシュ
+    var targetDateKeys = dates.map(function (date) {
+        return toMonthDayKey(date);
+    });
+    var targetDateKeySet = {};
+    targetDateKeys.forEach(function (key) {
+        targetDateKeySet[key] = true;
+    });
 
-    // 各日付ごとに処理
+    Logger.log("集計対象日: " + targetDateKeys.join(", "));
+
+    var processedMonths = {};
+
     dates.forEach(function (date) {
         var year = date.getFullYear();
         var month = date.getMonth(); // 0始まりの月（0が1月）
-        var day = date.getDate();
-
-        // 日付に対応する列を取得
-        var columns;
-        if (dateColumnCache[month]) {
-            columns = dateColumnCache[month];
-        } else {
-            columns = getColumnsForMonth(month);
-            dateColumnCache[month] = columns;
+        if (processedMonths[month]) {
+            return;
         }
+        processedMonths[month] = true;
 
-        var dateCol = columns.dateCol;
-        var amountCol = columns.amountCol;
-
-        // その月のデータを取得
-        var dataRange = sheet.getRange(startRow, dateCol, numRows, 4);
+        var columns = getColumnsForMonth(month);
+        var dataRange = sheet.getRange(
+            startRow,
+            columns.dateCol,
+            endRow - startRow + 1,
+            4
+        );
         var data = dataRange.getValues();
+        var currentDateKey = null;
+        var matchedCount = 0;
 
-        var currentDate = null;
-
-        // 各行のデータを処理
         for (var i = 0; i < data.length; i++) {
             var row = data[i];
-
-            // 行が空白行かどうかをチェック
-            var isEmptyRow = row.every(function (cell) {
-                return cell === null || cell.toString().trim() === '';
-            });
-
-            // 空白行が検出されたらループを終了
-            if (isEmptyRow) {
-                break;
-            }
-
             var dateCell = row[0];
             var category = row[1];
             var name = row[2];
             var amount = row[3];
 
-            // 日付が空白でない場合、現在の日付を更新
-            if (dateCell && dateCell.toString().trim() !== '') {
-                // 日付が文字列の場合、Dateオブジェクトに変換
-                if (typeof dateCell === 'string') {
-                    currentDate = parseDate(dateCell, year);
-                } else if (Object.prototype.toString.call(dateCell) === '[object Date]') {
-                    currentDate = new Date(dateCell.getFullYear(), dateCell.getMonth(), dateCell.getDate());
-                } else {
-                    continue; // 日付の形式が不明な場合はスキップ
-                }
+            var hasContent = [dateCell, category, name, amount].some(function (cell) {
+                return cell !== null && cell.toString().trim() !== '';
+            });
+            if (!hasContent) {
+                continue;
             }
 
-            // 現在の日付が対象の日付と一致する場合、データを収集
-            if (currentDate && currentDate.getTime() === date.getTime()) {
+            if (dateCell && dateCell.toString().trim() !== '') {
+                currentDateKey = toMonthDayKey(dateCell);
+            }
+
+            if (currentDateKey && targetDateKeySet[currentDateKey]) {
                 dataEntries.push({
-                    date: currentDate,
+                    date: monthDayKeyToDate(currentDateKey, year),
                     category: category,
                     name: name,
                     amount: amount
                 });
+                matchedCount++;
             }
         }
+
+        Logger.log(
+            "月別読取結果: month=" +
+                (month + 1) +
+                " cols=" +
+                columns.dateCol +
+                "-" +
+                (columns.dateCol + 3) +
+                " matched=" +
+                matchedCount
+        );
     });
 
     return dataEntries;
@@ -216,6 +217,25 @@ function parseDate(dateStr, year) {
     var month = parseInt(dateParts[0], 10) - 1; // 月は0始まり
     var day = parseInt(dateParts[1], 10);
     return new Date(year, month, day);
+}
+
+function toMonthDayKey(value) {
+    if (Object.prototype.toString.call(value) === '[object Date]') {
+        return ('0' + (value.getMonth() + 1)).slice(-2) + '/' + ('0' + value.getDate()).slice(-2);
+    }
+
+    var normalized = normalizeFullWidthNumbers(String(value)).trim().replace(/^'+/, '');
+    var match = normalized.match(/(\d{1,2})\/(\d{1,2})/);
+    if (!match) {
+        return null;
+    }
+
+    return ('0' + parseInt(match[1], 10)).slice(-2) + '/' + ('0' + parseInt(match[2], 10)).slice(-2);
+}
+
+function monthDayKeyToDate(key, year) {
+    var parts = key.split('/');
+    return new Date(year, parseInt(parts[0], 10) - 1, parseInt(parts[1], 10));
 }
 
 // 求めたデータ一覧の金額合計を算出するメソッド
