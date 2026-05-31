@@ -368,7 +368,10 @@ function getUpcomingPlannedExpenses(baseDate) {
 
 function getPlannedExpensesForCurrentWeek(baseDate) {
     var range = getWeekRange(baseDate);
-    return getPlannedExpensesInRange(range.startDate, range.endDate);
+    var startDate = new Date(baseDate.getFullYear(), baseDate.getMonth(), baseDate.getDate());
+    var endDateExclusive = new Date(range.endDate);
+    endDateExclusive.setDate(endDateExclusive.getDate() + 1);
+    return getPlannedExpensesInRange(startDate, endDateExclusive);
 }
 
 function getPlannedExpensesInRange(startDate, endDate) {
