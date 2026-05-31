@@ -634,6 +634,9 @@ function sendWeeklySummaryEmail(dateRangeStr, totalAmount, dataEntries, differen
 
     // 予算割合を小数点以下2桁で表示
     var percentageStr = percentage.toFixed(2);
+    var projectedPercentage = adjustedBudget
+        ? (((totalAmount + plannedExpenseTotal) / adjustedBudget) * 100).toFixed(2)
+        : "0.00";
 
     // トップ5の支出を計算
     var top5Entries = dataEntries.slice(); // 配列をコピー
@@ -645,12 +648,14 @@ function sendWeeklySummaryEmail(dateRangeStr, totalAmount, dataEntries, differen
     // メール本文を指定のフォーマットで作成
     var body = "";
     body += "◆ " + dateRangeStr + " の週次サマリー\n\n";
-    body += "合計支出は " + totalAmount + " 円です。\n\n";
-    body += "今後の予定金額は " + plannedExpenseTotal + " 円です。\n";
-    body += "（支出＋予定合計: " + (totalAmount + plannedExpenseTotal) + "円）\n\n";
-    body += "* 設定予算： " + adjustedBudget + " 円\n";
-    body += "* 予算差分：" + differenceSign + differenceAbs + "円\n";
-    body += "* 予算割合：" + percentageStr + "%\n\n";
+    body += dateRangeStr + " の実支出: " + totalAmount + " 円\n";
+    body += "今後の予定金額: " + plannedExpenseTotal + " 円\n";
+    body += "支出＋予定の合計見込み: " + (totalAmount + plannedExpenseTotal) + " 円\n\n";
+    body += "予算に対して\n";
+    body += "・実支出: " + percentageStr + "%\n";
+    body += "・合計見込み: " + projectedPercentage + "%\n";
+    body += "（設定予算：" + adjustedBudget + "円）\n";
+    body += "* 予算差分：" + differenceSign + differenceAbs + "円\n\n";
     body += "◆ 支出TOP5\n";
     top5Entries.forEach(function (entry) {
         body += "・" + formatDate(entry.date) + " - " + entry.name + ": " + entry.amount + "円\n";
@@ -716,6 +721,9 @@ function sendDailyProgressEmail(currentDate, datesInWeek, adjustedBudget, isStag
 
     // 予算に対する割合を計算
     var percentage = (totalAmount / adjustedBudget) * 100;
+    var projectedPercentage = adjustedBudget
+        ? (((totalAmount + plannedExpenseTotal) / adjustedBudget) * 100).toFixed(2)
+        : "0.00";
 
     // Gemini分析
     var geminiAnalysis = analyzeExpensesWithGemini(dataEntries, totalAmount, adjustedBudget, percentage, currentDate);
@@ -724,10 +732,12 @@ function sendDailyProgressEmail(currentDate, datesInWeek, adjustedBudget, isStag
     // メールの件名と本文を作成
     var subject = (isStaging ? "<test>" : "")
         + "家計簿日次レポート（" + formatDate(currentDate) + "）";
-    var body = formatDate(datesInWeek[0]) + " から " + formatDate(currentDate) + " までの合計支出は " + totalAmount + " 円です。\n";
-    body += "今後の予定金額は " + plannedExpenseTotal + " 円です。\n";
-    body += "（支出＋予定合計: " + (totalAmount + plannedExpenseTotal) + "円）\n";
-    body += "予算の " + percentage.toFixed(2) + "% を使用しました。\n";
+    var body = formatDate(datesInWeek[0]) + " から " + formatDate(currentDate) + " までの実支出: " + totalAmount + " 円\n";
+    body += "今後の予定金額: " + plannedExpenseTotal + " 円\n";
+    body += "支出＋予定の合計見込み: " + (totalAmount + plannedExpenseTotal) + " 円\n\n";
+    body += "予算に対して\n";
+    body += "・実支出: " + percentage.toFixed(2) + "%\n";
+    body += "・合計見込み: " + projectedPercentage + "%\n";
     body += "（設定予算：" + adjustedBudget + "円）\n\n";
 
     body += "詳細:\n";
