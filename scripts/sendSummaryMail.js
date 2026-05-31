@@ -356,6 +356,7 @@ function analyzeExpensesWithGemini(dataEntries, totalAmount, adjustedBudget, per
 
 function getUpcomingPlannedExpenses(baseDate) {
     if (typeof CalendarApp === 'undefined') {
+        Logger.log("CalendarApp is unavailable in this runtime.");
         return [];
     }
 
@@ -371,6 +372,14 @@ function getUpcomingPlannedExpenses(baseDate) {
 
     var events = calendar.getEvents(startDate, endDate);
     var plannedExpenses = [];
+    Logger.log(
+        "予定支出検索: start=" +
+            formatDate(startDate) +
+            " end=" +
+            formatDate(endDate) +
+            " events=" +
+            events.length
+    );
 
     events.forEach(function (event) {
         var description = event.getDescription() || "";
@@ -389,6 +398,8 @@ function getUpcomingPlannedExpenses(baseDate) {
     plannedExpenses.sort(function (a, b) {
         return a.date.getTime() - b.date.getTime();
     });
+
+    Logger.log("予定支出取得件数: " + plannedExpenses.length);
 
     return plannedExpenses;
 }
