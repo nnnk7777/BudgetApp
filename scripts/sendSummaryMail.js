@@ -116,6 +116,14 @@ function getDatesInWeek(date) {
     return dates;
 }
 
+function getWeekRange(date) {
+    var datesInWeek = getDatesInWeek(date);
+    return {
+        startDate: datesInWeek[0],
+        endDate: datesInWeek[datesInWeek.length - 1]
+    };
+}
+
 // その週に含まれる日付内データを一覧で取得するメソッド
 function getDataForDates(dates) {
     var ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -314,6 +322,19 @@ function analyzeExpensesWithGemini(dataEntries, totalAmount, adjustedBudget, per
 }
 
 function getUpcomingPlannedExpenses(baseDate) {
+    var startDate = new Date(baseDate.getFullYear(), baseDate.getMonth(), baseDate.getDate());
+    var lookaheadDays = getUpcomingExpenseLookaheadDays();
+    var endDate = new Date(startDate);
+    endDate.setDate(endDate.getDate() + lookaheadDays);
+    return getPlannedExpensesInRange(startDate, endDate);
+}
+
+function getPlannedExpensesForCurrentWeek(baseDate) {
+    var range = getWeekRange(baseDate);
+    return getPlannedExpensesInRange(range.startDate, range.endDate);
+}
+
+function getPlannedExpensesInRange(startDate, endDate) {
     if (typeof CalendarApp === 'undefined') {
         Logger.log("CalendarApp is unavailable in this runtime.");
         return [];
@@ -323,11 +344,6 @@ function getUpcomingPlannedExpenses(baseDate) {
     if (!calendar) {
         return [];
     }
-
-    var startDate = new Date(baseDate.getFullYear(), baseDate.getMonth(), baseDate.getDate());
-    var lookaheadDays = getUpcomingExpenseLookaheadDays();
-    var endDate = new Date(startDate);
-    endDate.setDate(endDate.getDate() + lookaheadDays);
 
     var events = calendar.getEvents(startDate, endDate);
     var plannedExpenses = [];
@@ -650,7 +666,7 @@ function fetchGenerativeModels(apiKey) {
 // 週次サマリーをメールで送信するメソッド（毎週日曜日）
 function sendWeeklySummaryEmail(dateRangeStr, totalAmount, dataEntries, difference, percentage, adjustedBudget, isStaging, action, currentDate) {
     var emailAddress = "TARGET_EMAIL_ADDRESS";
-    var upcomingPlannedExpenses = getUpcomingPlannedExpenses(currentDate);
+    var upcomingPlannedExpenses = getPlannedExpensesForCurrentWeek(currentDate);
     var upcomingExpenseLines = formatUpcomingPlannedExpenseLines(upcomingPlannedExpenses);
     var plannedExpenseTotal = calculatePlannedExpenseTotal(upcomingPlannedExpenses);
 
@@ -730,7 +746,7 @@ function sendWeeklySummaryEmail(dateRangeStr, totalAmount, dataEntries, differen
 // 日曜日以外に日次進捗をメールで送信するメソッド
 function sendDailyProgressEmail(currentDate, datesInWeek, adjustedBudget, isStaging, action) {
     var emailAddress = "TARGET_EMAIL_ADDRESS";
-    var upcomingPlannedExpenses = getUpcomingPlannedExpenses(currentDate);
+    var upcomingPlannedExpenses = getPlannedExpensesForCurrentWeek(currentDate);
     var upcomingExpenseLines = formatUpcomingPlannedExpenseLines(upcomingPlannedExpenses);
     var plannedExpenseTotal = calculatePlannedExpenseTotal(upcomingPlannedExpenses);
 
