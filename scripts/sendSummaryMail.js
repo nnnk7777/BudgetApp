@@ -64,7 +64,7 @@ function calculateExpensesSummary(action) {
 
     if (dayOfWeek === 0) {
         // 日曜日の場合、週次サマリーを送信
-        return sendWeeklySummaryEmail(dateRangeStr, totalAmount, dataEntries, difference, percentage, adjustedBudget, isStaging, action);
+        return sendWeeklySummaryEmail(dateRangeStr, totalAmount, dataEntries, difference, percentage, adjustedBudget, isStaging, action, currentDate);
     } else {
         // 日曜日以外の場合、週の開始から現在までのデータを取得し、メールで送信
         return sendDailyProgressEmail(currentDate, datesInWeek, adjustedBudget, isStaging, action);
@@ -124,78 +124,86 @@ function getDataForDates(dates) {
         throw new Error('シート「🐖 家計簿」が見つかりません。');
     }
     var startRow = 35; // データが開始する行
-
-    var lastRow = sheet.getLastRow();
-    var numRows = lastRow - startRow + 1;
+    var endRow = 184; // 支出明細の終端行
 
     var dataEntries = [];
-    var dateColumnCache = {}; // 月ごとの列情報をキャッシュ
+    var targetDateKeys = dates.map(function (date) {
+        return toMonthDayKey(date);
+    });
+    var targetDateKeySet = {};
+    targetDateKeys.forEach(function (key) {
+        targetDateKeySet[key] = true;
+    });
 
-    // 各日付ごとに処理
+    Logger.log("集計対象日: " + targetDateKeys.join(", "));
+
+    var processedMonths = {};
+
     dates.forEach(function (date) {
         var year = date.getFullYear();
         var month = date.getMonth(); // 0始まりの月（0が1月）
-        var day = date.getDate();
-
-        // 日付に対応する列を取得
-        var columns;
-        if (dateColumnCache[month]) {
-            columns = dateColumnCache[month];
-        } else {
-            columns = getColumnsForMonth(month);
-            dateColumnCache[month] = columns;
+        if (processedMonths[month]) {
+            return;
         }
+        processedMonths[month] = true;
 
-        var dateCol = columns.dateCol;
-        var amountCol = columns.amountCol;
-
-        // その月のデータを取得
-        var dataRange = sheet.getRange(startRow, dateCol, numRows, 4);
+        var columns = getColumnsForMonth(month);
+        var dataRange = sheet.getRange(
+            startRow,
+            columns.dateCol,
+            endRow - startRow + 1,
+            4
+        );
         var data = dataRange.getValues();
+        var currentDateKey = null;
+        var matchedCount = 0;
 
-        var currentDate = null;
-
-        // 各行のデータを処理
         for (var i = 0; i < data.length; i++) {
             var row = data[i];
-
-            // 行が空白行かどうかをチェック
-            var isEmptyRow = row.every(function (cell) {
-                return cell === null || cell.toString().trim() === '';
-            });
-
-            // 空白行が検出されたらループを終了
-            if (isEmptyRow) {
-                break;
-            }
-
             var dateCell = row[0];
             var category = row[1];
             var name = row[2];
             var amount = row[3];
 
-            // 日付が空白でない場合、現在の日付を更新
-            if (dateCell && dateCell.toString().trim() !== '') {
-                // 日付が文字列の場合、Dateオブジェクトに変換
-                if (typeof dateCell === 'string') {
-                    currentDate = parseDate(dateCell, year);
-                } else if (Object.prototype.toString.call(dateCell) === '[object Date]') {
-                    currentDate = new Date(dateCell.getFullYear(), dateCell.getMonth(), dateCell.getDate());
-                } else {
-                    continue; // 日付の形式が不明な場合はスキップ
-                }
+            var hasContent = [dateCell, category, name, amount].some(function (cell) {
+                return cell !== null && cell.toString().trim() !== '';
+            });
+            if (!hasContent) {
+                continue;
             }
 
-            // 現在の日付が対象の日付と一致する場合、データを収集
-            if (currentDate && currentDate.getTime() === date.getTime()) {
+            if (dateCell && dateCell.toString().trim() !== '') {
+                currentDateKey = toMonthDayKey(dateCell);
+            }
+
+            if (currentDateKey && targetDateKeySet[currentDateKey]) {
+                var hasEntryContent =
+                    (name !== null && String(name).trim() !== '') ||
+                    (amount !== null && String(amount).trim() !== '');
+                if (!hasEntryContent) {
+                    continue;
+                }
+
                 dataEntries.push({
-                    date: currentDate,
+                    date: monthDayKeyToDate(currentDateKey, year),
                     category: category,
                     name: name,
                     amount: amount
                 });
+                matchedCount++;
             }
         }
+
+        Logger.log(
+            "月別読取結果: month=" +
+                (month + 1) +
+                " cols=" +
+                columns.dateCol +
+                "-" +
+                (columns.dateCol + 3) +
+                " matched=" +
+                matchedCount
+        );
     });
 
     return dataEntries;
@@ -218,6 +226,25 @@ function parseDate(dateStr, year) {
     return new Date(year, month, day);
 }
 
+function toMonthDayKey(value) {
+    if (Object.prototype.toString.call(value) === '[object Date]') {
+        return ('0' + (value.getMonth() + 1)).slice(-2) + '/' + ('0' + value.getDate()).slice(-2);
+    }
+
+    var normalized = normalizeFullWidthNumbers(String(value)).trim().replace(/^'+/, '');
+    var match = normalized.match(/(\d{1,2})\/(\d{1,2})/);
+    if (!match) {
+        return null;
+    }
+
+    return ('0' + parseInt(match[1], 10)).slice(-2) + '/' + ('0' + parseInt(match[2], 10)).slice(-2);
+}
+
+function monthDayKeyToDate(key, year) {
+    var parts = key.split('/');
+    return new Date(year, parseInt(parts[0], 10) - 1, parseInt(parts[1], 10));
+}
+
 // 求めたデータ一覧の金額合計を算出するメソッド
 function calculateTotalAmount(dataEntries) {
     var total = 0;
@@ -231,24 +258,239 @@ function calculateTotalAmount(dataEntries) {
 }
 
 // Gemini に支出傾向の簡易分析を依頼するメソッド
-function analyzeExpensesWithGemini(dataEntries, totalAmount, adjustedBudget, percentage) {
+function analyzeExpensesWithGemini(dataEntries, totalAmount, adjustedBudget, percentage, baseDate) {
+    var apiKey = getGeminiApiKey();
+    if (!apiKey) {
+        return null;
+    }
+    var expenseLines = dataEntries.map(function (entry) {
+        return formatDate(entry.date) + " [" + (entry.category || "未分類") + "] " + entry.name + " " + entry.amount + "円";
+    });
+    var upcomingPlannedExpenses = getUpcomingPlannedExpenses(baseDate);
+    var upcomingExpenseLines = upcomingPlannedExpenses.map(function (entry) {
+        return formatDate(entry.date) + " [" + entry.title + "] " + entry.memo;
+    });
+
+    var prompt = [
+        "あなたはプロの家計管理アドバイザーです。挨拶や自己紹介は禁止です。金銭感覚の改善を目的としたコーチとして、冷静な分析と、時には優しく、時には厳しく指導してください。1週間分の支出について、予算を超えないようアドバイスをください。カジュアルな敬語て対応してください。",
+        "レシートは保管していませんが、代わりに全ての支出・収入をスプレッドシートに記録しています。単なる分析にとどまらず、「行動に落とし込める改善提案」を重視してください。感情的にならず、客観的かつ現実的な判断で、飴と鞭を使い分けてください。",
+        "通勤時（勤務地：永田町）の通勤定期はありませんが、給与で補填されます。食事はスーパーでまとめ買いした上でほぼ自炊しており、外食は友人と会う時が多いです。",
+        "Googleカレンダーの今後の予定メモに書かれた支出予定も考慮して助言してください。近いうちに大きな支出予定があるなら、今週の節約を強めに促してください。",
+        "1週間は月曜始まり・日曜終わりで考えて、今日までの傾向を数個と、次に意識すべき点を数個、箇条書きでまとめてください。箇条書きは最大5個までにし、それぞれに補足を付けてください。Markdown記法は使わず、プレーンな文字と絵文字のみで出力し、全体で500文字以内に収めてください。",
+        "週予算: " + adjustedBudget + "円 / これまでの支出: " + totalAmount + "円 (" + percentage.toFixed(1) + "%)",
+        "今後の予定メモ: " + (upcomingExpenseLines.length ? upcomingExpenseLines.join(" / ") : "なし"),
+        "以下は支出一覧(日付、カテゴリ、名称、金額)です。名称だけで内容が不明瞭な場合はカテゴリから内容を推定してください:",
+        expenseLines.join("\n")
+    ].join("\n");
+
+    Logger.log("Geminiプロンプト：")
+    Logger.log(prompt)
+
+    return generateGeminiText(apiKey, prompt, {
+        temperature: 0.4,
+        maxOutputTokens: 1000,
+        thinkingConfig: {
+            thinkingBudget: 400
+        }
+    });
+}
+
+function getUpcomingPlannedExpenses(baseDate) {
+    if (typeof CalendarApp === 'undefined') {
+        Logger.log("CalendarApp is unavailable in this runtime.");
+        return [];
+    }
+
+    var calendar = getTargetCalendar();
+    if (!calendar) {
+        return [];
+    }
+
+    var startDate = new Date(baseDate.getFullYear(), baseDate.getMonth(), baseDate.getDate());
+    var lookaheadDays = getUpcomingExpenseLookaheadDays();
+    var endDate = new Date(startDate);
+    endDate.setDate(endDate.getDate() + lookaheadDays);
+
+    var events = calendar.getEvents(startDate, endDate);
+    var plannedExpenses = [];
+    Logger.log(
+        "予定支出検索: start=" +
+            formatDate(startDate) +
+            " end=" +
+            formatDate(endDate) +
+            " events=" +
+            events.length
+    );
+
+    events.forEach(function (event) {
+        var description = sanitizePlannedExpenseMemo(event.getDescription() || "");
+        if (!hasPlannedExpenseMemo(description)) {
+            return;
+        }
+
+        plannedExpenses.push({
+            title: event.getTitle() || "予定",
+            date: event.getStartTime(),
+            memo: description
+        });
+    });
+
+    plannedExpenses = cleanPlannedExpenseMemosWithGemini(plannedExpenses);
+
+    plannedExpenses.sort(function (a, b) {
+        return a.date.getTime() - b.date.getTime();
+    });
+
+    Logger.log("予定支出取得件数: " + plannedExpenses.length);
+
+    return plannedExpenses;
+}
+
+function formatUpcomingPlannedExpenseLines(plannedExpenses) {
+    return plannedExpenses.map(function (entry) {
+        return "・" + formatDate(entry.date) + " - " + entry.title + ": " + entry.memo;
+    });
+}
+
+function getTargetCalendar() {
+    try {
+        var calendarId = PropertiesService.getScriptProperties().getProperty("CALENDAR_ID");
+        if (calendarId) {
+            return CalendarApp.getCalendarById(calendarId);
+        }
+        return CalendarApp.getDefaultCalendar();
+    } catch (error) {
+        Logger.log("Failed to access calendar: " + error);
+        return null;
+    }
+}
+
+function getUpcomingExpenseLookaheadDays() {
+    try {
+        var value = PropertiesService.getScriptProperties().getProperty("UPCOMING_EXPENSE_LOOKAHEAD_DAYS");
+        var parsed = parseInt(value, 10);
+        if (!isNaN(parsed) && parsed > 0) {
+            return parsed;
+        }
+    } catch (error) {
+        Logger.log("Failed to read UPCOMING_EXPENSE_LOOKAHEAD_DAYS: " + error);
+    }
+    return 14;
+}
+
+function cleanPlannedExpenseMemosWithGemini(plannedExpenses) {
+    if (!plannedExpenses.length) {
+        return plannedExpenses;
+    }
+
+    var apiKey = getGeminiApiKey();
+    if (!apiKey) {
+        return plannedExpenses;
+    }
+
+    var prompt = [
+        "以下はGoogleカレンダー予定のタイトルとメモです。",
+        "目的は、支出予定として意味のある情報だけを残し、Googleの自動追記やURLや案内文など無関係な文を除去することです。",
+        "各要素について cleanedMemo を返してください。",
+        "ルール:",
+        "- 支出予定として意味がある部分だけ残す",
+        "- URL、Googleの案内文、自動生成の説明、予約メール由来の定型文は削除する",
+        "- 金額がなくても、予定に関係する買い物や外食のメモなら残してよい",
+        "- 予定に関係する情報が何も残らないなら cleanedMemo を空文字にする",
+        "- 出力は各行 `index|cleanedMemo` のみ",
+        "- 説明文、Markdown、コードブロック、jsonという語は出力しない",
+        "- 例: `0|予定：服4000円`",
+        JSON.stringify(plannedExpenses.map(function (entry, index) {
+            return {
+                index: index,
+                title: entry.title,
+                memo: entry.memo
+            };
+        }))
+    ].join("\n");
+
+    var responseText = generateGeminiText(apiKey, prompt, {
+        temperature: 0,
+        maxOutputTokens: 800
+    });
+    if (!responseText) {
+        return plannedExpenses;
+    }
+
+    var cleanedByIndex = {};
+    var parsedLines = parsePipeResponse(responseText);
+    if (!parsedLines.length) {
+        Logger.log("予定メモ整形の行解析に失敗: " + responseText);
+        return plannedExpenses;
+    }
+
+    parsedLines.forEach(function (item) {
+        if (typeof item.index === 'number' && typeof item.cleanedMemo === 'string') {
+            cleanedByIndex[item.index] = item.cleanedMemo.trim();
+        }
+    });
+
+    var cleanedExpenses = plannedExpenses.map(function (entry, index) {
+        var cleanedMemo = cleanedByIndex.hasOwnProperty(index)
+            ? cleanedByIndex[index]
+            : entry.memo;
+
+        return {
+            title: entry.title,
+            date: entry.date,
+            memo: cleanedMemo
+        };
+    }).filter(function (entry) {
+        return entry.memo !== "";
+    });
+
+    Logger.log("予定メモ整形後件数: " + cleanedExpenses.length);
+    return cleanedExpenses;
+}
+
+function hasPlannedExpenseMemo(text) {
+    if (!text) {
+        return false;
+    }
+    return /予定/.test(text);
+}
+
+function sanitizePlannedExpenseMemo(text) {
+    return text
+        .replace(/\r\n/g, "\n")
+        .replace(/\r/g, "\n")
+        .split("\n")
+        .map(function (line) {
+            return line.trim();
+        })
+        .filter(function (line) {
+            return line !== "";
+        })
+        .join(" / ");
+}
+
+function getGeminiApiKey() {
     var apiKey = PropertiesService.getScriptProperties().getProperty("GEMINI_API_KEY");
     if (!apiKey) {
         Logger.log("Gemini API key is not set in script properties.");
         return null;
     }
+    return apiKey;
+}
 
-    // モデルは Script Properties で上書き可能。なければ listModels から generateContent 可能なモデルを自動取得。
+function getGeminiModelsToTry(apiKey) {
     var modelFromProp = PropertiesService.getScriptProperties().getProperty("GEMINI_MODEL");
     if (modelFromProp && modelFromProp.indexOf("models/") === 0) {
         modelFromProp = modelFromProp.replace(/^models\//, "");
     }
+
     var modelsToTry = [];
     if (modelFromProp) {
         modelsToTry.push(modelFromProp);
     } else {
         modelsToTry = modelsToTry.concat(fetchGenerativeModels(apiKey));
     }
+
     if (modelsToTry.length === 0) {
         modelsToTry = [
             "gemini-2.5-flash",
@@ -258,37 +500,20 @@ function analyzeExpensesWithGemini(dataEntries, totalAmount, adjustedBudget, per
             "gemini-1.5-flash"
         ];
     }
+
+    return modelsToTry;
+}
+
+function generateGeminiText(apiKey, prompt, generationConfig) {
+    var modelsToTry = getGeminiModelsToTry(apiKey);
     var apiVersions = ["v1beta", "v1"];
-    var expenseLines = dataEntries.map(function (entry) {
-        return formatDate(entry.date) + " [" + (entry.category || "未分類") + "] " + entry.name + " " + entry.amount + "円";
-    });
-
-    var prompt = [
-        "あなたはプロの家計管理アドバイザーです。挨拶や自己紹介は禁止です。金銭感覚の改善を目的としたコーチとして、冷静な分析と、時には優しく、時には厳しく指導してください。1週間分の支出について、予算を超えないようアドバイスをください。カジュアルな敬語て対応してください。",
-        "レシートは保管していませんが、代わりに全ての支出・収入をスプレッドシートに記録しています。単なる分析にとどまらず、「行動に落とし込める改善提案」を重視してください。感情的にならず、客観的かつ現実的な判断で、飴と鞭を使い分けてください。",
-        "通勤時（勤務地：永田町）の通勤定期はありませんが、給与で補填されます。食事はスーパーでまとめ買いした上でほぼ自炊しており、外食は友人と会う時が多いです。",
-        "1週間は月曜始まり・日曜終わりで考えて、今日までの傾向を数個と、次に意識すべき点を数個、箇条書きでまとめてください。箇条書きは最大5個までにし、それぞれに補足を付けてください。Markdown記法は使わず、プレーンな文字と絵文字のみで出力し、全体で500文字以内に収めてください。",
-        "週予算: " + adjustedBudget + "円 / これまでの支出: " + totalAmount + "円 (" + percentage.toFixed(1) + "%)",
-        "以下は支出一覧(日付、カテゴリ、名称、金額)です。名称だけで内容が不明瞭な場合はカテゴリから内容を推定してください:",
-        expenseLines.join("\n")
-    ].join("\n");
-
-    Logger.log("Geminiプロンプト：")
-    Logger.log(prompt)
-
     var payload = {
         contents: [{
             parts: [{
                 text: prompt
             }]
         }],
-        generationConfig: {
-            temperature: 0.4,
-            maxOutputTokens: 1000,
-            thinkingConfig: {
-                thinkingBudget: 400
-            }
-        }
+        generationConfig: generationConfig
     };
 
     for (var i = 0; i < apiVersions.length; i++) {
@@ -328,6 +553,47 @@ function analyzeExpensesWithGemini(dataEntries, totalAmount, adjustedBudget, per
     return null;
 }
 
+function parsePipeResponse(text) {
+    return text
+        .replace(/```[\s\S]*?\n/g, "")
+        .replace(/```/g, "")
+        .split("\n")
+        .map(function (line) {
+            return line.trim();
+        })
+        .filter(function (line) {
+            return /^\d+\|/.test(line);
+        })
+        .map(function (line) {
+            var separatorIndex = line.indexOf("|");
+            return {
+                index: parseInt(line.substring(0, separatorIndex), 10),
+                cleanedMemo: line.substring(separatorIndex + 1).trim()
+            };
+        })
+        .filter(function (item) {
+            return !isNaN(item.index);
+        });
+}
+
+function calculatePlannedExpenseTotal(plannedExpenses) {
+    var total = 0;
+
+    plannedExpenses.forEach(function (entry) {
+        var memo = entry.memo || "";
+        var matches = memo.match(/([0-9,]+)\s*円/g) || [];
+
+        matches.forEach(function (match) {
+            var amount = parseInt(match.replace(/[^\d]/g, ""), 10);
+            if (!isNaN(amount)) {
+                total += amount;
+            }
+        });
+    });
+
+    return total;
+}
+
 // listModels から generateContent 可能なモデル一覧を取得する
 function fetchGenerativeModels(apiKey) {
     try {
@@ -356,8 +622,11 @@ function fetchGenerativeModels(apiKey) {
 }
 
 // 週次サマリーをメールで送信するメソッド（毎週日曜日）
-function sendWeeklySummaryEmail(dateRangeStr, totalAmount, dataEntries, difference, percentage, adjustedBudget, isStaging, action) {
+function sendWeeklySummaryEmail(dateRangeStr, totalAmount, dataEntries, difference, percentage, adjustedBudget, isStaging, action, currentDate) {
     var emailAddress = "TARGET_EMAIL_ADDRESS";
+    var upcomingPlannedExpenses = getUpcomingPlannedExpenses(currentDate);
+    var upcomingExpenseLines = formatUpcomingPlannedExpenseLines(upcomingPlannedExpenses);
+    var plannedExpenseTotal = calculatePlannedExpenseTotal(upcomingPlannedExpenses);
 
     // 予算差分の符号を設定
     var differenceSign = difference >= 0 ? "+" : "-";
@@ -365,6 +634,9 @@ function sendWeeklySummaryEmail(dateRangeStr, totalAmount, dataEntries, differen
 
     // 予算割合を小数点以下2桁で表示
     var percentageStr = percentage.toFixed(2);
+    var projectedPercentage = adjustedBudget
+        ? (((totalAmount + plannedExpenseTotal) / adjustedBudget) * 100).toFixed(2)
+        : "0.00";
 
     // トップ5の支出を計算
     var top5Entries = dataEntries.slice(); // 配列をコピー
@@ -376,10 +648,17 @@ function sendWeeklySummaryEmail(dateRangeStr, totalAmount, dataEntries, differen
     // メール本文を指定のフォーマットで作成
     var body = "";
     body += "◆ " + dateRangeStr + " の週次サマリー\n\n";
-    body += "合計支出は " + totalAmount + " 円です。\n\n";
-    body += "* 設定予算： " + adjustedBudget + " 円\n";
-    body += "* 予算差分：" + differenceSign + differenceAbs + "円\n";
-    body += "* 予算割合：" + percentageStr + "%\n\n";
+    body += "++++++++++ 💸 予算サマリー 💸 ++++++++++\n";
+    body += dateRangeStr + " の実支出: " + totalAmount + " 円\n";
+    body += "今後の予定金額: " + plannedExpenseTotal + " 円\n";
+    body += "支出＋予定の合計見込み: " + (totalAmount + plannedExpenseTotal) + " 円\n";
+    body += "\n";
+    body += "予算に対して\n";
+    body += "・実支出: " + percentageStr + "%\n";
+    body += "・合計見込み: " + projectedPercentage + "%\n";
+    body += "（設定予算：" + adjustedBudget + "円）\n";
+    body += "++++++++++++++++++++++++++++++++++++\n";
+    body += "* 予算差分：" + differenceSign + differenceAbs + "円\n\n";
     body += "◆ 支出TOP5\n";
     top5Entries.forEach(function (entry) {
         body += "・" + formatDate(entry.date) + " - " + entry.name + ": " + entry.amount + "円\n";
@@ -391,7 +670,17 @@ function sendWeeklySummaryEmail(dateRangeStr, totalAmount, dataEntries, differen
     });
     body += "\n";
 
-    var geminiAnalysis = analyzeExpensesWithGemini(dataEntries, totalAmount, adjustedBudget, percentage);
+    body += "◆ 直近の予定支出\n";
+    if (upcomingExpenseLines.length) {
+        upcomingExpenseLines.forEach(function (line) {
+            body += line + "\n";
+        });
+    } else {
+        body += "・なし\n";
+    }
+    body += "\n";
+
+    var geminiAnalysis = analyzeExpensesWithGemini(dataEntries, totalAmount, adjustedBudget, percentage, currentDate);
     if (geminiAnalysis) {
         body += "◆ Gemini分析\n" + geminiAnalysis + "\n";
     } else {
@@ -415,6 +704,9 @@ function sendWeeklySummaryEmail(dateRangeStr, totalAmount, dataEntries, differen
 // 日曜日以外に日次進捗をメールで送信するメソッド
 function sendDailyProgressEmail(currentDate, datesInWeek, adjustedBudget, isStaging, action) {
     var emailAddress = "TARGET_EMAIL_ADDRESS";
+    var upcomingPlannedExpenses = getUpcomingPlannedExpenses(currentDate);
+    var upcomingExpenseLines = formatUpcomingPlannedExpenseLines(upcomingPlannedExpenses);
+    var plannedExpenseTotal = calculatePlannedExpenseTotal(upcomingPlannedExpenses);
 
     // 週の開始日から現在の日付までのデータを取得
     var datesUpToToday = datesInWeek.filter(function (date) {
@@ -432,22 +724,42 @@ function sendDailyProgressEmail(currentDate, datesInWeek, adjustedBudget, isStag
 
     // 予算に対する割合を計算
     var percentage = (totalAmount / adjustedBudget) * 100;
+    var projectedPercentage = adjustedBudget
+        ? (((totalAmount + plannedExpenseTotal) / adjustedBudget) * 100).toFixed(2)
+        : "0.00";
 
     // Gemini分析
-    var geminiAnalysis = analyzeExpensesWithGemini(dataEntries, totalAmount, adjustedBudget, percentage);
+    var geminiAnalysis = analyzeExpensesWithGemini(dataEntries, totalAmount, adjustedBudget, percentage, currentDate);
 
 
     // メールの件名と本文を作成
     var subject = (isStaging ? "<test>" : "")
         + "家計簿日次レポート（" + formatDate(currentDate) + "）";
-    var body = formatDate(datesInWeek[0]) + " から " + formatDate(currentDate) + " までの合計支出は " + totalAmount + " 円です。\n";
-    body += "予算の " + percentage.toFixed(2) + "% を使用しました。\n";
-    body += "（設定予算：" + adjustedBudget + "円）\n\n";
+    var body = "++++++++++ 💸 予算サマリー 💸 ++++++++++\n";
+    body += formatDate(datesInWeek[0]) + " から " + formatDate(currentDate) + " までの実支出: " + totalAmount + " 円\n";
+    body += "今後の予定金額: " + plannedExpenseTotal + " 円\n";
+    body += "支出＋予定の合計見込み: " + (totalAmount + plannedExpenseTotal) + " 円\n";
+    body += "\n";
+    body += "予算に対して\n";
+    body += "・実支出: " + percentage.toFixed(2) + "%\n";
+    body += "・合計見込み: " + projectedPercentage + "%\n";
+    body += "（設定予算：" + adjustedBudget + "円）\n";
+    body += "++++++++++++++++++++++++++++++++++++\n\n";
 
     body += "詳細:\n";
     dataEntries.forEach(function (entry) {
         body += "・" + formatDate(entry.date) + " - " + entry.name + ": " + entry.amount + "円\n";
     });
+    body += "\n";
+
+    body += "◆ 直近の予定支出\n";
+    if (upcomingExpenseLines.length) {
+        upcomingExpenseLines.forEach(function (line) {
+            body += line + "\n";
+        });
+    } else {
+        body += "・なし\n";
+    }
     body += "\n";
 
     if (geminiAnalysis) {
