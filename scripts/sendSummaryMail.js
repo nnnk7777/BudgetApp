@@ -469,6 +469,14 @@ function sanitizePlannedExpenseMemo(text) {
         .join(" / ");
 }
 
+function normalizeFullWidthNumbers(text) {
+    return text
+        .replace(/[０-９]/g, function (char) {
+            return String.fromCharCode(char.charCodeAt(0) - 0xFEE0);
+        })
+        .replace(/，/g, ",");
+}
+
 function getGeminiApiKey() {
     var apiKey = PropertiesService.getScriptProperties().getProperty("GEMINI_API_KEY");
     if (!apiKey) {
