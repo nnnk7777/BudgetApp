@@ -165,6 +165,16 @@ function getDataForDates(dates) {
             var name = row[2];
             var amount = row[3];
 
+            if (isFixedCostMarker(dateCell)) {
+                Logger.log(
+                    "固定費マーカーを検出したため読取終了: month=" +
+                        (month + 1) +
+                        " row=" +
+                        (startRow + i)
+                );
+                break;
+            }
+
             var hasContent = [dateCell, category, name, amount].some(function (cell) {
                 return cell !== null && cell.toString().trim() !== '';
             });
@@ -224,6 +234,14 @@ function parseDate(dateStr, year) {
     var month = parseInt(dateParts[0], 10) - 1; // 月は0始まり
     var day = parseInt(dateParts[1], 10);
     return new Date(year, month, day);
+}
+
+function isFixedCostMarker(value) {
+    if (value === null || value === undefined) {
+        return false;
+    }
+
+    return String(value).trim() === '固定';
 }
 
 function toMonthDayKey(value) {
