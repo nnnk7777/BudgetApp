@@ -177,6 +177,13 @@ function getDataForDates(dates) {
             }
 
             if (currentDateKey && targetDateKeySet[currentDateKey]) {
+                var hasEntryContent =
+                    (name !== null && String(name).trim() !== '') ||
+                    (amount !== null && String(amount).trim() !== '');
+                if (!hasEntryContent) {
+                    continue;
+                }
+
                 dataEntries.push({
                     date: monthDayKeyToDate(currentDateKey, year),
                     category: category,
@@ -284,17 +291,17 @@ function analyzeExpensesWithGemini(dataEntries, totalAmount, adjustedBudget, per
     });
     var upcomingPlannedExpenses = getUpcomingPlannedExpenses(baseDate);
     var upcomingExpenseLines = upcomingPlannedExpenses.map(function (entry) {
-        return formatDate(entry.date) + " [" + entry.title + "] " + entry.amount + "円";
+        return formatDate(entry.date) + " [" + entry.title + "] " + entry.memo;
     });
 
     var prompt = [
         "あなたはプロの家計管理アドバイザーです。挨拶や自己紹介は禁止です。金銭感覚の改善を目的としたコーチとして、冷静な分析と、時には優しく、時には厳しく指導してください。1週間分の支出について、予算を超えないようアドバイスをください。カジュアルな敬語て対応してください。",
         "レシートは保管していませんが、代わりに全ての支出・収入をスプレッドシートに記録しています。単なる分析にとどまらず、「行動に落とし込める改善提案」を重視してください。感情的にならず、客観的かつ現実的な判断で、飴と鞭を使い分けてください。",
         "通勤時（勤務地：永田町）の通勤定期はありませんが、給与で補填されます。食事はスーパーでまとめ買いした上でほぼ自炊しており、外食は友人と会う時が多いです。",
-        "Googleカレンダーの今後の予定に想定支出がある場合は、それも考慮して助言してください。近いうちに大きな支出予定があるなら、今週の節約を強めに促してください。",
+        "Googleカレンダーの今後の予定メモに書かれた支出予定も考慮して助言してください。近いうちに大きな支出予定があるなら、今週の節約を強めに促してください。",
         "1週間は月曜始まり・日曜終わりで考えて、今日までの傾向を数個と、次に意識すべき点を数個、箇条書きでまとめてください。箇条書きは最大5個までにし、それぞれに補足を付けてください。Markdown記法は使わず、プレーンな文字と絵文字のみで出力し、全体で500文字以内に収めてください。",
         "週予算: " + adjustedBudget + "円 / これまでの支出: " + totalAmount + "円 (" + percentage.toFixed(1) + "%)",
-        "今後の予定支出: " + (upcomingExpenseLines.length ? upcomingExpenseLines.join(", ") : "なし"),
+        "今後の予定メモ: " + (upcomingExpenseLines.length ? upcomingExpenseLines.join(" / ") : "なし"),
         "以下は支出一覧(日付、カテゴリ、名称、金額)です。名称だけで内容が不明瞭な場合はカテゴリから内容を推定してください:",
         expenseLines.join("\n")
     ].join("\n");
@@ -382,16 +389,15 @@ function getUpcomingPlannedExpenses(baseDate) {
     );
 
     events.forEach(function (event) {
-        var description = event.getDescription() || "";
-        var amount = extractPlannedExpenseAmount(description);
-        if (amount === null) {
+        var description = sanitizePlannedExpenseMemo(event.getDescription() || "");
+        if (!hasPlannedExpenseMemo(description)) {
             return;
         }
 
         plannedExpenses.push({
             title: event.getTitle() || "予定",
             date: event.getStartTime(),
-            amount: amount
+            memo: description
         });
     });
 
@@ -406,7 +412,7 @@ function getUpcomingPlannedExpenses(baseDate) {
 
 function formatUpcomingPlannedExpenseLines(plannedExpenses) {
     return plannedExpenses.map(function (entry) {
-        return "・" + formatDate(entry.date) + " - " + entry.title + ": " + entry.amount + "円";
+        return "・" + formatDate(entry.date) + " - " + entry.title + ": " + entry.memo;
     });
 }
 
@@ -436,38 +442,25 @@ function getUpcomingExpenseLookaheadDays() {
     return 14;
 }
 
-function extractPlannedExpenseAmount(text) {
+function hasPlannedExpenseMemo(text) {
     if (!text) {
-        return null;
+        return false;
     }
-
-    var normalizedText = normalizeFullWidthNumbers(text);
-    var patterns = [
-        /(?:想定支出|予定支出|支出予定|予算|費用|金額)\s*[:：]?\s*[¥￥]?\s*([0-9,]+)\s*円?/i,
-        /[¥￥]\s*([0-9,]+)\s*円?/i
-    ];
-
-    for (var i = 0; i < patterns.length; i++) {
-        var match = normalizedText.match(patterns[i]);
-        if (!match) {
-            continue;
-        }
-
-        var amount = parseInt(match[1].replace(/,/g, ""), 10);
-        if (!isNaN(amount)) {
-            return amount;
-        }
-    }
-
-    return null;
+    return /予定/.test(text);
 }
 
-function normalizeFullWidthNumbers(text) {
+function sanitizePlannedExpenseMemo(text) {
     return text
-        .replace(/[０-９]/g, function (char) {
-            return String.fromCharCode(char.charCodeAt(0) - 0xFEE0);
+        .replace(/\r\n/g, "\n")
+        .replace(/\r/g, "\n")
+        .split("\n")
+        .map(function (line) {
+            return line.trim();
         })
-        .replace(/，/g, ",");
+        .filter(function (line) {
+            return line !== "";
+        })
+        .join(" / ");
 }
 
 // listModels から generateContent 可能なモデル一覧を取得する
