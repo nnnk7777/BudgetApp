@@ -259,33 +259,10 @@ function calculateTotalAmount(dataEntries) {
 
 // Gemini に支出傾向の簡易分析を依頼するメソッド
 function analyzeExpensesWithGemini(dataEntries, totalAmount, adjustedBudget, percentage, baseDate) {
-    var apiKey = PropertiesService.getScriptProperties().getProperty("GEMINI_API_KEY");
+    var apiKey = getGeminiApiKey();
     if (!apiKey) {
-        Logger.log("Gemini API key is not set in script properties.");
         return null;
     }
-
-    // モデルは Script Properties で上書き可能。なければ listModels から generateContent 可能なモデルを自動取得。
-    var modelFromProp = PropertiesService.getScriptProperties().getProperty("GEMINI_MODEL");
-    if (modelFromProp && modelFromProp.indexOf("models/") === 0) {
-        modelFromProp = modelFromProp.replace(/^models\//, "");
-    }
-    var modelsToTry = [];
-    if (modelFromProp) {
-        modelsToTry.push(modelFromProp);
-    } else {
-        modelsToTry = modelsToTry.concat(fetchGenerativeModels(apiKey));
-    }
-    if (modelsToTry.length === 0) {
-        modelsToTry = [
-            "gemini-2.5-flash",
-            "gemini-2.5-pro",
-            "gemini-2.5-pro-preview-06-05",
-            "gemini-2.0-flash",
-            "gemini-1.5-flash"
-        ];
-    }
-    var apiVersions = ["v1beta", "v1"];
     var expenseLines = dataEntries.map(function (entry) {
         return formatDate(entry.date) + " [" + (entry.category || "未分類") + "] " + entry.name + " " + entry.amount + "円";
     });
@@ -309,56 +286,13 @@ function analyzeExpensesWithGemini(dataEntries, totalAmount, adjustedBudget, per
     Logger.log("Geminiプロンプト：")
     Logger.log(prompt)
 
-    var payload = {
-        contents: [{
-            parts: [{
-                text: prompt
-            }]
-        }],
-        generationConfig: {
-            temperature: 0.4,
-            maxOutputTokens: 1000,
-            thinkingConfig: {
-                thinkingBudget: 400
-            }
+    return generateGeminiText(apiKey, prompt, {
+        temperature: 0.4,
+        maxOutputTokens: 1000,
+        thinkingConfig: {
+            thinkingBudget: 400
         }
-    };
-
-    for (var i = 0; i < apiVersions.length; i++) {
-        var version = apiVersions[i];
-        for (var j = 0; j < modelsToTry.length; j++) {
-            var model = modelsToTry[j];
-            var url = "https://generativelanguage.googleapis.com/" + version + "/models/" + model + ":generateContent?key=" + apiKey;
-
-            try {
-                var response = UrlFetchApp.fetch(url, {
-                    method: "post",
-                    contentType: "application/json",
-                    payload: JSON.stringify(payload),
-                    muteHttpExceptions: true
-                });
-
-                if (response.getResponseCode() !== 200) {
-                    Logger.log("Gemini request failed (version=" + version + ", model=" + model + "): " + response.getResponseCode() + " " + response.getContentText());
-                    continue;
-                }
-
-                var result = JSON.parse(response.getContentText());
-                if (result && result.candidates && result.candidates.length > 0) {
-                    var parts = result.candidates[0].content && result.candidates[0].content.parts;
-                    if (parts && parts.length > 0) {
-                        return parts.map(function (part) {
-                            return part.text || "";
-                        }).join("").trim();
-                    }
-                }
-            } catch (error) {
-                Logger.log("Gemini request error (version=" + version + ", model=" + model + "): " + error);
-            }
-        }
-    }
-
-    return null;
+    });
 }
 
 function getUpcomingPlannedExpenses(baseDate) {
@@ -401,6 +335,8 @@ function getUpcomingPlannedExpenses(baseDate) {
         });
     });
 
+    plannedExpenses = cleanPlannedExpenseMemosWithGemini(plannedExpenses);
+
     plannedExpenses.sort(function (a, b) {
         return a.date.getTime() - b.date.getTime();
     });
@@ -442,6 +378,74 @@ function getUpcomingExpenseLookaheadDays() {
     return 14;
 }
 
+function cleanPlannedExpenseMemosWithGemini(plannedExpenses) {
+    if (!plannedExpenses.length) {
+        return plannedExpenses;
+    }
+
+    var apiKey = getGeminiApiKey();
+    if (!apiKey) {
+        return plannedExpenses;
+    }
+
+    var prompt = [
+        "以下はGoogleカレンダー予定のタイトルとメモです。",
+        "目的は、支出予定として意味のある情報だけを残し、Googleの自動追記やURLや案内文など無関係な文を除去することです。",
+        "各要素について cleanedMemo を返してください。",
+        "ルール:",
+        "- 支出予定として意味がある部分だけ残す",
+        "- URL、Googleの案内文、自動生成の説明、予約メール由来の定型文は削除する",
+        "- 金額がなくても、予定に関係する買い物や外食のメモなら残してよい",
+        "- 予定に関係する情報が何も残らないなら cleanedMemo を空文字にする",
+        "- 出力はJSON配列のみ。各要素は {\"index\": number, \"cleanedMemo\": string}",
+        JSON.stringify(plannedExpenses.map(function (entry, index) {
+            return {
+                index: index,
+                title: entry.title,
+                memo: entry.memo
+            };
+        }))
+    ].join("\n");
+
+    var responseText = generateGeminiText(apiKey, prompt, {
+        temperature: 0,
+        maxOutputTokens: 800
+    });
+    if (!responseText) {
+        return plannedExpenses;
+    }
+
+    var parsed = parseJsonArrayResponse(responseText);
+    if (!parsed) {
+        Logger.log("予定メモ整形のJSON解析に失敗: " + responseText);
+        return plannedExpenses;
+    }
+
+    var cleanedByIndex = {};
+    parsed.forEach(function (item) {
+        if (typeof item.index === 'number' && typeof item.cleanedMemo === 'string') {
+            cleanedByIndex[item.index] = item.cleanedMemo.trim();
+        }
+    });
+
+    var cleanedExpenses = plannedExpenses.map(function (entry, index) {
+        var cleanedMemo = cleanedByIndex.hasOwnProperty(index)
+            ? cleanedByIndex[index]
+            : entry.memo;
+
+        return {
+            title: entry.title,
+            date: entry.date,
+            memo: cleanedMemo
+        };
+    }).filter(function (entry) {
+        return entry.memo !== "";
+    });
+
+    Logger.log("予定メモ整形後件数: " + cleanedExpenses.length);
+    return cleanedExpenses;
+}
+
 function hasPlannedExpenseMemo(text) {
     if (!text) {
         return false;
@@ -461,6 +465,106 @@ function sanitizePlannedExpenseMemo(text) {
             return line !== "";
         })
         .join(" / ");
+}
+
+function getGeminiApiKey() {
+    var apiKey = PropertiesService.getScriptProperties().getProperty("GEMINI_API_KEY");
+    if (!apiKey) {
+        Logger.log("Gemini API key is not set in script properties.");
+        return null;
+    }
+    return apiKey;
+}
+
+function getGeminiModelsToTry(apiKey) {
+    var modelFromProp = PropertiesService.getScriptProperties().getProperty("GEMINI_MODEL");
+    if (modelFromProp && modelFromProp.indexOf("models/") === 0) {
+        modelFromProp = modelFromProp.replace(/^models\//, "");
+    }
+
+    var modelsToTry = [];
+    if (modelFromProp) {
+        modelsToTry.push(modelFromProp);
+    } else {
+        modelsToTry = modelsToTry.concat(fetchGenerativeModels(apiKey));
+    }
+
+    if (modelsToTry.length === 0) {
+        modelsToTry = [
+            "gemini-2.5-flash",
+            "gemini-2.5-pro",
+            "gemini-2.5-pro-preview-06-05",
+            "gemini-2.0-flash",
+            "gemini-1.5-flash"
+        ];
+    }
+
+    return modelsToTry;
+}
+
+function generateGeminiText(apiKey, prompt, generationConfig) {
+    var modelsToTry = getGeminiModelsToTry(apiKey);
+    var apiVersions = ["v1beta", "v1"];
+    var payload = {
+        contents: [{
+            parts: [{
+                text: prompt
+            }]
+        }],
+        generationConfig: generationConfig
+    };
+
+    for (var i = 0; i < apiVersions.length; i++) {
+        var version = apiVersions[i];
+        for (var j = 0; j < modelsToTry.length; j++) {
+            var model = modelsToTry[j];
+            var url = "https://generativelanguage.googleapis.com/" + version + "/models/" + model + ":generateContent?key=" + apiKey;
+
+            try {
+                var response = UrlFetchApp.fetch(url, {
+                    method: "post",
+                    contentType: "application/json",
+                    payload: JSON.stringify(payload),
+                    muteHttpExceptions: true
+                });
+
+                if (response.getResponseCode() !== 200) {
+                    Logger.log("Gemini request failed (version=" + version + ", model=" + model + "): " + response.getResponseCode() + " " + response.getContentText());
+                    continue;
+                }
+
+                var result = JSON.parse(response.getContentText());
+                if (result && result.candidates && result.candidates.length > 0) {
+                    var parts = result.candidates[0].content && result.candidates[0].content.parts;
+                    if (parts && parts.length > 0) {
+                        return parts.map(function (part) {
+                            return part.text || "";
+                        }).join("").trim();
+                    }
+                }
+            } catch (error) {
+                Logger.log("Gemini request error (version=" + version + ", model=" + model + "): " + error);
+            }
+        }
+    }
+
+    return null;
+}
+
+function parseJsonArrayResponse(text) {
+    try {
+        return JSON.parse(text);
+    } catch (error) {
+        var match = text.match(/\[[\s\S]*\]/);
+        if (!match) {
+            return null;
+        }
+        try {
+            return JSON.parse(match[0]);
+        } catch (nestedError) {
+            return null;
+        }
+    }
 }
 
 // listModels から generateContent 可能なモデル一覧を取得する
