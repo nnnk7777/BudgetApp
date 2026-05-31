@@ -397,7 +397,9 @@ function cleanPlannedExpenseMemosWithGemini(plannedExpenses) {
         "- URL、Googleの案内文、自動生成の説明、予約メール由来の定型文は削除する",
         "- 金額がなくても、予定に関係する買い物や外食のメモなら残してよい",
         "- 予定に関係する情報が何も残らないなら cleanedMemo を空文字にする",
-        "- 出力はJSON配列のみ。各要素は {\"index\": number, \"cleanedMemo\": string}",
+        "- 出力は各行 `index|cleanedMemo` のみ",
+        "- 説明文、Markdown、コードブロック、jsonという語は出力しない",
+        "- 例: `0|予定：服4000円`",
         JSON.stringify(plannedExpenses.map(function (entry, index) {
             return {
                 index: index,
@@ -415,14 +417,14 @@ function cleanPlannedExpenseMemosWithGemini(plannedExpenses) {
         return plannedExpenses;
     }
 
-    var parsed = parseJsonArrayResponse(responseText);
-    if (!parsed) {
-        Logger.log("予定メモ整形のJSON解析に失敗: " + responseText);
+    var cleanedByIndex = {};
+    var parsedLines = parsePipeResponse(responseText);
+    if (!parsedLines.length) {
+        Logger.log("予定メモ整形の行解析に失敗: " + responseText);
         return plannedExpenses;
     }
 
-    var cleanedByIndex = {};
-    parsed.forEach(function (item) {
+    parsedLines.forEach(function (item) {
         if (typeof item.index === 'number' && typeof item.cleanedMemo === 'string') {
             cleanedByIndex[item.index] = item.cleanedMemo.trim();
         }
@@ -551,20 +553,27 @@ function generateGeminiText(apiKey, prompt, generationConfig) {
     return null;
 }
 
-function parseJsonArrayResponse(text) {
-    try {
-        return JSON.parse(text);
-    } catch (error) {
-        var match = text.match(/\[[\s\S]*\]/);
-        if (!match) {
-            return null;
-        }
-        try {
-            return JSON.parse(match[0]);
-        } catch (nestedError) {
-            return null;
-        }
-    }
+function parsePipeResponse(text) {
+    return text
+        .replace(/```[\s\S]*?\n/g, "")
+        .replace(/```/g, "")
+        .split("\n")
+        .map(function (line) {
+            return line.trim();
+        })
+        .filter(function (line) {
+            return /^\d+\|/.test(line);
+        })
+        .map(function (line) {
+            var separatorIndex = line.indexOf("|");
+            return {
+                index: parseInt(line.substring(0, separatorIndex), 10),
+                cleanedMemo: line.substring(separatorIndex + 1).trim()
+            };
+        })
+        .filter(function (item) {
+            return !isNaN(item.index);
+        });
 }
 
 // listModels から generateContent 可能なモデル一覧を取得する
