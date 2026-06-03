@@ -318,6 +318,12 @@ function getCategoryRankingLines(dataEntries) {
         });
 }
 
+function countUncategorizedEntries(dataEntries) {
+    return dataEntries.filter(function (entry) {
+        return !entry.category || String(entry.category).trim() === "";
+    }).length;
+}
+
 // Gemini に支出傾向の簡易分析を依頼するメソッド
 function analyzeExpensesWithGemini(dataEntries, totalAmount, adjustedBudget, percentage, baseDate) {
     var apiKey = getGeminiApiKey();
@@ -831,6 +837,7 @@ function sendDailyProgressEmail(currentDate, datesInWeek, adjustedBudget, isStag
         ? (((totalAmount + plannedExpenseTotal) / adjustedBudget) * 100).toFixed(2)
         : "0.00";
     var categoryRankingLines = getCategoryRankingLines(dataEntries);
+    var uncategorizedCount = countUncategorizedEntries(dataEntries);
 
     // Gemini分析
     var geminiAnalysis = analyzeExpensesWithGemini(dataEntries, totalAmount, adjustedBudget, percentage, currentDate);
@@ -848,6 +855,9 @@ function sendDailyProgressEmail(currentDate, datesInWeek, adjustedBudget, isStag
     body += "・実支出: " + percentage.toFixed(2) + "%\n";
     body += "・合計見込み: " + projectedPercentage + "%\n";
     body += "（設定予算：" + adjustedBudget + "円）\n";
+    if (uncategorizedCount > 0) {
+        body += "・未分類の支出: " + uncategorizedCount + "件\n";
+    }
     body += "++++++++++++++++++++++++++++++++++++\n\n";
 
     body += "◆ カテゴリ別支出ランキング\n";

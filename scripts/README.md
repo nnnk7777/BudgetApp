@@ -22,6 +22,12 @@
 -   `categoreis`アクションによって実行される。
 -   `categories.js`内のデータから名称の一覧を取得する
 
+### [manageUncategorizedExpenses.js](manageUncategorizedExpenses.js)
+
+-   `list_uncategorized`アクションによって未分類支出の一覧を返す。
+-   `autofill_uncategorized`アクションによって、Gemini でカテゴリ候補を推定し、高信頼のものだけ更新する。
+-   推定時の履歴参照は対象月の前月1ヶ月分のみ。1月は履歴なしで推定する。
+
 ## 編集をトリガーとした処理
 
 ### [formatDateAndPriceNumbers.js](formatDateAndPriceNumbers.js)

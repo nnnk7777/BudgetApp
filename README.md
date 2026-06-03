@@ -100,6 +100,9 @@ action に渡せる値は以下のとおりです。
 |  `mail`  | サマリをメールとして送信します           |
 |  `text`  | サマリの文字列をレスポンスとして返します |
 |  `add`   | 支出レコードを追加します                 |
+| `categories` | カテゴリ一覧を返します              |
+| `list_uncategorized` | カテゴリ未設定の支出一覧を返します |
+| `autofill_uncategorized` | Geminiでカテゴリを推定し、高信頼のものだけ自動反映します |
 
 `add`の場合は、以下のような body を渡してください。
 
@@ -110,6 +113,28 @@ action に渡せる値は以下のとおりです。
         "title": "<支出のタイトル>",
         "amount": <支出金額>,
         "category": "<カテゴリー名>"
+    },
+    "hash": "<ハッシュとして利用する値を設定>"
+}
+```
+
+`list_uncategorized` の場合は、以下のような body を渡してください。
+
+```json
+{
+    "action": "list_uncategorized",
+    "hash": "<ハッシュとして利用する値を設定>"
+}
+```
+
+`autofill_uncategorized` の場合は、以下のような body を渡してください。
+
+```json
+{
+    "action": "autofill_uncategorized",
+    "options": {
+        "confidenceThreshold": 0.9,
+        "limit": 20
     },
     "hash": "<ハッシュとして利用する値を設定>"
 }
