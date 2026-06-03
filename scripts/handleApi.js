@@ -2,57 +2,13 @@ function doPost(e) {
     let result = "init";
 
     try {
-        const jsonString = e.postData.contents;
-        const data = JSON.parse(jsonString);
-
-        const hash = data.hash;
-        const action = data.action;
-
-        const scriptHash = PropertiesService.getScriptProperties().getProperty("HASH");
-
-        // 受け取ったハッシュが想定通りの値だった場合、メールサマリ生成を実行
-        if (hash === scriptHash) {
-            switch (action) {
-                case 'text':
-                case 'mail':
-                    result = calculateExpensesSummary(action);
-                    break;
-                case 'add':
-                    const item = data.item;
-                    const title = item.title;
-                    const amount = item.amount;
-                    const category = item.category;
-
-                    result = addExpenseRecord(title, amount, category);
-                    break;
-                case 'categories':
-                    result = fetchCategories();
-                    break;
-                case 'list_uncategorized':
-                    result = listUncategorizedExpenses();
-                    break;
-                case 'autofill_uncategorized':
-                    result = autofillUncategorizedExpenses(data.options || {});
-                    break;
-                default:
-                    throw new Error('actionが定義されていません');
-            }
-        } else {
-            throw new Error('hashが一致しません');
-        }
+        const data = parseApiRequest(e);
+        verifyApiHash(data.hash);
+        result = dispatchApiAction(data);
     } catch (error) {
-        result = JSON.stringify({
-            ok: false,
-            error: error.message
-        });
+        result = buildApiErrorResponse(error);
         Logger.log(error);
     } finally {
-        // レスポンスを作成
-        var output = ContentService.createTextOutput(
-            typeof result === 'string' ? result : JSON.stringify(result)
-        );
-        output.setMimeType(ContentService.MimeType.JSON);
-
-        return output;
+        return buildJsonTextOutput(result);
     }
 }

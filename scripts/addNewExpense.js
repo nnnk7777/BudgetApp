@@ -5,21 +5,8 @@ function addExpenseRecord(title, amount, category) {
         throw new Error('シート「🐖 家計簿」が見つかりません。');
     }
 
-    var currentDate;
-    var testDateStr = "TEST_DATE_PLACEHOLDER"
-    var isStaging = testDateStr ? true : false
-
-    if (isStaging) {
-        // テスト用の日付が指定されている場合はその日付を使用
-        // YYYYMMDD フォーマットをパースして Date オブジェクトを作成
-        currentDate = parseYYYYMMDD(testDateStr);
-        if (!currentDate) {
-            throw new Error('Invalid TEST_DATE format. Expected YYYYMMDD.');
-        }
-    } else {
-        // 指定がない場合は現在の日付を使用
-        currentDate = new Date();
-    }
+    var runtimeContext = getScriptRuntimeContext();
+    var currentDate = runtimeContext.currentDate;
     const year = currentDate.getFullYear();
     const month = currentDate.getMonth(); // 0が1月
     const day = currentDate.getDate();
@@ -116,15 +103,4 @@ function parseDateCell(dateCell, year) {
     } else {
         throw new Error('無効な日付形式です。');
     }
-}
-
-// YYYYMMDD フォーマットの日付文字列を Date オブジェクトに変換する関数
-function parseYYYYMMDD(dateStr) {
-    if (!/^\d{8}$/.test(dateStr)) {
-        return null;
-    }
-    var year = parseInt(dateStr.substring(0, 4), 10);
-    var month = parseInt(dateStr.substring(4, 6), 10) - 1; // 月は0始まり
-    var day = parseInt(dateStr.substring(6, 8), 10);
-    return new Date(year, month, day);
 }
