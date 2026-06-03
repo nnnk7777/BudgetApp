@@ -134,8 +134,11 @@ action に渡せる値は以下のとおりです。
     "action": "autofill_uncategorized",
     "options": {
         "confidenceThreshold": 0.9,
-        "limit": 20
+        "limit": 20,
+        "debug": true
     },
     "hash": "<ハッシュとして利用する値を設定>"
 }
 ```
+
+`debug` を `true` にすると、Gemini の応答解析に失敗した際の詳細情報がレスポンスの `debug` および `skipped[*]` に含まれます。
