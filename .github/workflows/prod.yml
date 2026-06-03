@@ -57,8 +57,7 @@ jobs:
 
             - name: メール送信先の変数置換
               run: |
-                  sed -i 's/TARGET_EMAIL_ADDRESS/'"${TARGET_EMAIL_ADDRESS}"'/g' scripts/formatting/summaryMessageFormatter.js
-                  sed -i 's/TARGET_EMAIL_ADDRESS/'"${TARGET_EMAIL_ADDRESS}"'/g' scripts/formatting/monthlySummaryFormatter.js
+                  sed -i 's/TARGET_EMAIL_ADDRESS/'"${TARGET_EMAIL_ADDRESS}"'/g' scripts/infrastructure/gas/scriptRuntime.js
 
             - name: TEST_DATE_PLACEHOLDER の置換(infrastructure/gas/scriptRuntime.js)
               run: |

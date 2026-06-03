@@ -1,5 +1,5 @@
 function handleWeeklySummaryResult(dateRangeStr, totalAmount, dataEntries, difference, percentage, adjustedBudget, isStaging, action, currentDate) {
-    var emailAddress = "TARGET_EMAIL_ADDRESS";
+    var emailAddress = getTargetEmailAddress();
     var upcomingPlannedExpenses = getPlannedExpensesForCurrentWeek(currentDate);
     var upcomingExpenseLines = formatUpcomingPlannedExpenseLines(upcomingPlannedExpenses);
     var plannedExpenseTotal = calculatePlannedExpenseTotal(upcomingPlannedExpenses);
@@ -74,7 +74,7 @@ function handleWeeklySummaryResult(dateRangeStr, totalAmount, dataEntries, diffe
 }
 
 function handleDailySummaryResult(currentDate, datesInWeek, adjustedBudget, isStaging, action) {
-    var emailAddress = "TARGET_EMAIL_ADDRESS";
+    var emailAddress = getTargetEmailAddress();
     var upcomingPlannedExpenses = getPlannedExpensesForCurrentWeek(currentDate);
     var upcomingExpenseLines = formatUpcomingPlannedExpenseLines(upcomingPlannedExpenses);
     var plannedExpenseTotal = calculatePlannedExpenseTotal(upcomingPlannedExpenses);

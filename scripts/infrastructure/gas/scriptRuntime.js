@@ -20,6 +20,26 @@ function getScriptRuntimeContext() {
     };
 }
 
+function getTargetEmailAddress() {
+    var emailAddress = null;
+
+    if (typeof PropertiesService !== 'undefined') {
+        emailAddress = PropertiesService.getScriptProperties().getProperty("TARGET_EMAIL_ADDRESS");
+    }
+
+    if (!emailAddress) {
+        emailAddress = "TARGET_EMAIL_ADDRESS";
+    }
+
+    emailAddress = String(emailAddress || "").trim();
+
+    if (!emailAddress || emailAddress === "TARGET_EMAIL_ADDRESS") {
+        throw new Error('無効なメール: TARGET_EMAIL_ADDRESS');
+    }
+
+    return emailAddress;
+}
+
 function parseScriptDateYYYYMMDD(dateStr) {
     if (!/^\d{8}$/.test(dateStr)) {
         return null;

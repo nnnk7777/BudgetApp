@@ -59,8 +59,9 @@ function sendMonthlySummaryResult(action, currentDate, isStaging, body) {
         throw new Error('actionはmailのみ対応しています');
     }
 
+    var emailAddress = getTargetEmailAddress();
     var subjectPrefix = isStaging ? "<test>" : "";
     var subject = subjectPrefix + "家計簿月次レポート（" + (currentDate.getMonth() + 1) + "月）";
-    MailApp.sendEmail("TARGET_EMAIL_ADDRESS", subject, body);
+    MailApp.sendEmail(emailAddress, subject, body);
     return "Successfully sent monthly summary mail";
 }
