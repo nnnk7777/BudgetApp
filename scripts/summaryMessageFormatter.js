@@ -81,7 +81,7 @@ function handleDailySummaryResult(currentDate, datesInWeek, adjustedBudget, isSt
     var datesUpToToday = datesInWeek.filter(function (date) {
         return date <= currentDate;
     });
-    var dataEntries = getDataForDates(datesUpToToday).reverse().map(function (entry) {
+    var dataEntries = getExpenseEntriesForDates(datesUpToToday).reverse().map(function (entry) {
         if (entry.name.length >= 16) {
             entry.name = entry.name.substring(0, 14) + "...";
         }
