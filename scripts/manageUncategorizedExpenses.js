@@ -68,6 +68,7 @@ function suggestExpenseCategories(items, options) {
     var groupedItems = groupItemsByMonth(items);
     var suggestions = [];
     var debugEntries = [];
+    var retryMissingIds = options.retryMissingIds !== false;
 
     Object.keys(groupedItems).sort(function (a, b) {
         return parseInt(a, 10) - parseInt(b, 10);
@@ -75,16 +76,13 @@ function suggestExpenseCategories(items, options) {
         var month = parseInt(monthKey, 10);
         var monthItems = groupedItems[monthKey];
         var historyItems = fetchCategoryHistoryForMonth(month);
-        var prompt = buildCategorySuggestionPrompt(monthItems, historyItems, categoryNames);
-        var responseText = generateGeminiText(apiKey, prompt, {
-            temperature: 0.1,
-            maxOutputTokens: 800
-        });
         var monthDebug = {
             month: month,
             itemCount: monthItems.length,
             historyCount: historyItems.length
         };
+        var attemptResult = requestCategorySuggestions(apiKey, monthItems, historyItems, categoryNames, month, options);
+        var responseText = attemptResult.responseText;
 
         if (!responseText) {
             Logger.log("カテゴリ推定のGemini応答が空でした: month=" + month + " itemCount=" + monthItems.length);
@@ -108,15 +106,37 @@ function suggestExpenseCategories(items, options) {
             return;
         }
 
-        var parseResult = parseCategorySuggestionResponse(responseText, monthItems, categoryNames, {
-            month: month,
-            debug: options.debug
-        });
-        var parsedSuggestions = parseResult.suggestions;
+        var parseResult = attemptResult.parseResult;
+        var parsedSuggestions = parseResult.suggestions.slice();
         var suggestionMap = {};
         parsedSuggestions.forEach(function (suggestion) {
             suggestionMap[suggestion.id] = suggestion;
         });
+
+        var missingItems = monthItems.filter(function (item) {
+            return !suggestionMap[item.id];
+        });
+        var retryDebug = null;
+
+        if (retryMissingIds && missingItems.length) {
+            var retryResult = requestCategorySuggestions(apiKey, missingItems, historyItems, categoryNames, month, options);
+            retryDebug = {
+                requestedIds: missingItems.map(function (item) {
+                    return item.id;
+                }),
+                status: retryResult.parseResult.status,
+                responsePreview: retryResult.parseResult.responsePreview,
+                parseError: retryResult.parseResult.parseError || null
+            };
+
+            retryResult.parseResult.suggestions.forEach(function (suggestion) {
+                suggestionMap[suggestion.id] = suggestion;
+            });
+
+            if (options.debug) {
+                retryDebug.rawResponse = retryResult.responseText || '';
+            }
+        }
 
         monthItems.forEach(function (item) {
             if (suggestionMap[item.id]) {
@@ -139,6 +159,9 @@ function suggestExpenseCategories(items, options) {
         monthDebug.responsePreview = parseResult.responsePreview;
         monthDebug.parseError = parseResult.parseError || null;
         monthDebug.extractedJsonPreview = parseResult.extractedJsonPreview || null;
+        if (retryDebug) {
+            monthDebug.retry = retryDebug;
+        }
         if (options.debug) {
             monthDebug.rawResponse = responseText;
         }
@@ -264,11 +287,17 @@ function fetchCategoryHistoryForMonth(targetMonth) {
 }
 
 function buildCategorySuggestionPrompt(items, historyItems, categoryNames) {
+    var requiredIds = items.map(function (item) {
+        return item.id;
+    });
+
     return [
         "あなたは家計簿カテゴリ分類アシスタントです。",
         "出力は1行1件のプレーンテキストのみで、説明文・JSON・コードブロック・Markdownは禁止です。",
         "カテゴリは必ず次の一覧から選んでください。自信が低い場合は category に null を入れてください。",
         "カテゴリ一覧: " + JSON.stringify(categoryNames),
+        "出力必須ID一覧:",
+        requiredIds.join(", "),
         "対象の未分類レコード一覧:",
         JSON.stringify(items),
         "前月1ヶ月分の分類済み履歴一覧:",
@@ -287,8 +316,39 @@ function buildCategorySuggestionPrompt(items, historyItems, categoryNames) {
         "- 同じ店名やサービス名の履歴があれば優先して参考にする",
         "- amount や title から一般常識で推定できても、自信が低ければ null にする",
         "- reason に | を含めない",
-        "- 対象件数と同じ件数の行を返す"
+        "- 出力必須ID一覧の全IDを必ず1回ずつ出力する",
+        "- 判定不能でも null 行を省略しない",
+        "- 対象件数と同じ件数の行を返す",
+        "- 出力順は出力必須ID一覧と同じ順にする"
     ].join("\n");
+}
+
+function requestCategorySuggestions(apiKey, items, historyItems, categoryNames, month, options) {
+    var prompt = buildCategorySuggestionPrompt(items, historyItems, categoryNames);
+    var responseText = generateGeminiText(apiKey, prompt, {
+        temperature: 0.1,
+        maxOutputTokens: 800
+    });
+    var parseResult;
+
+    if (!responseText) {
+        parseResult = {
+            status: 'empty_response',
+            responsePreview: '',
+            extractedJsonPreview: null,
+            suggestions: []
+        };
+    } else {
+        parseResult = parseCategorySuggestionResponse(responseText, items, categoryNames, {
+            month: month,
+            debug: options.debug
+        });
+    }
+
+    return {
+        responseText: responseText,
+        parseResult: parseResult
+    };
 }
 
 function parseCategorySuggestionResponse(text, items, categoryNames, context) {
