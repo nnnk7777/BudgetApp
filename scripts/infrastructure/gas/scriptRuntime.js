@@ -21,6 +21,7 @@ function getScriptRuntimeContext() {
 }
 
 function getTargetEmailAddress() {
+    var fallbackEmailPlaceholder = "TARGET_EMAIL_ADDRESS_PLACEHOLDER";
     var emailAddress = null;
 
     if (typeof PropertiesService !== 'undefined') {
@@ -28,13 +29,13 @@ function getTargetEmailAddress() {
     }
 
     if (!emailAddress) {
-        emailAddress = "TARGET_EMAIL_ADDRESS";
+        emailAddress = fallbackEmailPlaceholder;
     }
 
     emailAddress = String(emailAddress || "").trim();
 
-    if (!emailAddress || emailAddress === "TARGET_EMAIL_ADDRESS") {
-        throw new Error('無効なメール: TARGET_EMAIL_ADDRESS');
+    if (!emailAddress || emailAddress === fallbackEmailPlaceholder) {
+        throw new Error('無効なメール: ' + emailAddress);
     }
 
     return emailAddress;
