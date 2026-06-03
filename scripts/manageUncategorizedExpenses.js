@@ -90,11 +90,16 @@ function suggestExpenseCategories(items, options) {
         if (!responseText) {
             Logger.log("カテゴリ推定のGemini応答が空でした: month=" + month + " itemCount=" + monthItems.length);
             monthItems.forEach(function (item) {
-                suggestions.push(buildSkippedSuggestion(item, null, 'Geminiから応答を取得できませんでした', {
+                suggestions.push(buildSkippedSuggestion(
+                    item,
+                    null,
+                    buildDetailedReason('Geminiから応答を取得できませんでした', 'Gemini response was empty.'),
+                    {
                     errorCode: 'empty_response',
                     errorDetail: 'Gemini response was empty.',
                     responsePreview: ''
-                }));
+                    }
+                ));
             });
             monthDebug.status = 'empty_response';
             if (options.debug) {
@@ -118,11 +123,16 @@ function suggestExpenseCategories(items, options) {
             if (suggestionMap[item.id]) {
                 suggestions.push(suggestionMap[item.id]);
             } else {
-                suggestions.push(buildSkippedSuggestion(item, null, 'Gemini応答に対象IDが含まれていません', {
+                suggestions.push(buildSkippedSuggestion(
+                    item,
+                    null,
+                    buildDetailedReason('Gemini応答に対象IDが含まれていません', 'Target ID was not included in Gemini response.'),
+                    {
                     errorCode: 'missing_target_id',
                     errorDetail: 'Target ID was not included in Gemini response.',
                     responsePreview: buildResponsePreview(responseText)
-                }));
+                    }
+                ));
             }
         });
 
@@ -305,11 +315,16 @@ function parseCategorySuggestionResponse(text, items, categoryNames, context) {
             responsePreview: buildResponsePreview(cleanedText),
             extractedJsonPreview: extractedJsonText ? buildResponsePreview(extractedJsonText) : null,
             suggestions: items.map(function (item) {
-                return buildSkippedSuggestion(item, null, 'Gemini応答をJSONとして解釈できませんでした', {
+                return buildSkippedSuggestion(
+                    item,
+                    null,
+                    buildDetailedReason('Gemini応答をJSONとして解釈できませんでした', parsed.errorMessage),
+                    {
                     errorCode: 'json_parse_failed',
                     errorDetail: parsed.errorMessage,
                     responsePreview: buildResponsePreview(cleanedText)
-                });
+                    }
+                );
             })
         };
     }
@@ -326,11 +341,16 @@ function parseCategorySuggestionResponse(text, items, categoryNames, context) {
             responsePreview: buildResponsePreview(cleanedText),
             extractedJsonPreview: extractedJsonText ? buildResponsePreview(extractedJsonText) : null,
             suggestions: items.map(function (item) {
-                return buildSkippedSuggestion(item, null, 'Gemini応答が配列形式ではありません', {
+                return buildSkippedSuggestion(
+                    item,
+                    null,
+                    buildDetailedReason('Gemini応答が配列形式ではありません', 'Gemini response was valid JSON but not an array.'),
+                    {
                     errorCode: 'response_not_array',
                     errorDetail: 'Gemini response was valid JSON but not an array.',
                     responsePreview: buildResponsePreview(cleanedText)
-                });
+                    }
+                );
             })
         };
     }
@@ -591,4 +611,22 @@ function buildResponsePreview(text) {
     }
 
     return normalized.substring(0, 300) + '...';
+}
+
+function buildDetailedReason(baseReason, detail) {
+    if (!detail) {
+        return baseReason;
+    }
+
+    var normalizedDetail = String(detail).replace(/\s+/g, ' ').trim();
+    if (!normalizedDetail) {
+        return baseReason;
+    }
+
+    var maxDetailLength = 120;
+    if (normalizedDetail.length > maxDetailLength) {
+        normalizedDetail = normalizedDetail.substring(0, maxDetailLength) + '...';
+    }
+
+    return baseReason + '（' + normalizedDetail + '）';
 }
