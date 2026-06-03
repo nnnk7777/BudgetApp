@@ -159,6 +159,7 @@ function suggestExpenseCategories(items, options) {
         monthDebug.responsePreview = parseResult.responsePreview;
         monthDebug.parseError = parseResult.parseError || null;
         monthDebug.extractedJsonPreview = parseResult.extractedJsonPreview || null;
+        monthDebug.parseWarnings = parseResult.parseWarnings || [];
         if (retryDebug) {
             monthDebug.retry = retryDebug;
         }
@@ -310,7 +311,7 @@ function buildCategorySuggestionPrompt(items, historyItems, categoryNames) {
         "ルール:",
         "- 1行1件で返す",
         "- 区切り文字は半角パイプ | のみを使う",
-        "- reason は20文字以内",
+        "- reason は10文字以内",
         "- confidence は 0 から 1 の数値",
         "- タイトルや前月履歴だけでは判断が難しい場合は category を null にする",
         "- 同じ店名やサービス名の履歴があれば優先して参考にする",
@@ -327,7 +328,7 @@ function requestCategorySuggestions(apiKey, items, historyItems, categoryNames, 
     var prompt = buildCategorySuggestionPrompt(items, historyItems, categoryNames);
     var responseText = generateGeminiText(apiKey, prompt, {
         temperature: 0.1,
-        maxOutputTokens: 800
+        maxOutputTokens: 1200
     });
     var parseResult;
 
@@ -357,10 +358,11 @@ function parseCategorySuggestionResponse(text, items, categoryNames, context) {
     var lineParseResult = parseCategorySuggestionPipeResponse(cleanedText, items, categoryNames);
     if (lineParseResult.ok) {
         return {
-            status: 'ok',
+            status: lineParseResult.warnings.length ? 'ok_with_warnings' : 'ok',
             responsePreview: buildResponsePreview(cleanedText),
             extractedJsonPreview: null,
-            suggestions: lineParseResult.suggestions
+            suggestions: lineParseResult.suggestions,
+            parseWarnings: lineParseResult.warnings
         };
     }
 
@@ -390,6 +392,7 @@ function parseCategorySuggestionResponse(text, items, categoryNames, context) {
             parseError: lineParseResult.errorDetail + " / " + parsed.errorMessage,
             responsePreview: buildResponsePreview(cleanedText),
             extractedJsonPreview: extractedJsonText ? buildResponsePreview(extractedJsonText) : null,
+            parseWarnings: lineParseResult.warnings || [],
             suggestions: items.map(function (item) {
                 return buildSkippedSuggestion(
                     item,
@@ -416,6 +419,7 @@ function parseCategorySuggestionResponse(text, items, categoryNames, context) {
             status: 'response_not_array',
             responsePreview: buildResponsePreview(cleanedText),
             extractedJsonPreview: extractedJsonText ? buildResponsePreview(extractedJsonText) : null,
+            parseWarnings: lineParseResult.warnings || [],
             suggestions: items.map(function (item) {
                 return buildSkippedSuggestion(
                     item,
@@ -690,18 +694,18 @@ function parseCategorySuggestionPipeResponse(text, items, categoryNames) {
     if (!lines.length) {
         return {
             ok: false,
-            errorDetail: 'Pipe形式の応答行を検出できませんでした'
+            errorDetail: 'Pipe形式の応答行を検出できませんでした',
+            warnings: []
         };
     }
 
     var suggestions = [];
+    var warnings = [];
     for (var i = 0; i < lines.length; i++) {
         var parts = lines[i].split("|");
         if (parts.length < 4) {
-            return {
-                ok: false,
-                errorDetail: 'Pipe形式の列数が不足しています: ' + lines[i]
-            };
+            warnings.push('Pipe形式の列数が不足しています: ' + lines[i]);
+            continue;
         }
 
         var id = parts[0].trim();
@@ -733,9 +737,20 @@ function parseCategorySuggestionPipeResponse(text, items, categoryNames) {
         });
     }
 
+    if (!suggestions.length) {
+        return {
+            ok: false,
+            errorDetail: warnings.length
+                ? warnings[0]
+                : 'Pipe形式の有効な応答行を解釈できませんでした',
+            warnings: warnings
+        };
+    }
+
     return {
         ok: true,
-        suggestions: suggestions
+        suggestions: suggestions,
+        warnings: warnings
     };
 }
 
