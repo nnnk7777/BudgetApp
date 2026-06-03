@@ -1,13 +1,15 @@
 function getScriptRuntimeContext() {
     var testDateStr = "TEST_DATE_PLACEHOLDER";
-    if (!testDateStr || testDateStr === "TEST_DATE_PLACEHOLDER") {
+    var normalizedTestDateStr = String(testDateStr || "").trim();
+
+    if (!/^\d{8}$/.test(normalizedTestDateStr)) {
         return {
             currentDate: new Date(),
             isStaging: false
         };
     }
 
-    var testDate = parseScriptDateYYYYMMDD(testDateStr);
+    var testDate = parseScriptDateYYYYMMDD(normalizedTestDateStr);
     if (!testDate) {
         throw new Error('Invalid TEST_DATE format. Expected YYYYMMDD.');
     }
