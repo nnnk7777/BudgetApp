@@ -57,32 +57,15 @@ jobs:
 
             - name: メール送信先の変数置換
               run: |
-                  sed -i 's/TARGET_EMAIL_ADDRESS/'"${TARGET_EMAIL_ADDRESS}"'/g' scripts/sendSummaryMail.js
-                  sed -i 's/TARGET_EMAIL_ADDRESS/'"${TARGET_EMAIL_ADDRESS}"'/g' scripts/sendMonthlySummaryMail.js
+                  sed -i 's/TARGET_EMAIL_ADDRESS_PLACEHOLDER/'"${TARGET_EMAIL_ADDRESS}"'/g' scripts/infrastructure/gas/scriptRuntime.js
 
-            - name: TEST_DATE_PLACEHOLDER の置換(sendSummaryMail.js, sendMonthlySummaryMail.js)
+            - name: TEST_DATE_PLACEHOLDER の置換(infrastructure/gas/scriptRuntime.js)
               run: |
-                  sed -i 's/"TEST_DATE_PLACEHOLDER"/"${{ env.TEST_DATE }}"/g' scripts/sendSummaryMail.js
-                  sed -i 's/"TEST_DATE_PLACEHOLDER"/"${{ env.TEST_DATE }}"/g' scripts/sendMonthlySummaryMail.js
-
-            - name: TEST_DATE_PLACEHOLDER の置換(addNewExpense.js)
-              run: |
-                  sed -i 's/"TEST_DATE_PLACEHOLDER"/"${{ env.TEST_DATE }}"/g' scripts/addNewExpense.js
+                  sed -i 's/TEST_DATE_PLACEHOLDER/${{ env.TEST_DATE }}/g' scripts/infrastructure/gas/scriptRuntime.js
 
             - name: メインスクリプトの変数置換
               run: |
                   sed -i 's/TARGET_SHEET_NAME/'"${TARGET_SHEET_NAME}"'/g' main.ts
-
-            - name: スクリプト群のコピー
-              run: make copy
-
-            - name: カテゴリ一覧のコピー
-              run: |
-                  cp config/categories.js dist/categories.js
-
-            - name: カテゴリ一覧スクリプトから不要文字列の削除
-              run: |
-                  sed -i '/^export default categories;/d' dist/categories.js
 
             - name: アプリのビルドとGASへのプッシュ
               run: make build-and-push
