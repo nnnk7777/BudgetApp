@@ -59,7 +59,7 @@ jobs:
               run: |
                   sed -i 's/TARGET_EMAIL_ADDRESS/'"${TARGET_EMAIL_ADDRESS}"'/g' scripts/expenseSummary.js
                   sed -i 's/TARGET_EMAIL_ADDRESS/'"${TARGET_EMAIL_ADDRESS}"'/g' scripts/summaryMessageFormatter.js
-                  sed -i 's/TARGET_EMAIL_ADDRESS/'"${TARGET_EMAIL_ADDRESS}"'/g' scripts/sendMonthlySummaryMail.js
+                  sed -i 's/TARGET_EMAIL_ADDRESS/'"${TARGET_EMAIL_ADDRESS}"'/g' scripts/monthlySummaryFormatter.js
 
             - name: TEST_DATE_PLACEHOLDER の置換(scriptRuntime.js)
               run: |

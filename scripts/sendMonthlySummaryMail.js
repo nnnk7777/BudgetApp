@@ -16,8 +16,8 @@ function calculateMonthlySummary(action) {
     var endOfMonth = new Date(year, month + 1, 0);
     var dateRangeStr = formatDate(startOfMonth) + "〜" + formatDate(endOfMonth);
 
-    var expenseEntries = getMonthlyExpenses(year, month);
-    var incomeEntries = getMonthlyIncomes(year, month);
+    var expenseEntries = getMonthlyExpenseEntries(year, month);
+    var incomeEntries = getMonthlyIncomeEntries(year, month);
 
     var totalExpenses = calculateTotalAmount(expenseEntries);
     var totalIncome = calculateTotalAmount(incomeEntries);
@@ -28,186 +28,23 @@ function calculateMonthlySummary(action) {
     var percentage = adjustedBudget ? (totalExpenses / adjustedBudget) * 100 : 0;
 
     var categoryTotals = calculateCategoryTotals(expenseEntries);
-    var sortedCategories = Object.keys(categoryTotals).sort(function (a, b) {
-        return categoryTotals[b] - categoryTotals[a];
-    });
-
-    // デバッグ出力（先頭数件のみを確認用に出力）
-    Logger.log("【MonthlySummary Debug】Target sheet: 🐖 家計簿");
-    Logger.log("【MonthlySummary Debug】Expenses range: rows 35-185, cols " + getColumnsForMonth(month).dateCol + "-" + (getColumnsForMonth(month).dateCol + 3));
-    Logger.log("【MonthlySummary Debug】Income range: rows 22-33, cols " + getColumnsForMonth(month).dateCol + "-" + (getColumnsForMonth(month).dateCol + 3));
-    Logger.log("【MonthlySummary Debug】Expenses (sample):");
-    expenseEntries.slice(0, 5).forEach(function (entry, idx) {
-        Logger.log("  Expense[" + idx + "] " + formatDate(entry.date) + " " + (entry.category || "未分類") + " " + entry.name + " " + entry.amount);
-    });
-    Logger.log("【MonthlySummary Debug】Incomes (sample):");
-    incomeEntries.slice(0, 3).forEach(function (entry, idx) {
-        Logger.log("  Income[" + idx + "] " + formatDate(entry.date) + " " + entry.name + " " + entry.amount);
-    });
-    Logger.log("【MonthlySummary Debug】Category totals (top3): " + sortedCategories.slice(0, 3).map(function (c) { return c + "=" + categoryTotals[c]; }).join(", "));
-
-    var subject = "家計簿月次レポート（" + (month + 1) + "月）";
-    var body = "";
-    body += "◆ " + dateRangeStr + " の月次サマリー\n\n";
-    body += "収入合計: " + totalIncome + "円\n";
-    body += "支出合計: " + totalExpenses + "円\n";
-    body += "月間予算(週予算換算): " + adjustedBudget + "円\n";
-    body += "予算差分: " + (difference >= 0 ? "+" : "-") + Math.abs(difference) + "円\n";
-    body += "予算消化率: " + percentage.toFixed(2) + "%\n\n";
-
-    body += "◆ カテゴリ別支出\n";
-    sortedCategories.forEach(function (category) {
-        body += "・" + category + ": " + categoryTotals[category] + "円\n";
-    });
-    body += "\n";
-
-    body += "◆ 支出一覧\n";
-    expenseEntries.forEach(function (entry) {
-        body += "・" + formatDate(entry.date) + " - " + entry.category + " - " + entry.name + ": " + entry.amount + "円\n";
-    });
-
-    body += "\n◆ 収入一覧\n";
-    incomeEntries.forEach(function (entry) {
-        body += "・" + formatDate(entry.date) + " - " + entry.name + ": " + entry.amount + "円\n";
-    });
+    logMonthlySummaryDebug(month, expenseEntries, incomeEntries, categoryTotals);
 
     var geminiAnalysis = analyzeMonthlyWithGemini(expenseEntries, categoryTotals, totalExpenses, totalIncome, adjustedBudget, percentage, dateRangeStr);
-    body += "\n";
-    if (geminiAnalysis) {
-        body += "◆ Gemini分析\n" + geminiAnalysis + "\n";
-    } else {
-        body += "◆ Gemini分析\n(Geminiからの回答を取得できませんでした。ログを確認してください)\n";
-    }
+    var body = buildMonthlySummaryMessage(
+        dateRangeStr,
+        totalIncome,
+        totalExpenses,
+        adjustedBudget,
+        difference,
+        percentage,
+        expenseEntries,
+        incomeEntries,
+        categoryTotals,
+        geminiAnalysis
+    );
 
-    if (action !== 'mail') {
-        throw new Error('actionはmailのみ対応しています');
-    }
-    MailApp.sendEmail("TARGET_EMAIL_ADDRESS", subject, body);
-    return "Successfully sent monthly summary mail";
-}
-
-// 指定月の支出データを取得する
-function getMonthlyExpenses(year, month) {
-    var ss = SpreadsheetApp.getActiveSpreadsheet();
-    var sheet = ss.getSheetByName("🐖 家計簿");
-    if (!sheet) {
-        throw new Error('シート「🐖 家計簿」が見つかりません。');
-    }
-    var startRow = 35;
-    var endRow = 185;
-
-    var columns = getColumnsForMonth(month);
-    var dataRange = sheet.getRange(startRow, columns.dateCol, endRow - startRow + 1, 4);
-    var data = dataRange.getValues();
-
-    var entries = [];
-    var currentDate = null;
-    data.forEach(function (row, index) {
-        var dateCell = row[0];
-        var category = row[1];
-        var name = row[2];
-        var amount = row[3];
-        var absoluteRow = startRow + index;
-
-        var hasContent = [dateCell, category, name, amount].some(function (cell) {
-            return cell !== null && cell.toString().trim() !== '';
-        });
-        if (!hasContent) {
-            return;
-        }
-
-        if (dateCell && dateCell.toString().trim() !== '') {
-            if (typeof dateCell === 'string') {
-                currentDate = parseDate(dateCell, year);
-            } else if (Object.prototype.toString.call(dateCell) === '[object Date]') {
-                currentDate = new Date(dateCell.getFullYear(), dateCell.getMonth(), dateCell.getDate());
-            }
-        }
-
-        var includeEntry = false;
-        if (currentDate && currentDate.getFullYear() === year && currentDate.getMonth() === month) {
-            includeEntry = true;
-        } else if (!currentDate && absoluteRow >= 156) {
-            // 156行目以降は日付が空でも固定費として当月扱い
-            currentDate = new Date(year, month, 1);
-            includeEntry = true;
-        }
-
-        if (includeEntry) {
-            entries.push({
-                date: currentDate || new Date(year, month, 1),
-                category: category || "未分類",
-                name: name || "",
-                amount: amount || 0
-            });
-        }
-    });
-
-    return entries;
-}
-
-// 指定月の収入データを取得する
-function getMonthlyIncomes(year, month) {
-    var ss = SpreadsheetApp.getActiveSpreadsheet();
-    var sheet = ss.getSheetByName("🐖 家計簿");
-    if (!sheet) {
-        throw new Error('シート「🐖 家計簿」が見つかりません。');
-    }
-    var startRow = 22;
-    var endRow = 33;
-
-    var columns = getColumnsForMonth(month);
-    var dataRange = sheet.getRange(startRow, columns.dateCol, endRow - startRow + 1, 4);
-    var data = dataRange.getValues();
-
-    var entries = [];
-    data.forEach(function (row) {
-        var dateCell = row[0];
-        var name = row[2];
-        var amount = row[3];
-
-        var hasContent = [dateCell, name, amount].some(function (cell) {
-            return cell !== null && cell.toString().trim() !== '';
-        });
-        if (!hasContent) {
-            return;
-        }
-
-        var entryDate;
-        if (dateCell && dateCell.toString().trim() !== '') {
-            if (typeof dateCell === 'string') {
-                entryDate = parseDate(dateCell, year);
-            } else if (Object.prototype.toString.call(dateCell) === '[object Date]') {
-                entryDate = new Date(dateCell.getFullYear(), dateCell.getMonth(), dateCell.getDate());
-            }
-        } else {
-            entryDate = new Date(year, month, 1);
-        }
-
-        if (entryDate.getFullYear() === year && entryDate.getMonth() === month) {
-            entries.push({
-                date: entryDate,
-                name: name || "",
-                amount: amount || 0
-            });
-        }
-    });
-
-    return entries;
-}
-
-// カテゴリ別合計を算出
-function calculateCategoryTotals(entries) {
-    var totals = {};
-    entries.forEach(function (entry) {
-        var key = entry.category || "未分類";
-        var amount = parseFloat(entry.amount) || 0;
-        if (!totals[key]) {
-            totals[key] = 0;
-        }
-        totals[key] += amount;
-    });
-    return totals;
+    return sendMonthlySummaryResult(action, currentDate, isStaging, body);
 }
 
 // 月次サマリーを Gemini で分析する
