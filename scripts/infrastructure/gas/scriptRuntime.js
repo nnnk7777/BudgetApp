@@ -22,9 +22,9 @@ function getScriptRuntimeContext() {
 
 function getTargetEmailAddress() {
     var fallbackEmailPlaceholder = "TARGET_EMAIL_ADDRESS_PLACEHOLDER";
-    var emailAddress = null;
+    var emailAddress = fallbackEmailPlaceholder;
 
-    if (typeof PropertiesService !== 'undefined') {
+    if (emailAddress === fallbackEmailPlaceholder && typeof PropertiesService !== 'undefined') {
         emailAddress = PropertiesService.getScriptProperties().getProperty("TARGET_EMAIL_ADDRESS");
     }
 
@@ -39,6 +39,37 @@ function getTargetEmailAddress() {
     }
 
     return emailAddress;
+}
+
+function getScriptRuntimeDiagnostics() {
+    var runtimeContext = getScriptRuntimeContext();
+    var activeSpreadsheet = null;
+    var diagnostics = {
+        currentDate: runtimeContext.currentDate.toISOString(),
+        isStaging: runtimeContext.isStaging
+    };
+
+    if (typeof PropertiesService !== 'undefined') {
+        diagnostics.scriptPropertyTargetEmailAddress =
+            PropertiesService.getScriptProperties().getProperty("TARGET_EMAIL_ADDRESS") || null;
+    }
+
+    try {
+        diagnostics.resolvedTargetEmailAddress = getTargetEmailAddress();
+    } catch (error) {
+        diagnostics.resolvedTargetEmailAddressError = String(error);
+    }
+
+    if (typeof SpreadsheetApp !== 'undefined') {
+        activeSpreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+    }
+
+    if (activeSpreadsheet) {
+        diagnostics.activeSpreadsheetId = activeSpreadsheet.getId();
+        diagnostics.activeSpreadsheetName = activeSpreadsheet.getName();
+    }
+
+    return diagnostics;
 }
 
 function parseScriptDateYYYYMMDD(dateStr) {

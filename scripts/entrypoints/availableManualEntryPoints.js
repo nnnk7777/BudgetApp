@@ -13,6 +13,11 @@ function availableMonthlySummaryMail() {
     return calculateMonthlySummary('mail');
 }
 
+// manual diagnostics
+function availableRuntimeDiagnostics() {
+    return JSON.stringify(getScriptRuntimeDiagnostics());
+}
+
 // action: categories
 function availableFetchCategories() {
     return fetchCategories();
