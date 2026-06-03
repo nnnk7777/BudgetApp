@@ -15,13 +15,39 @@ Google スプレッドシートの家計簿を生成・管理するための GAS
 ├── build.ts
 ├── Makefile
 ├── scripts
-│   ├── deployment
-│   │   ├── setup_claspjson.sh
-│   │   └── setup_clasprcjson.sh
-│   ├── addNewExpense.js
-│   ├── formatDateAndPriceNumbers.js
-│   ├── handleApi.js
-│   └── expenseSummary.js
+│   ├── entrypoints
+│   │   ├── handleApi.js
+│   │   ├── apiCommon.js
+│   │   ├── availableManualEntryPoints.js
+│   │   ├── scheduledSummaryTriggers.js
+│   │   └── formatDateAndPriceNumbers.js
+│   ├── application
+│   │   ├── addExpenseRecord.js
+│   │   ├── fetchCategories.js
+│   │   ├── expenseSummary.js
+│   │   ├── monthlySummary.js
+│   │   └── uncategorizedExpenses.js
+│   ├── infrastructure
+│   │   ├── gas
+│   │   │   ├── scriptRuntime.js
+│   │   │   ├── expenseSheetRepository.js
+│   │   │   ├── monthlySheetRepository.js
+│   │   │   └── uncategorizedExpenseRepository.js
+│   │   └── gemini
+│   │       ├── geminiClient.js
+│   │       ├── expenseSummaryGemini.js
+│   │       ├── monthlySummaryGemini.js
+│   │       └── uncategorizedSuggestionGemini.js
+│   ├── formatting
+│   │   ├── summaryMessageFormatter.js
+│   │   └── monthlySummaryFormatter.js
+│   ├── utils
+│   │   ├── expenseSummaryUtils.js
+│   │   ├── summaryDateUtils.js
+│   │   └── uncategorizedCommonUtils.js
+│   └── deployment
+│       ├── setup_claspjson.sh
+│       └── setup_clasprcjson.sh
 ├── service
 ├── model
 ├── types
@@ -142,3 +168,42 @@ action に渡せる値は以下のとおりです。
 ```
 
 `debug` を `true` にすると、Gemini の応答解析に失敗した際の詳細情報がレスポンスの `debug` および `skipped[*]` に含まれます。
+
+## scripts構成
+
+`/scripts` は現在、主に以下の責務で分かれています。
+
+-   `entrypoints`
+    -   GAS から直接呼ばれる入口
+    -   `handleApi.js`
+    -   `availableManualEntryPoints.js`
+    -   `scheduledSummaryTriggers.js`
+    -   `formatDateAndPriceNumbers.js`
+-   `application`
+    -   action ごとの本処理
+    -   `addExpenseRecord.js`
+    -   `fetchCategories.js`
+    -   `expenseSummary.js`
+    -   `monthlySummary.js`
+    -   `uncategorizedExpenses.js`
+-   `infrastructure/gas`
+    -   SpreadsheetApp / PropertiesService / runtime 依存
+    -   `scriptRuntime.js`
+    -   `expenseSheetRepository.js`
+    -   `monthlySheetRepository.js`
+    -   `uncategorizedExpenseRepository.js`
+-   `infrastructure/gemini`
+    -   Gemini API と Gemini 依存ロジック
+    -   `geminiClient.js`
+    -   `expenseSummaryGemini.js`
+    -   `monthlySummaryGemini.js`
+    -   `uncategorizedSuggestionGemini.js`
+-   `formatting`
+    -   mail / text の本文生成
+    -   `summaryMessageFormatter.js`
+    -   `monthlySummaryFormatter.js`
+-   `utils`
+    -   純粋関数寄りの共通処理
+    -   `expenseSummaryUtils.js`
+    -   `summaryDateUtils.js`
+    -   `uncategorizedCommonUtils.js`
