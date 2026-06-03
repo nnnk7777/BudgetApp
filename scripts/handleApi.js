@@ -18,27 +18,39 @@ function doPost(e) {
                     result = calculateExpensesSummary(action);
                     break;
                 case 'add':
-                    item = data.item;
-
-                    title = item.title;
-                    amount = item.amount;
-                    category = item.category;
+                    const item = data.item;
+                    const title = item.title;
+                    const amount = item.amount;
+                    const category = item.category;
 
                     result = addExpenseRecord(title, amount, category);
                     break;
                 case 'categories':
                     result = fetchCategories();
                     break;
+                case 'list_uncategorized':
+                    result = listUncategorizedExpenses();
+                    break;
+                case 'autofill_uncategorized':
+                    result = autofillUncategorizedExpenses(data.options || {});
+                    break;
                 default:
                     throw new Error('actionが定義されていません');
             }
+        } else {
+            throw new Error('hashが一致しません');
         }
     } catch (error) {
-        result = error.message;
+        result = JSON.stringify({
+            ok: false,
+            error: error.message
+        });
         Logger.log(error);
     } finally {
         // レスポンスを作成
-        var output = ContentService.createTextOutput(result);
+        var output = ContentService.createTextOutput(
+            typeof result === 'string' ? result : JSON.stringify(result)
+        );
         output.setMimeType(ContentService.MimeType.JSON);
 
         return output;
