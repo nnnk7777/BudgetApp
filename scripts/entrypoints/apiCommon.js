@@ -45,7 +45,15 @@ function handleAddExpenseAction(item) {
         throw new Error('itemが定義されていません');
     }
 
-    return addExpenseRecord(item.title, item.amount, item.category);
+    var amount = item.amount;
+    if (amount === undefined || amount === null || amount === '') {
+        amount = item.price;
+    }
+    if (amount === undefined || amount === null || amount === '') {
+        amount = item.cost;
+    }
+
+    return addExpenseRecord(item.title, amount, item.category);
 }
 
 function buildApiErrorResponse(error) {

@@ -1,4 +1,9 @@
 function addExpenseRecord(title, amount, category) {
+    var normalizedAmount = normalizeAddExpenseAmount(amount);
+    if (normalizedAmount === null) {
+        throw new Error('amountが不正です');
+    }
+
     const ss = SpreadsheetApp.getActiveSpreadsheet();
     const sheet = ss.getSheetByName("🐖 家計簿");
     if (!sheet) {
@@ -81,7 +86,7 @@ function addExpenseRecord(title, amount, category) {
         dateValue,
         category,
         title,
-        amount
+        normalizedAmount
     ];
 
     // シートに書き込み
@@ -89,6 +94,19 @@ function addExpenseRecord(title, amount, category) {
     writeRange.setValues([newRowValues]);
 
     return "Successfully registered new expense"
+}
+
+function normalizeAddExpenseAmount(value) {
+    if (value === undefined || value === null || value === '') {
+        return null;
+    }
+
+    var normalizedValue = normalizeFullWidthNumbers(String(value))
+        .replace(/[,\s]/g, '')
+        .replace(/[¥￥円]/g, '');
+    var parsed = parseFloat(normalizedValue);
+
+    return isNaN(parsed) ? null : parsed;
 }
 
 // 日付セルをDateオブジェクトに変換する関数
