@@ -1,22 +1,20 @@
 function getScriptRuntimeContext() {
     var testDateStr = "TEST_DATE_PLACEHOLDER";
-    var isStaging = testDateStr ? true : false;
-
-    if (isStaging) {
-        var testDate = parseScriptDateYYYYMMDD(testDateStr);
-        if (!testDate) {
-            throw new Error('Invalid TEST_DATE format. Expected YYYYMMDD.');
-        }
-
+    if (!testDateStr || testDateStr === "TEST_DATE_PLACEHOLDER") {
         return {
-            currentDate: testDate,
-            isStaging: true
+            currentDate: new Date(),
+            isStaging: false
         };
     }
 
+    var testDate = parseScriptDateYYYYMMDD(testDateStr);
+    if (!testDate) {
+        throw new Error('Invalid TEST_DATE format. Expected YYYYMMDD.');
+    }
+
     return {
-        currentDate: new Date(),
-        isStaging: false
+        currentDate: testDate,
+        isStaging: true
     };
 }
 
