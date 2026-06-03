@@ -42,7 +42,16 @@ function getTargetEmailAddress() {
 }
 
 function isValidEmailAddress(emailAddress) {
-    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(emailAddress || "").trim());
+    var normalizedEmailAddress = String(emailAddress || "").trim();
+    var atIndex = normalizedEmailAddress.indexOf("@");
+    var lastDotIndex = normalizedEmailAddress.lastIndexOf(".");
+
+    return (
+        atIndex > 0 &&
+        lastDotIndex > atIndex + 1 &&
+        lastDotIndex < normalizedEmailAddress.length - 1 &&
+        normalizedEmailAddress.indexOf(" ") === -1
+    );
 }
 
 function getScriptRuntimeDiagnostics() {

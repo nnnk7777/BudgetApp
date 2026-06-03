@@ -1,5 +1,4 @@
 function handleWeeklySummaryResult(dateRangeStr, totalAmount, dataEntries, difference, percentage, adjustedBudget, isStaging, action, currentDate) {
-    var emailAddress = getTargetEmailAddress();
     var upcomingPlannedExpenses = getPlannedExpensesForCurrentWeek(currentDate);
     var upcomingExpenseLines = formatUpcomingPlannedExpenseLines(upcomingPlannedExpenses);
     var plannedExpenseTotal = calculatePlannedExpenseTotal(upcomingPlannedExpenses);
@@ -63,6 +62,7 @@ function handleWeeklySummaryResult(dateRangeStr, totalAmount, dataEntries, diffe
 
     switch (action) {
         case 'mail':
+            var emailAddress = getTargetEmailAddress();
             var subject = (isStaging ? "<test>" : "") + "家計簿週次レポート" + "（" + dateRangeStr + "）";
             MailApp.sendEmail(emailAddress, subject, body);
             return "Successfully sent mail";
@@ -74,7 +74,6 @@ function handleWeeklySummaryResult(dateRangeStr, totalAmount, dataEntries, diffe
 }
 
 function handleDailySummaryResult(currentDate, datesInWeek, adjustedBudget, isStaging, action) {
-    var emailAddress = getTargetEmailAddress();
     var upcomingPlannedExpenses = getPlannedExpensesForCurrentWeek(currentDate);
     var upcomingExpenseLines = formatUpcomingPlannedExpenseLines(upcomingPlannedExpenses);
     var plannedExpenseTotal = calculatePlannedExpenseTotal(upcomingPlannedExpenses);
@@ -142,6 +141,7 @@ function handleDailySummaryResult(currentDate, datesInWeek, adjustedBudget, isSt
 
     switch (action) {
         case 'mail':
+            var emailAddress = getTargetEmailAddress();
             MailApp.sendEmail(emailAddress, subject, body);
             return "Successfully sent mail";
         case 'text':
