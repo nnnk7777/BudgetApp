@@ -26,7 +26,7 @@ function getMonthlyExpenseEntries(year, month) {
             if (typeof dateCell === 'string') {
                 currentDate = parseDate(dateCell, year);
             } else if (Object.prototype.toString.call(dateCell) === '[object Date]') {
-                currentDate = new Date(dateCell.getFullYear(), dateCell.getMonth(), dateCell.getDate());
+                currentDate = new Date(year, dateCell.getMonth(), dateCell.getDate());
             }
         }
 
@@ -77,7 +77,7 @@ function getMonthlyIncomeEntries(year, month) {
             if (typeof dateCell === 'string') {
                 entryDate = parseDate(dateCell, year);
             } else if (Object.prototype.toString.call(dateCell) === '[object Date]') {
-                entryDate = new Date(dateCell.getFullYear(), dateCell.getMonth(), dateCell.getDate());
+                entryDate = new Date(year, dateCell.getMonth(), dateCell.getDate());
             }
         } else {
             entryDate = new Date(year, month, 1);
