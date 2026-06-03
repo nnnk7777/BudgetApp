@@ -34,11 +34,15 @@ function getTargetEmailAddress() {
 
     emailAddress = String(emailAddress || "").trim();
 
-    if (!emailAddress || emailAddress === fallbackEmailPlaceholder) {
+    if (!isValidEmailAddress(emailAddress)) {
         throw new Error('無効なメール: ' + emailAddress);
     }
 
     return emailAddress;
+}
+
+function isValidEmailAddress(emailAddress) {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(emailAddress || "").trim());
 }
 
 function getScriptRuntimeDiagnostics() {

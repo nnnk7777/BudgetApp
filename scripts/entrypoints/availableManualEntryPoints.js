@@ -15,7 +15,8 @@ function availableMonthlySummaryMail() {
 
 // manual diagnostics
 function availableRuntimeDiagnostics() {
-    return JSON.stringify(getScriptRuntimeDiagnostics());
+    var result = JSON.stringify(getScriptRuntimeDiagnostics());
+    Logger.log(result);
 }
 
 // action: categories
