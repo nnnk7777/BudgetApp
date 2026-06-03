@@ -21,7 +21,7 @@ Google スプレッドシートの家計簿を生成・管理するための GAS
 │   ├── addNewExpense.js
 │   ├── formatDateAndPriceNumbers.js
 │   ├── handleApi.js
-│   └── sendSummaryMail.js
+│   └── expenseSummary.js
 ├── service
 ├── model
 ├── types

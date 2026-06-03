@@ -11,7 +11,7 @@
 -   `add`アクションによって実行される。
 -   金額と内容を受け取って該当の日付の直下にデータを追加する。
 
-### [sendSummaryMail.js](sendSummaryMail.js)
+### [expenseSummary.js](expenseSummary.js)
 
 -   `mail`または`text`アクションによって実行される。
 -   予算（45000 円/週）に対する割合や差分を取得する。

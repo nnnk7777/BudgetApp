@@ -1,4 +1,4 @@
-function sendWeeklySummaryEmail(dateRangeStr, totalAmount, dataEntries, difference, percentage, adjustedBudget, isStaging, action, currentDate) {
+function handleWeeklySummaryResult(dateRangeStr, totalAmount, dataEntries, difference, percentage, adjustedBudget, isStaging, action, currentDate) {
     var emailAddress = "TARGET_EMAIL_ADDRESS";
     var upcomingPlannedExpenses = getPlannedExpensesForCurrentWeek(currentDate);
     var upcomingExpenseLines = formatUpcomingPlannedExpenseLines(upcomingPlannedExpenses);
@@ -73,7 +73,7 @@ function sendWeeklySummaryEmail(dateRangeStr, totalAmount, dataEntries, differen
     }
 }
 
-function sendDailyProgressEmail(currentDate, datesInWeek, adjustedBudget, isStaging, action) {
+function handleDailySummaryResult(currentDate, datesInWeek, adjustedBudget, isStaging, action) {
     var emailAddress = "TARGET_EMAIL_ADDRESS";
     var upcomingPlannedExpenses = getPlannedExpensesForCurrentWeek(currentDate);
     var upcomingExpenseLines = formatUpcomingPlannedExpenseLines(upcomingPlannedExpenses);

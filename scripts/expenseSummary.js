@@ -52,10 +52,10 @@ function calculateExpensesSummary(action) {
 
     if (dayOfWeek === 0) {
         // 日曜日の場合、週次サマリーを送信
-        return sendWeeklySummaryEmail(dateRangeStr, totalAmount, dataEntries, difference, percentage, adjustedBudget, isStaging, action, currentDate);
+        return handleWeeklySummaryResult(dateRangeStr, totalAmount, dataEntries, difference, percentage, adjustedBudget, isStaging, action, currentDate);
     } else {
         // 日曜日以外の場合、週の開始から現在までのデータを取得し、メールで送信
-        return sendDailyProgressEmail(currentDate, datesInWeek, adjustedBudget, isStaging, action);
+        return handleDailySummaryResult(currentDate, datesInWeek, adjustedBudget, isStaging, action);
     }
 }
 
