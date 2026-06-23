@@ -54,17 +54,7 @@ function getPlannedExpensesForCurrentWeek(baseDate) {
 }
 
 function getPlannedExpensesInRange(startDate, endDate) {
-    if (typeof CalendarApp === 'undefined') {
-        Logger.log("CalendarApp is unavailable in this runtime.");
-        return [];
-    }
-
-    var calendar = getTargetCalendar();
-    if (!calendar) {
-        return [];
-    }
-
-    var events = calendar.getEvents(startDate, endDate);
+    var events = getCalendarEventsInRange(startDate, endDate);
     var plannedExpenses = [];
     Logger.log(
         "予定支出検索: start=" +
@@ -104,32 +94,6 @@ function formatUpcomingPlannedExpenseLines(plannedExpenses) {
     return plannedExpenses.map(function (entry) {
         return "・" + formatDate(entry.date) + " - " + entry.title + ": " + entry.memo;
     });
-}
-
-function getTargetCalendar() {
-    try {
-        var calendarId = PropertiesService.getScriptProperties().getProperty("CALENDAR_ID");
-        if (calendarId) {
-            return CalendarApp.getCalendarById(calendarId);
-        }
-        return CalendarApp.getDefaultCalendar();
-    } catch (error) {
-        Logger.log("Failed to access calendar: " + error);
-        return null;
-    }
-}
-
-function getUpcomingExpenseLookaheadDays() {
-    try {
-        var value = PropertiesService.getScriptProperties().getProperty("UPCOMING_EXPENSE_LOOKAHEAD_DAYS");
-        var parsed = parseInt(value, 10);
-        if (!isNaN(parsed) && parsed > 0) {
-            return parsed;
-        }
-    } catch (error) {
-        Logger.log("Failed to read UPCOMING_EXPENSE_LOOKAHEAD_DAYS: " + error);
-    }
-    return 14;
 }
 
 function cleanPlannedExpenseMemosWithGemini(plannedExpenses) {
@@ -232,4 +196,3 @@ function sanitizePlannedExpenseMemo(text) {
         })
         .join(" / ");
 }
-

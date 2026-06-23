@@ -80,6 +80,10 @@
 
 -   月次サマリー用の支出・収入データを家計簿シートから取得する。
 
+### [infrastructure/gas/calendarRepository.js](./infrastructure/gas/calendarRepository.js)
+
+-   Google カレンダー取得と、カレンダー関連の Script Properties 読み取りを担当する。
+
 ### [infrastructure/gas/uncategorizedExpenseRepository.js](./infrastructure/gas/uncategorizedExpenseRepository.js)
 
 -   未分類支出の取得、カテゴリ更新、前月履歴の取得を担当する。
