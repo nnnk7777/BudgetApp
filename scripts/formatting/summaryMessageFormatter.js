@@ -2,6 +2,7 @@ function handleWeeklySummaryResult(dateRangeStr, totalAmount, dataEntries, diffe
     var upcomingPlannedExpenses = getPlannedExpensesForCurrentWeek(currentDate);
     var upcomingExpenseLines = formatUpcomingPlannedExpenseLines(upcomingPlannedExpenses);
     var plannedExpenseTotal = calculatePlannedExpenseTotal(upcomingPlannedExpenses);
+    var weeklyBudgetCarryoverMemo = getWeeklyBudgetCarryoverMemoForWeek(currentDate);
     var differenceSign = difference >= 0 ? "+" : "-";
     var differenceAbs = Math.abs(difference);
     var percentageStr = percentage.toFixed(2);
@@ -24,6 +25,8 @@ function handleWeeklySummaryResult(dateRangeStr, totalAmount, dataEntries, diffe
     body += "（設定予算：" + adjustedBudget + "円）\n";
     body += "++++++++++++++++++++++++++++++++++++\n";
     body += "* 予算差分：" + differenceSign + differenceAbs + "円\n\n";
+    body += "◆ 前週からの持ち越し\n";
+    body += formatWeeklyBudgetCarryoverSummaryForMessage(weeklyBudgetCarryoverMemo) + "\n\n";
     body += "◆ カテゴリ別支出ランキング\n";
     if (categoryRankingLines.length) {
         categoryRankingLines.forEach(function (line) {
@@ -83,6 +86,7 @@ function handleDailySummaryResult(currentDate, datesInWeek, adjustedBudget, isSt
     var upcomingPlannedExpenses = getPlannedExpensesForCurrentWeek(currentDate);
     var upcomingExpenseLines = formatUpcomingPlannedExpenseLines(upcomingPlannedExpenses);
     var plannedExpenseTotal = calculatePlannedExpenseTotal(upcomingPlannedExpenses);
+    var weeklyBudgetCarryoverMemo = getWeeklyBudgetCarryoverMemoForWeek(currentDate);
     var datesUpToToday = datesInWeek.filter(function (date) {
         return date <= currentDate;
     });
@@ -115,6 +119,8 @@ function handleDailySummaryResult(currentDate, datesInWeek, adjustedBudget, isSt
         body += "・未分類の支出: " + uncategorizedCount + "件\n";
     }
     body += "++++++++++++++++++++++++++++++++++++\n\n";
+    body += "◆ 前週からの持ち越し\n";
+    body += formatWeeklyBudgetCarryoverSummaryForMessage(weeklyBudgetCarryoverMemo) + "\n\n";
     body += "◆ カテゴリ別支出ランキング\n";
     if (categoryRankingLines.length) {
         categoryRankingLines.forEach(function (line) {
@@ -155,4 +161,33 @@ function handleDailySummaryResult(currentDate, datesInWeek, adjustedBudget, isSt
         default:
             throw new Error('actionが定義されていません');
     }
+}
+
+function formatWeeklyBudgetCarryoverSummaryForMessage(memo) {
+    var overrunRatio;
+
+    if (!memo) {
+        return "・前週差分メモはありません。今週の予算と支出状況を中心に見ます。";
+    }
+
+    if (memo.difference <= 0) {
+        return (
+            "・前週（" +
+            (memo.dateRangeStr || "対象週不明") +
+            "）は予算内で、" +
+            Math.abs(memo.difference) +
+            "円の余裕がありました。ただし今週は今週の支出状況を優先して判断します。"
+        );
+    }
+
+    overrunRatio = memo.adjustedBudget ? ((memo.difference / memo.adjustedBudget) * 100).toFixed(1) : "0.0";
+    return (
+        "・前週（" +
+        (memo.dateRangeStr || "対象週不明") +
+        "）は予算を" +
+        memo.difference +
+        "円超過していました（週予算比 " +
+        overrunRatio +
+        "% 超）。今週はこの反動も意識して、裁量支出をやや引き締め気味に見ます。"
+    );
 }
