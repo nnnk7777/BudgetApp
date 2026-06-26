@@ -60,6 +60,12 @@ function handleWeeklySummaryResult(dateRangeStr, totalAmount, dataEntries, diffe
         body += "◆ Gemini分析\n(Geminiからの回答を取得できませんでした。ログを確認してください)\n";
     }
 
+    if (!isStaging) {
+        upsertWeeklyBudgetCarryoverMemo(currentDate, difference, adjustedBudget, totalAmount, dateRangeStr);
+    } else {
+        Logger.log("staging実行のため前週予算差分メモの保存をスキップしました");
+    }
+
     switch (action) {
         case 'mail':
             var emailAddress = getTargetEmailAddress();

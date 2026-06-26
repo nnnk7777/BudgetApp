@@ -82,7 +82,7 @@
 
 ### [infrastructure/gas/calendarRepository.js](./infrastructure/gas/calendarRepository.js)
 
--   Google カレンダー取得と、カレンダー関連の Script Properties 読み取りを担当する。
+-   Google カレンダー取得、前週予算差分メモの保存/取得、カレンダー関連の Script Properties 読み取りを担当する。
 
 ### [infrastructure/gas/uncategorizedExpenseRepository.js](./infrastructure/gas/uncategorizedExpenseRepository.js)
 

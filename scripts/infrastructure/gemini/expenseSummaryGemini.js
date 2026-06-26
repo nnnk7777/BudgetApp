@@ -11,15 +11,18 @@ function analyzeExpensesWithGemini(dataEntries, totalAmount, adjustedBudget, per
         return formatDate(entry.date) + " [" + entry.title + "] " + entry.memo;
     });
     var categoryRankingLines = getCategoryRankingLines(dataEntries);
+    var weeklyBudgetCarryoverMemo = getWeeklyBudgetCarryoverMemoForWeek(baseDate);
 
     var prompt = [
         "あなたはプロの家計管理アドバイザーです。挨拶や自己紹介は禁止です。金銭感覚の改善を目的としたコーチとして、冷静な分析と、時には優しく、時には厳しく指導してください。1週間分の支出について、予算を超えないようアドバイスをください。カジュアルな敬語て対応してください。",
         "レシートは保管していませんが、代わりに全ての支出・収入をスプレッドシートに記録しています。単なる分析にとどまらず、「行動に落とし込める改善提案」を重視してください。感情的にならず、客観的かつ現実的な判断で、飴と鞭を使い分けてください。",
         "通勤時（勤務地：永田町）の通勤定期はありませんが、給与で補填されます。食事はスーパーでまとめ買いした上でほぼ自炊しており、外食は友人と会う時が多いです。",
         "Googleカレンダーの今後の予定メモに書かれた支出予定も考慮して助言してください。近いうちに大きな支出予定があるなら、今週の節約を強めに促してください。",
+        "前週の予算差分メモがあれば補助情報として参照してください。ただし今週の週予算、実支出、予定支出を優先して判断し、前週差分は助言のニュアンス調整にのみ使ってください。",
         "1週間は月曜始まり・日曜終わりで考えて、今日までの傾向を数個と、次に意識すべき点を数個、箇条書きでまとめてください。箇条書きは最大5個までにし、それぞれに補足を付けてください。Markdown記法は使わず、プレーンな文字と絵文字のみで出力し、全体で500文字以内に収めてください。",
         "週予算: " + adjustedBudget + "円 / これまでの支出: " + totalAmount + "円 (" + percentage.toFixed(1) + "%)",
         "カテゴリ別支出ランキング: " + (categoryRankingLines.length ? categoryRankingLines.join(" / ") : "なし"),
+        "前週の予算差分メモ: " + formatWeeklyBudgetCarryoverMemoForPrompt(weeklyBudgetCarryoverMemo),
         "今後の予定メモ: " + (upcomingExpenseLines.length ? upcomingExpenseLines.join(" / ") : "なし"),
         "以下は支出一覧(日付、カテゴリ、名称、金額)です。名称だけで内容が不明瞭な場合はカテゴリから内容を推定してください:",
         expenseLines.join("\n")
@@ -68,6 +71,9 @@ function getPlannedExpensesInRange(startDate, endDate) {
     events.forEach(function (event) {
         var title = event.getTitle() || "予定";
         var description = sanitizePlannedExpenseMemo(event.getDescription() || "");
+        if (isWeeklyBudgetCarryoverMemo(title, description)) {
+            return;
+        }
         if (!hasPlannedExpenseMemo(description, title)) {
             return;
         }
@@ -94,6 +100,19 @@ function formatUpcomingPlannedExpenseLines(plannedExpenses) {
     return plannedExpenses.map(function (entry) {
         return "・" + formatDate(entry.date) + " - " + entry.title + ": " + entry.memo;
     });
+}
+
+function formatWeeklyBudgetCarryoverMemoForPrompt(memo) {
+    if (!memo) {
+        return "なし";
+    }
+
+    return [
+        memo.dateRangeStr || "対象週不明",
+        "予算差分 " + (memo.difference >= 0 ? "+" : "-") + Math.abs(memo.difference) + "円",
+        "実支出 " + memo.totalAmount + "円",
+        "週予算 " + memo.adjustedBudget + "円"
+    ].join(" / ");
 }
 
 function cleanPlannedExpenseMemosWithGemini(plannedExpenses) {
