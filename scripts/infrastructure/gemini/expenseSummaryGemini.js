@@ -13,24 +13,17 @@ function analyzeExpensesWithGemini(dataEntries, totalAmount, adjustedBudget, per
     var categoryRankingLines = getCategoryRankingLines(dataEntries);
     var weeklyBudgetCarryoverMemo = getWeeklyBudgetCarryoverMemoForWeek(baseDate);
     var weeklyBudgetCarryoverGuidance = buildWeeklyBudgetCarryoverGuidanceForPrompt(weeklyBudgetCarryoverMemo);
-
-    var prompt = [
-        "あなたはプロの家計管理アドバイザーです。挨拶や自己紹介は禁止です。金銭感覚の改善を目的としたコーチとして、冷静な分析と、時には優しく、時には厳しく指導してください。1週間分の支出について、予算を超えないようアドバイスをください。カジュアルな敬語て対応してください。",
-        "レシートは保管していませんが、代わりに全ての支出・収入をスプレッドシートに記録しています。単なる分析にとどまらず、「行動に落とし込める改善提案」を重視してください。感情的にならず、客観的かつ現実的な判断で、飴と鞭を使い分けてください。",
-        "通勤時（勤務地：永田町）の通勤定期はありませんが、給与で補填されます。食事はスーパーでまとめ買いした上でほぼ自炊しており、外食は友人と会う時が多いです。",
-        "Googleカレンダーの今後の予定メモに書かれた支出予定も考慮して助言してください。近いうちに大きな支出予定があるなら、今週の節約を強めに促してください。",
-        "前週の予算差分メモがあれば補助情報として参照してください。特に前週が大きく超過していた場合は、その影響を締めの一言だけで済ませず、今週の傾向分析と次に意識すべき点の両方に反映してください。",
-        "前週超過がある場合は、裁量支出や先送りできる支出への姿勢を普段より一段引き締めて提案してください。ただし今週の週予算、実支出、予定支出を優先し、前週差分だけで過度に断定したり、今週の予算を実質的に減額したような言い方はしないでください。",
-        "前週が予算内に収まっていた場合でも、安心しすぎる助言にはせず、今週の数値を主軸に冷静に判断してください。",
-        "1週間は月曜始まり・日曜終わりで考えて、今日までの傾向を数個と、次に意識すべき点を数個、箇条書きでまとめてください。箇条書きは最大5個までにし、それぞれに補足を付けてください。Markdown記法は使わず、プレーンな文字と絵文字のみで出力し、全体で500文字以内に収めてください。",
-        "週予算: " + adjustedBudget + "円 / これまでの支出: " + totalAmount + "円 (" + percentage.toFixed(1) + "%)",
-        "カテゴリ別支出ランキング: " + (categoryRankingLines.length ? categoryRankingLines.join(" / ") : "なし"),
-        "前週の予算差分メモ: " + formatWeeklyBudgetCarryoverMemoForPrompt(weeklyBudgetCarryoverMemo),
-        "前週差分の反映方針: " + weeklyBudgetCarryoverGuidance,
-        "今後の予定メモ: " + (upcomingExpenseLines.length ? upcomingExpenseLines.join(" / ") : "なし"),
-        "以下は支出一覧(日付、カテゴリ、名称、金額)です。名称だけで内容が不明瞭な場合はカテゴリから内容を推定してください:",
-        expenseLines.join("\n")
-    ].join("\n");
+    var prompt = buildExpenseSummaryPrompt(
+        dataEntries,
+        totalAmount,
+        adjustedBudget,
+        percentage,
+        baseDate,
+        categoryRankingLines,
+        weeklyBudgetCarryoverMemo,
+        weeklyBudgetCarryoverGuidance,
+        upcomingExpenseLines
+    );
 
     Logger.log("Geminiプロンプト：");
     Logger.log(prompt);
@@ -42,6 +35,64 @@ function analyzeExpensesWithGemini(dataEntries, totalAmount, adjustedBudget, per
             thinkingBudget: 400
         }
     });
+}
+
+function buildExpenseSummaryPrompt(
+    dataEntries,
+    totalAmount,
+    adjustedBudget,
+    percentage,
+    baseDate,
+    categoryRankingLines,
+    weeklyBudgetCarryoverMemo,
+    weeklyBudgetCarryoverGuidance,
+    upcomingExpenseLines
+) {
+    var expenseLines = dataEntries.map(function (entry) {
+        return formatDate(entry.date) + " [" + (entry.category || "未分類") + "] " + entry.name + " " + entry.amount + "円";
+    });
+    var prompt = [
+        "あなたはプロの家計管理アドバイザーです。挨拶や自己紹介は禁止です。金銭感覚の改善を目的としたコーチとして、冷静な分析と、時には優しく、時には厳しく指導してください。1週間分の支出について、予算を超えないようアドバイスをください。カジュアルな敬語て対応してください。",
+        "レシートは保管していませんが、代わりに全ての支出・収入をスプレッドシートに記録しています。単なる分析にとどまらず、「行動に落とし込める改善提案」を重視してください。感情的にならず、客観的かつ現実的な判断で、飴と鞭を使い分けてください。",
+        "通勤時（勤務地：永田町）の通勤定期はありませんが、給与で補填されます。食事はスーパーでまとめ買いした上でほぼ自炊しており、外食は友人と会う時が多いです。",
+        "Googleカレンダーの今後の予定メモに書かれた支出予定も考慮して助言してください。近いうちに大きな支出予定があるなら、今週の節約を強めに促してください。",
+        "前週の予算差分メモがあれば補助情報として参照してください。特に前週が大きく超過していた場合は、その影響を締めの一言だけで済ませず、今週の傾向分析と次に意識すべき点の両方に反映してください。",
+        "前週超過がある場合は、裁量支出や先送りできる支出への姿勢を普段より一段引き締めて提案してください。ただし今週の週予算、実支出、予定支出を優先し、前週差分だけで過度に断定したり、今週の予算を実質的に減額したような言い方はしないでください。",
+        "前週が予算内に収まっていた場合でも、安心しすぎる助言にはせず、今週の数値を主軸に冷静に判断してください。",
+        buildAnalysisDateContext(baseDate),
+        "与えられた分析基準日・対象期間・支出一覧だけを根拠に判断してください。曜日や週の進捗を勝手に推測しないでください。",
+        "特に、基準日が火曜日なのに『今日が日曜日』と書いたり、対象週が月をまたぐのに月末で週が終わったかのように扱うのは禁止です。",
+        "1週間は月曜始まり・日曜終わりで考えて、今日までの傾向を数個と、次に意識すべき点を数個、箇条書きでまとめてください。箇条書きは最大5個までにし、それぞれに補足を付けてください。Markdown記法は使わず、プレーンな文字と絵文字のみで出力し、全体で500文字以内に収めてください。",
+        "週予算: " + adjustedBudget + "円 / これまでの支出: " + totalAmount + "円 (" + percentage.toFixed(1) + "%)",
+        "カテゴリ別支出ランキング: " + (categoryRankingLines.length ? categoryRankingLines.join(" / ") : "なし"),
+        "前週の予算差分メモ: " + formatWeeklyBudgetCarryoverMemoForPrompt(weeklyBudgetCarryoverMemo),
+        "前週差分の反映方針: " + weeklyBudgetCarryoverGuidance,
+        "今後の予定メモ: " + (upcomingExpenseLines.length ? upcomingExpenseLines.join(" / ") : "なし"),
+        "以下は支出一覧(日付、カテゴリ、名称、金額)です。名称だけで内容が不明瞭な場合はカテゴリから内容を推定してください:",
+        expenseLines.join("\n")
+    ].join("\n");
+
+    return prompt;
+}
+
+function buildAnalysisDateContext(baseDate) {
+    var weekRange = getWeekRange(baseDate);
+    var weekday = getJapaneseWeekday(baseDate.getDay());
+    var isWeekClosed = baseDate.getDay() === 0;
+    var weekStatus = isWeekClosed
+        ? "今週は日曜まで終了した確定値として扱う。"
+        : "今週はまだ途中であり、" + weekday + "時点の途中経過として扱う。";
+
+    return [
+        "分析基準日: " + formatDate(baseDate) + " (" + weekday + ")",
+        "分析対象の週: " + formatDate(weekRange.startDate) + "〜" + formatDate(weekRange.endDate) + " の1週間",
+        "週の扱い: 1週間は月曜始まり・日曜終わり。月をまたいでも同じ週として扱う。年をまたぐ場合だけ、その年に含まれる日付までを対象にする。",
+        "分析時点: " + weekStatus
+    ].join(" / ");
+}
+
+function getJapaneseWeekday(dayIndex) {
+    return ["日曜日", "月曜日", "火曜日", "水曜日", "木曜日", "金曜日", "土曜日"][dayIndex] || "";
 }
 
 function getUpcomingPlannedExpenses(baseDate) {
