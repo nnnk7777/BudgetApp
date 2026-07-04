@@ -1,15 +1,12 @@
 function handleWeeklySummaryResult(dateRangeStr, totalAmount, dataEntries, difference, percentage, adjustedBudget, isStaging, action, currentDate) {
-    var upcomingPlannedExpenses = getPlannedExpensesForCurrentWeek(currentDate);
-    var upcomingExpenseLines = formatUpcomingPlannedExpenseLines(upcomingPlannedExpenses);
-    var plannedExpenseTotal = calculatePlannedExpenseTotal(upcomingPlannedExpenses);
+    var nextWeekPlannedExpenses = getPlannedExpensesForNextWeek(currentDate);
+    var nextWeekExpenseLines = formatUpcomingPlannedExpenseLines(nextWeekPlannedExpenses);
+    var nextWeekPlannedExpenseTotal = calculatePlannedExpenseTotal(nextWeekPlannedExpenses);
     var weeklyBudgetCarryoverMemo = getWeeklyBudgetCarryoverMemoForWeek(currentDate);
     var weeklyAnalysisMode = getWeeklyAnalysisMode(currentDate);
     var differenceSign = difference >= 0 ? "+" : "-";
     var differenceAbs = Math.abs(difference);
     var percentageStr = percentage.toFixed(2);
-    var projectedPercentage = adjustedBudget
-        ? (((totalAmount + plannedExpenseTotal) / adjustedBudget) * 100).toFixed(2)
-        : "0.00";
     var categoryRankingLines = getCategoryRankingLines(dataEntries);
     var top5Entries = getTopExpenseEntries(dataEntries, 5);
     var body = "";
@@ -17,12 +14,9 @@ function handleWeeklySummaryResult(dateRangeStr, totalAmount, dataEntries, diffe
     body += "◆ " + dateRangeStr + " の週次サマリー\n\n";
     body += "++++++++++ 💸 予算サマリー 💸 ++++++++++\n";
     body += dateRangeStr + " の実支出: " + totalAmount + " 円\n";
-    body += "今後の予定金額: " + plannedExpenseTotal + " 円\n";
-    body += "支出＋予定の合計見込み: " + (totalAmount + plannedExpenseTotal) + " 円\n";
     body += "\n";
     body += "予算に対して\n";
     body += "・実支出: " + percentageStr + "%\n";
-    body += "・合計見込み: " + projectedPercentage + "%\n";
     body += "（設定予算：" + adjustedBudget + "円）\n";
     body += "・分析モード: " + formatWeeklyAnalysisModeForMessage(weeklyAnalysisMode) + "\n";
     body += "++++++++++++++++++++++++++++++++++++\n";
@@ -48,9 +42,10 @@ function handleWeeklySummaryResult(dateRangeStr, totalAmount, dataEntries, diffe
         body += "・" + formatDate(entry.date) + " - " + entry.name + ": " + entry.amount + "円\n";
     });
     body += "\n";
-    body += "◆ 直近の予定支出\n";
-    if (upcomingExpenseLines.length) {
-        upcomingExpenseLines.forEach(function (line) {
+    body += "◆ 来週の支出予定\n";
+    if (nextWeekExpenseLines.length) {
+        body += "合計見込み: " + nextWeekPlannedExpenseTotal + "円\n";
+        nextWeekExpenseLines.forEach(function (line) {
             body += line + "\n";
         });
     } else {
@@ -58,7 +53,10 @@ function handleWeeklySummaryResult(dateRangeStr, totalAmount, dataEntries, diffe
     }
     body += "\n";
 
-    var geminiAnalysis = analyzeExpensesWithGemini(dataEntries, totalAmount, adjustedBudget, percentage, currentDate, weeklyAnalysisMode);
+    var geminiAnalysis = analyzeExpensesWithGemini(dataEntries, totalAmount, adjustedBudget, percentage, currentDate, weeklyAnalysisMode, {
+        plannedExpenses: nextWeekPlannedExpenses,
+        plannedExpenseLabel: "来週の予定メモ"
+    });
     if (geminiAnalysis) {
         body += "◆ Gemini分析\n" + geminiAnalysis + "\n";
     } else {
