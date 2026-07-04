@@ -1,4 +1,4 @@
-function analyzeExpensesWithGemini(dataEntries, totalAmount, adjustedBudget, percentage, baseDate) {
+function analyzeExpensesWithGemini(dataEntries, totalAmount, adjustedBudget, percentage, baseDate, weeklyAnalysisMode) {
     var apiKey = getGeminiApiKey();
     if (!apiKey) {
         return null;
@@ -13,6 +13,7 @@ function analyzeExpensesWithGemini(dataEntries, totalAmount, adjustedBudget, per
     var categoryRankingLines = getCategoryRankingLines(dataEntries);
     var weeklyBudgetCarryoverMemo = getWeeklyBudgetCarryoverMemoForWeek(baseDate);
     var weeklyBudgetCarryoverGuidance = buildWeeklyBudgetCarryoverGuidanceForPrompt(weeklyBudgetCarryoverMemo);
+    var weeklyAnalysisModeGuidance = buildWeeklyAnalysisModeGuidanceForPrompt(weeklyAnalysisMode);
     var prompt = buildExpenseSummaryPrompt(
         dataEntries,
         totalAmount,
@@ -20,6 +21,8 @@ function analyzeExpensesWithGemini(dataEntries, totalAmount, adjustedBudget, per
         percentage,
         baseDate,
         categoryRankingLines,
+        weeklyAnalysisMode,
+        weeklyAnalysisModeGuidance,
         weeklyBudgetCarryoverMemo,
         weeklyBudgetCarryoverGuidance,
         upcomingExpenseLines
@@ -44,6 +47,8 @@ function buildExpenseSummaryPrompt(
     percentage,
     baseDate,
     categoryRankingLines,
+    weeklyAnalysisMode,
+    weeklyAnalysisModeGuidance,
     weeklyBudgetCarryoverMemo,
     weeklyBudgetCarryoverGuidance,
     upcomingExpenseLines
@@ -65,6 +70,8 @@ function buildExpenseSummaryPrompt(
         "1週間は月曜始まり・日曜終わりで考えて、今日までの傾向を数個と、次に意識すべき点を数個、箇条書きでまとめてください。箇条書きは最大5個までにし、それぞれに補足を付けてください。Markdown記法は使わず、プレーンな文字と絵文字のみで出力し、全体で500文字以内に収めてください。",
         "週予算: " + adjustedBudget + "円 / これまでの支出: " + totalAmount + "円 (" + percentage.toFixed(1) + "%)",
         "カテゴリ別支出ランキング: " + (categoryRankingLines.length ? categoryRankingLines.join(" / ") : "なし"),
+        "今週の分析モード: " + formatWeeklyAnalysisModeForPrompt(weeklyAnalysisMode),
+        "分析モードの反映方針: " + weeklyAnalysisModeGuidance,
         "前週の予算差分メモ: " + formatWeeklyBudgetCarryoverMemoForPrompt(weeklyBudgetCarryoverMemo),
         "前週差分の反映方針: " + weeklyBudgetCarryoverGuidance,
         "今後の予定メモ: " + (upcomingExpenseLines.length ? upcomingExpenseLines.join(" / ") : "なし"),
@@ -73,6 +80,22 @@ function buildExpenseSummaryPrompt(
     ].join("\n");
 
     return prompt;
+}
+
+function formatWeeklyAnalysisModeForPrompt(modeResult) {
+    if (!modeResult || modeResult.mode !== WEEKLY_ANALYSIS_MODE_FRUGAL) {
+        return "通常モード";
+    }
+
+    return modeResult.label;
+}
+
+function buildWeeklyAnalysisModeGuidanceForPrompt(modeResult) {
+    if (!modeResult || modeResult.mode !== WEEKLY_ANALYSIS_MODE_FRUGAL) {
+        return "通常モード。必要以上に厳しくしすぎず、数値と予定支出に基づいて冷静に評価する。";
+    }
+
+    return "節制モード。通常より一段厳しめに評価し、裁量支出、先送りできる支出、習慣化すると危険な出費には甘くしない。ただし説教調にはせず、改善行動が明確になる実務的な助言を優先する。";
 }
 
 function buildAnalysisDateContext(baseDate) {
@@ -127,6 +150,9 @@ function getPlannedExpensesInRange(startDate, endDate) {
         var title = event.getTitle() || "予定";
         var description = sanitizePlannedExpenseMemo(event.getDescription() || "");
         if (isWeeklyBudgetCarryoverMemo(title, description)) {
+            return;
+        }
+        if (isWeeklyAnalysisModeEvent(title, description)) {
             return;
         }
         if (!hasPlannedExpenseMemo(description, title)) {
