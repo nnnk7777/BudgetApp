@@ -1,13 +1,15 @@
-function analyzeExpensesWithGemini(dataEntries, totalAmount, adjustedBudget, percentage, baseDate, weeklyAnalysisMode) {
+function analyzeExpensesWithGemini(dataEntries, totalAmount, adjustedBudget, percentage, baseDate, weeklyAnalysisMode, options) {
     var apiKey = getGeminiApiKey();
+    var analysisOptions = options || {};
+    var plannedExpenses = analysisOptions.plannedExpenses || getUpcomingPlannedExpenses(baseDate);
+    var plannedExpenseLabel = analysisOptions.plannedExpenseLabel || "今後の予定メモ";
     if (!apiKey) {
         return null;
     }
     var expenseLines = dataEntries.map(function (entry) {
         return formatDate(entry.date) + " [" + (entry.category || "未分類") + "] " + entry.name + " " + entry.amount + "円";
     });
-    var upcomingPlannedExpenses = getUpcomingPlannedExpenses(baseDate);
-    var upcomingExpenseLines = upcomingPlannedExpenses.map(function (entry) {
+    var upcomingExpenseLines = plannedExpenses.map(function (entry) {
         return formatDate(entry.date) + " [" + entry.title + "] " + entry.memo;
     });
     var categoryRankingLines = getCategoryRankingLines(dataEntries);
@@ -25,6 +27,7 @@ function analyzeExpensesWithGemini(dataEntries, totalAmount, adjustedBudget, per
         weeklyAnalysisModeGuidance,
         weeklyBudgetCarryoverMemo,
         weeklyBudgetCarryoverGuidance,
+        plannedExpenseLabel,
         upcomingExpenseLines
     );
 
@@ -51,6 +54,7 @@ function buildExpenseSummaryPrompt(
     weeklyAnalysisModeGuidance,
     weeklyBudgetCarryoverMemo,
     weeklyBudgetCarryoverGuidance,
+    plannedExpenseLabel,
     upcomingExpenseLines
 ) {
     var expenseLines = dataEntries.map(function (entry) {
@@ -74,7 +78,7 @@ function buildExpenseSummaryPrompt(
         "分析モードの反映方針: " + weeklyAnalysisModeGuidance,
         "前週の予算差分メモ: " + formatWeeklyBudgetCarryoverMemoForPrompt(weeklyBudgetCarryoverMemo),
         "前週差分の反映方針: " + weeklyBudgetCarryoverGuidance,
-        "今後の予定メモ: " + (upcomingExpenseLines.length ? upcomingExpenseLines.join(" / ") : "なし"),
+        plannedExpenseLabel + ": " + (upcomingExpenseLines.length ? upcomingExpenseLines.join(" / ") : "なし"),
         "以下は支出一覧(日付、カテゴリ、名称、金額)です。名称だけで内容が不明瞭な場合はカテゴリから内容を推定してください:",
         expenseLines.join("\n")
     ].join("\n");
@@ -131,6 +135,15 @@ function getPlannedExpensesForCurrentWeek(baseDate) {
     var startDate = new Date(baseDate.getFullYear(), baseDate.getMonth(), baseDate.getDate());
     var endDateExclusive = new Date(range.endDate);
     endDateExclusive.setDate(endDateExclusive.getDate() + 1);
+    return getPlannedExpensesInRange(startDate, endDateExclusive);
+}
+
+function getPlannedExpensesForNextWeek(baseDate) {
+    var range = getWeekRange(baseDate);
+    var startDate = new Date(range.endDate);
+    var endDateExclusive = new Date(range.endDate);
+    startDate.setDate(startDate.getDate() + 1);
+    endDateExclusive.setDate(endDateExclusive.getDate() + 8);
     return getPlannedExpensesInRange(startDate, endDateExclusive);
 }
 
