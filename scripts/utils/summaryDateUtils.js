@@ -34,6 +34,14 @@ function getWeekRange(date) {
     };
 }
 
+function isSunday(date) {
+    return date.getDay() === 0;
+}
+
+function isLastDayOfMonth(date) {
+    return date.getDate() === new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
+}
+
 function parseDate(dateStr, year) {
     var dateParts = dateStr.split('/');
     var month = parseInt(dateParts[0], 10) - 1;

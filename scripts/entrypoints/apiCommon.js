@@ -1,6 +1,12 @@
 var ApiActions = Object.freeze({
     TEXT: 'text',
     MAIL: 'mail',
+    DAILY_TEXT: 'daily_text',
+    WEEKLY_TEXT: 'weekly_text',
+    MONTHLY_TEXT: 'monthly_text',
+    DAILY_MAIL: 'daily_mail',
+    WEEKLY_MAIL: 'weekly_mail',
+    MONTHLY_MAIL: 'monthly_mail',
     ADD: 'add',
     CATEGORIES: 'categories',
     LIST_UNCATEGORIZED: 'list_uncategorized',
@@ -27,6 +33,18 @@ function dispatchApiAction(data) {
         case ApiActions.TEXT:
         case ApiActions.MAIL:
             return calculateExpensesSummary(data.action);
+        case ApiActions.DAILY_TEXT:
+            return calculateDailySummary('text');
+        case ApiActions.WEEKLY_TEXT:
+            return calculateWeeklySummary('text');
+        case ApiActions.MONTHLY_TEXT:
+            return calculateMonthlySummaryByUnit('text');
+        case ApiActions.DAILY_MAIL:
+            return calculateDailySummary('mail');
+        case ApiActions.WEEKLY_MAIL:
+            return calculateWeeklySummary('mail');
+        case ApiActions.MONTHLY_MAIL:
+            return calculateMonthlySummaryByUnit('mail');
         case ApiActions.ADD:
             return handleAddExpenseAction(data.item);
         case ApiActions.CATEGORIES:

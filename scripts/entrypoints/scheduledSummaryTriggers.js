@@ -3,6 +3,5 @@ function handleCalculateExpensesSummaryTrigger() {
 }
 
 function handleCalculateMonthlySummaryTrigger() {
-    calculateMonthlySummary('mail');
+    calculateMonthlySummaryByUnit('mail');
 }
-

@@ -55,13 +55,16 @@ function buildMonthlySummaryMessage(dateRangeStr, totalIncome, totalExpenses, ad
 }
 
 function sendMonthlySummaryResult(action, currentDate, isStaging, body) {
-    if (action !== 'mail') {
-        throw new Error('actionはmailのみ対応しています');
+    switch (action) {
+        case 'mail':
+            var emailAddress = getTargetEmailAddress();
+            var subjectPrefix = isStaging ? "<test>" : "";
+            var subject = subjectPrefix + "家計簿月次レポート（" + (currentDate.getMonth() + 1) + "月）";
+            MailApp.sendEmail(emailAddress, subject, body);
+            return "Successfully sent monthly summary mail";
+        case 'text':
+            return body;
+        default:
+            throw new Error('actionが定義されていません');
     }
-
-    var emailAddress = getTargetEmailAddress();
-    var subjectPrefix = isStaging ? "<test>" : "";
-    var subject = subjectPrefix + "家計簿月次レポート（" + (currentDate.getMonth() + 1) + "月）";
-    MailApp.sendEmail(emailAddress, subject, body);
-    return "Successfully sent monthly summary mail";
 }
