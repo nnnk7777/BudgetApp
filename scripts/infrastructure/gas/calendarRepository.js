@@ -1,5 +1,7 @@
 var WEEKLY_BUDGET_CARRYOVER_MEMO_TITLE = "先週の予算差分メモ";
 var WEEKLY_BUDGET_CARRYOVER_MEMO_MARKER = "WEEKLY_BUDGET_CARRYOVER_MEMO";
+var WEEKLY_ANALYSIS_MODE_NORMAL = "normal";
+var WEEKLY_ANALYSIS_MODE_FRUGAL = "frugal";
 
 function getCalendarEventsInRange(startDate, endDate) {
     if (typeof CalendarApp === 'undefined') {
@@ -69,6 +71,32 @@ function getWeeklyBudgetCarryoverMemoForWeek(baseDate) {
     return parsedMemo;
 }
 
+function getWeeklyAnalysisMode(baseDate) {
+    var weekStartDate = getWeekRange(baseDate).startDate;
+    var modeEvents = findWeeklyAnalysisModeEventsForDate(weekStartDate);
+    var resolvedMode = createWeeklyAnalysisModeResult(WEEKLY_ANALYSIS_MODE_NORMAL, "通常モード", "default");
+    var i;
+    var detectedMode;
+
+    for (i = 0; i < modeEvents.length; i++) {
+        detectedMode = detectWeeklyAnalysisModeFromEvent(modeEvents[i]);
+        if (detectedMode) {
+            Logger.log(
+                "分析モードを検出: date=" +
+                    formatDate(weekStartDate) +
+                    " mode=" +
+                    detectedMode.mode +
+                    " source=" +
+                    detectedMode.source
+            );
+            return detectedMode;
+        }
+    }
+
+    Logger.log("分析モード指定なし: date=" + formatDate(weekStartDate));
+    return resolvedMode;
+}
+
 function isWeeklyBudgetCarryoverMemo(title, description) {
     var normalizedTitle = String(title || "");
     var normalizedDescription = String(description || "");
@@ -76,6 +104,14 @@ function isWeeklyBudgetCarryoverMemo(title, description) {
         normalizedTitle.indexOf(WEEKLY_BUDGET_CARRYOVER_MEMO_TITLE) !== -1 ||
         normalizedDescription.indexOf(WEEKLY_BUDGET_CARRYOVER_MEMO_MARKER) !== -1
     );
+}
+
+function isWeeklyAnalysisModeEvent(title, description) {
+    if (isWeeklyBudgetCarryoverMemo(title, description)) {
+        return false;
+    }
+
+    return detectWeeklyAnalysisModeFromText(title, description) === WEEKLY_ANALYSIS_MODE_FRUGAL;
 }
 
 function getTargetCalendar() {
@@ -117,6 +153,16 @@ function findWeeklyBudgetCarryoverMemoEventsForDate(date) {
 
     return calendar.getEventsForDay(date).filter(function (event) {
         return isWeeklyBudgetCarryoverMemo(event.getTitle(), event.getDescription());
+    });
+}
+
+function findWeeklyAnalysisModeEventsForDate(date) {
+    var startDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    var endDate = new Date(startDate);
+    endDate.setDate(endDate.getDate() + 1);
+
+    return getCalendarEventsInRange(startDate, endDate).filter(function (event) {
+        return !isWeeklyBudgetCarryoverMemo(event.getTitle(), event.getDescription());
     });
 }
 
@@ -174,6 +220,87 @@ function getNextWeekMonday(date) {
     nextMonday.setDate(nextMonday.getDate() + 1);
     nextMonday.setHours(0, 0, 0, 0);
     return nextMonday;
+}
+
+function detectWeeklyAnalysisModeFromEvent(event) {
+    var title = event.getTitle() || "";
+    var description = event.getDescription() || "";
+    var ruleBasedMode = detectWeeklyAnalysisModeFromText(title, description);
+    var geminiMode;
+
+    if (ruleBasedMode) {
+        return createWeeklyAnalysisModeResult(ruleBasedMode, "節制モード", "rule");
+    }
+
+    geminiMode = detectWeeklyAnalysisModeWithGemini(title, description);
+    if (geminiMode === WEEKLY_ANALYSIS_MODE_FRUGAL) {
+        return createWeeklyAnalysisModeResult(geminiMode, "節制モード", "gemini");
+    }
+
+    return null;
+}
+
+function detectWeeklyAnalysisModeFromText(title, description) {
+    var normalizedCombined = normalizeWeeklyAnalysisModeText([title || "", description || ""].join(" "));
+    if (!normalizedCombined) {
+        return null;
+    }
+
+    if (
+        normalizedCombined.indexOf("節制モード") !== -1 ||
+        normalizedCombined.indexOf("節制") !== -1
+    ) {
+        return WEEKLY_ANALYSIS_MODE_FRUGAL;
+    }
+
+    return null;
+}
+
+function detectWeeklyAnalysisModeWithGemini(title, description) {
+    var apiKey = getGeminiApiKey();
+    var responseText;
+    var normalized;
+    var prompt;
+
+    if (!apiKey) {
+        return null;
+    }
+
+    prompt = [
+        "以下のGoogleカレンダー予定が、その週の家計分析を厳しめにする『節制モード』指定かどうかを判定してください。",
+        "出力は YES か NO のどちらか1語のみです。",
+        "節制モードと判断してよい例: 節制モード, 節制, 引き締め週, 節約強化週間。",
+        "支出予定、通常の予定、意味が曖昧で節制意図が読めないものは NO にしてください。",
+        "タイトル: " + String(title || ""),
+        "説明: " + String(description || "")
+    ].join("\n");
+
+    responseText = generateGeminiText(apiKey, prompt, {
+        temperature: 0,
+        maxOutputTokens: 10
+    });
+    if (!responseText) {
+        return null;
+    }
+
+    normalized = String(responseText).trim().toUpperCase();
+    Logger.log("分析モードGemini判定: title=" + title + " response=" + normalized);
+    return normalized.indexOf("YES") === 0 ? WEEKLY_ANALYSIS_MODE_FRUGAL : null;
+}
+
+function createWeeklyAnalysisModeResult(mode, label, source) {
+    return {
+        mode: mode,
+        label: label,
+        source: source
+    };
+}
+
+function normalizeWeeklyAnalysisModeText(text) {
+    return normalizeFullWidthNumbers(String(text || ""))
+        .toLowerCase()
+        .replace(/\s+/g, "")
+        .replace(/[!！?？\-ー_./／\\,，。、「」（）()【】\[\]:'"@#&]/g, "");
 }
 
 function escapeRegExp(text) {

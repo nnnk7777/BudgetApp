@@ -3,6 +3,7 @@ function handleWeeklySummaryResult(dateRangeStr, totalAmount, dataEntries, diffe
     var upcomingExpenseLines = formatUpcomingPlannedExpenseLines(upcomingPlannedExpenses);
     var plannedExpenseTotal = calculatePlannedExpenseTotal(upcomingPlannedExpenses);
     var weeklyBudgetCarryoverMemo = getWeeklyBudgetCarryoverMemoForWeek(currentDate);
+    var weeklyAnalysisMode = getWeeklyAnalysisMode(currentDate);
     var differenceSign = difference >= 0 ? "+" : "-";
     var differenceAbs = Math.abs(difference);
     var percentageStr = percentage.toFixed(2);
@@ -23,6 +24,7 @@ function handleWeeklySummaryResult(dateRangeStr, totalAmount, dataEntries, diffe
     body += "・実支出: " + percentageStr + "%\n";
     body += "・合計見込み: " + projectedPercentage + "%\n";
     body += "（設定予算：" + adjustedBudget + "円）\n";
+    body += "・分析モード: " + formatWeeklyAnalysisModeForMessage(weeklyAnalysisMode) + "\n";
     body += "++++++++++++++++++++++++++++++++++++\n";
     body += "* 予算差分：" + differenceSign + differenceAbs + "円\n\n";
     body += "◆ 前週からの持ち越し\n";
@@ -56,7 +58,7 @@ function handleWeeklySummaryResult(dateRangeStr, totalAmount, dataEntries, diffe
     }
     body += "\n";
 
-    var geminiAnalysis = analyzeExpensesWithGemini(dataEntries, totalAmount, adjustedBudget, percentage, currentDate);
+    var geminiAnalysis = analyzeExpensesWithGemini(dataEntries, totalAmount, adjustedBudget, percentage, currentDate, weeklyAnalysisMode);
     if (geminiAnalysis) {
         body += "◆ Gemini分析\n" + geminiAnalysis + "\n";
     } else {
@@ -87,6 +89,7 @@ function handleDailySummaryResult(currentDate, datesInWeek, adjustedBudget, isSt
     var upcomingExpenseLines = formatUpcomingPlannedExpenseLines(upcomingPlannedExpenses);
     var plannedExpenseTotal = calculatePlannedExpenseTotal(upcomingPlannedExpenses);
     var weeklyBudgetCarryoverMemo = getWeeklyBudgetCarryoverMemoForWeek(currentDate);
+    var weeklyAnalysisMode = getWeeklyAnalysisMode(currentDate);
     var datesUpToToday = datesInWeek.filter(function (date) {
         return date <= currentDate;
     });
@@ -103,7 +106,7 @@ function handleDailySummaryResult(currentDate, datesInWeek, adjustedBudget, isSt
         : "0.00";
     var categoryRankingLines = getCategoryRankingLines(dataEntries);
     var uncategorizedCount = countUncategorizedEntries(dataEntries);
-    var geminiAnalysis = analyzeExpensesWithGemini(dataEntries, totalAmount, adjustedBudget, percentage, currentDate);
+    var geminiAnalysis = analyzeExpensesWithGemini(dataEntries, totalAmount, adjustedBudget, percentage, currentDate, weeklyAnalysisMode);
     var subject = (isStaging ? "<test>" : "") + "家計簿日次レポート（" + formatDate(currentDate) + "）";
     var body = "++++++++++ 💸 予算サマリー 💸 ++++++++++\n";
 
@@ -115,6 +118,7 @@ function handleDailySummaryResult(currentDate, datesInWeek, adjustedBudget, isSt
     body += "・実支出: " + percentage.toFixed(2) + "%\n";
     body += "・合計見込み: " + projectedPercentage + "%\n";
     body += "（設定予算：" + adjustedBudget + "円）\n";
+    body += "・分析モード: " + formatWeeklyAnalysisModeForMessage(weeklyAnalysisMode) + "\n";
     if (uncategorizedCount > 0) {
         body += "・未分類の支出: " + uncategorizedCount + "件\n";
     }
@@ -190,4 +194,12 @@ function formatWeeklyBudgetCarryoverSummaryForMessage(memo) {
         overrunRatio +
         "% 超）。今週はこの反動も意識して、裁量支出をやや引き締め気味に見ます。"
     );
+}
+
+function formatWeeklyAnalysisModeForMessage(modeResult) {
+    if (!modeResult || modeResult.mode !== WEEKLY_ANALYSIS_MODE_FRUGAL) {
+        return "通常";
+    }
+
+    return modeResult.label + "（やや厳しめに評価）";
 }
