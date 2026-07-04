@@ -3,14 +3,34 @@ function availableExpenseSummaryText() {
     return calculateExpensesSummary('text');
 }
 
+function availableDailySummaryText() {
+    return calculateDailySummary('text');
+}
+
+function availableWeeklySummaryText() {
+    return calculateWeeklySummary('text');
+}
+
+function availableMonthlySummaryText() {
+    return calculateMonthlySummaryByUnit('text');
+}
+
 // action: mail
 function availableExpenseSummaryMail() {
     return calculateExpensesSummary('mail');
 }
 
+function availableDailySummaryMail() {
+    return calculateDailySummary('mail');
+}
+
+function availableWeeklySummaryMail() {
+    return calculateWeeklySummary('mail');
+}
+
 // monthly summary mail
 function availableMonthlySummaryMail() {
-    return calculateMonthlySummary('mail');
+    return calculateMonthlySummaryByUnit('mail');
 }
 
 // manual diagnostics
