@@ -46,14 +46,8 @@ function calculatePlannedExpenseTotal(plannedExpenses) {
     var total = 0;
 
     plannedExpenses.forEach(function (entry) {
-        var memo = entry.memo || "";
-        var matches = memo.match(/([0-9,]+)\s*円/g) || [];
-
-        matches.forEach(function (match) {
-            var amount = parseInt(match.replace(/[^\d]/g, ""), 10);
-            if (!isNaN(amount)) {
-                total += amount;
-            }
+        extractPlannedExpenseAmounts(entry).forEach(function (amount) {
+            total += amount;
         });
     });
 
@@ -66,4 +60,56 @@ function getTopExpenseEntries(dataEntries, limit) {
         return parseFloat(b.amount) - parseFloat(a.amount);
     });
     return topEntries.slice(0, limit);
+}
+
+function extractPlannedExpenseAmounts(entry) {
+    var combined = [entry.title || "", entry.memo || ""].join(" ");
+    var matches = combined.match(/([0-9,]+)\s*円/g) || [];
+
+    return matches
+        .map(function (match) {
+            return parseInt(match.replace(/[^\d]/g, ""), 10);
+        })
+        .filter(function (amount) {
+            return !isNaN(amount);
+        });
+}
+
+function normalizeExpenseComparisonText(text) {
+    return normalizeFullWidthNumbers(String(text || ""))
+        .toLowerCase()
+        .replace(/\s+/g, "")
+        .replace(/[!！?？\-ー_./／\\,，。、「」（）()【】\[\]:'"@#&]/g, "");
+}
+
+function tokenizeExpenseComparisonText(text) {
+    return normalizeFullWidthNumbers(String(text || ""))
+        .toLowerCase()
+        .replace(/[!！?？\-ー_./／\\,，。、「」（）()【】\[\]:'"@#&]/g, " ")
+        .split(/\s+/)
+        .map(function (token) {
+            return token.trim();
+        })
+        .filter(function (token) {
+            return token.length >= 2 && !/^\d+$/.test(token);
+        });
+}
+
+function countSharedExpenseTokens(leftText, rightText) {
+    var leftTokens = tokenizeExpenseComparisonText(leftText);
+    var rightTokenSet = {};
+    var sharedCount = 0;
+
+    tokenizeExpenseComparisonText(rightText).forEach(function (token) {
+        rightTokenSet[token] = true;
+    });
+
+    leftTokens.forEach(function (token) {
+        if (rightTokenSet[token]) {
+            sharedCount++;
+            delete rightTokenSet[token];
+        }
+    });
+
+    return sharedCount;
 }

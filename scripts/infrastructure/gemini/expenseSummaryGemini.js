@@ -180,6 +180,7 @@ function getPlannedExpensesInRange(startDate, endDate) {
     });
 
     plannedExpenses = cleanPlannedExpenseMemosWithGemini(plannedExpenses);
+    plannedExpenses = filterRecordedPlannedExpenses(plannedExpenses);
 
     plannedExpenses.sort(function (a, b) {
         return a.date.getTime() - b.date.getTime();
@@ -188,6 +189,190 @@ function getPlannedExpensesInRange(startDate, endDate) {
     Logger.log("予定支出取得件数: " + plannedExpenses.length);
 
     return plannedExpenses;
+}
+
+function filterRecordedPlannedExpenses(plannedExpenses) {
+    if (!plannedExpenses.length) {
+        return plannedExpenses;
+    }
+
+    var actualEntries = getExpenseEntriesForDates(buildExpenseComparisonDates(plannedExpenses));
+
+    return plannedExpenses.filter(function (plannedExpense) {
+        var candidateEntries = findRecordedExpenseCandidates(plannedExpense, actualEntries);
+        var shouldExclude = shouldExcludePlannedExpense(plannedExpense, candidateEntries);
+
+        if (shouldExclude) {
+            Logger.log(
+                "記録済み予定を除外: " +
+                    formatDate(plannedExpense.date) +
+                    " title=" +
+                    plannedExpense.title +
+                    " memo=" +
+                    plannedExpense.memo
+            );
+        }
+
+        return !shouldExclude;
+    });
+}
+
+function buildExpenseComparisonDates(plannedExpenses) {
+    var dateMap = {};
+    var dates = [];
+
+    plannedExpenses.forEach(function (plannedExpense) {
+        [-1, 0, 1].forEach(function (offset) {
+            var date = new Date(plannedExpense.date);
+            var key;
+            date.setDate(date.getDate() + offset);
+            key = date.getFullYear() + "-" + (date.getMonth() + 1) + "-" + date.getDate();
+            if (!dateMap[key]) {
+                dateMap[key] = true;
+                dates.push(new Date(date.getFullYear(), date.getMonth(), date.getDate()));
+            }
+        });
+    });
+
+    return dates;
+}
+
+function findRecordedExpenseCandidates(plannedExpense, actualEntries) {
+    var plannedAmounts = extractPlannedExpenseAmounts(plannedExpense);
+    var plannedText = [plannedExpense.title || "", plannedExpense.memo || ""].join(" ");
+    var plannedNormalized = normalizeExpenseComparisonText(plannedText);
+
+    return actualEntries.filter(function (entry) {
+        var dayDistance = Math.abs(calculateDateDistanceInDays(plannedExpense.date, entry.date));
+        var actualAmount = parseFloat(entry.amount);
+        var sharedTokenCount = countSharedExpenseTokens(plannedText, [entry.name || "", entry.category || ""].join(" "));
+        var amountMatched = !plannedAmounts.length || plannedAmounts.some(function (plannedAmount) {
+            return !isNaN(actualAmount) && Math.abs(plannedAmount - actualAmount) <= 300;
+        });
+        var nameNormalized = normalizeExpenseComparisonText(entry.name || "");
+        var containsMatchedName = !!nameNormalized && (
+            plannedNormalized.indexOf(nameNormalized) !== -1 ||
+            nameNormalized.indexOf(plannedNormalized) !== -1
+        );
+
+        if (dayDistance > 1) {
+            return false;
+        }
+
+        return amountMatched || sharedTokenCount > 0 || containsMatchedName;
+    });
+}
+
+function shouldExcludePlannedExpense(plannedExpense, candidateEntries) {
+    if (!candidateEntries.length) {
+        return false;
+    }
+
+    var exactRuleMatch = findExactRecordedExpenseMatch(plannedExpense, candidateEntries);
+    if (exactRuleMatch) {
+        return true;
+    }
+
+    var geminiCandidates = candidateEntries.filter(function (entry) {
+        return isStrongExpenseCandidateForGemini(plannedExpense, entry);
+    });
+
+    if (!geminiCandidates.length) {
+        return false;
+    }
+
+    return detectRecordedPlannedExpenseWithGemini(plannedExpense, geminiCandidates);
+}
+
+function findExactRecordedExpenseMatch(plannedExpense, candidateEntries) {
+    var plannedAmounts = extractPlannedExpenseAmounts(plannedExpense);
+    var plannedText = [plannedExpense.title || "", plannedExpense.memo || ""].join(" ");
+    var plannedNormalized = normalizeExpenseComparisonText(plannedText);
+
+    return candidateEntries.some(function (entry) {
+        var actualAmount = parseFloat(entry.amount);
+        var nameNormalized = normalizeExpenseComparisonText(entry.name || "");
+        var dayDistance = Math.abs(calculateDateDistanceInDays(plannedExpense.date, entry.date));
+        var exactAmountMatched = plannedAmounts.length && plannedAmounts.some(function (plannedAmount) {
+            return !isNaN(actualAmount) && plannedAmount === actualAmount;
+        });
+        var strongTextMatch = countSharedExpenseTokens(plannedText, [entry.name || "", entry.category || ""].join(" ")) >= 1 ||
+            (!!nameNormalized && plannedNormalized.indexOf(nameNormalized) !== -1);
+
+        return dayDistance === 0 && exactAmountMatched && strongTextMatch;
+    });
+}
+
+function isStrongExpenseCandidateForGemini(plannedExpense, entry) {
+    var plannedAmounts = extractPlannedExpenseAmounts(plannedExpense);
+    var actualAmount = parseFloat(entry.amount);
+    var dayDistance = Math.abs(calculateDateDistanceInDays(plannedExpense.date, entry.date));
+    var sharedTokenCount = countSharedExpenseTokens(
+        [plannedExpense.title || "", plannedExpense.memo || ""].join(" "),
+        [entry.name || "", entry.category || ""].join(" ")
+    );
+
+    if (dayDistance > 1) {
+        return false;
+    }
+
+    if (sharedTokenCount >= 1 && !plannedAmounts.length) {
+        return true;
+    }
+
+    return plannedAmounts.some(function (plannedAmount) {
+        return !isNaN(actualAmount) && Math.abs(plannedAmount - actualAmount) <= 300;
+    });
+}
+
+function detectRecordedPlannedExpenseWithGemini(plannedExpense, candidateEntries) {
+    var apiKey = getGeminiApiKey();
+    var prompt;
+    var responseText;
+    var normalized;
+
+    if (!apiKey) {
+        return false;
+    }
+
+    prompt = [
+        "以下のGoogleカレンダーの支出予定が、家計簿に記録済みの支出として扱ってよいか判定してください。",
+        "保守的に判定し、自信がない場合は NO にしてください。",
+        "出力は YES か NO のどちらか1語のみです。",
+        "予定:",
+        JSON.stringify({
+            date: formatDate(plannedExpense.date),
+            title: plannedExpense.title,
+            memo: plannedExpense.memo
+        }),
+        "家計簿候補:",
+        JSON.stringify(candidateEntries.map(function (entry) {
+            return {
+                date: formatDate(entry.date),
+                category: entry.category || "",
+                name: entry.name || "",
+                amount: entry.amount
+            };
+        }))
+    ].join("\n");
+
+    responseText = generateGeminiText(apiKey, prompt, {
+        temperature: 0,
+        maxOutputTokens: 10
+    });
+    if (!responseText) {
+        return false;
+    }
+
+    normalized = String(responseText).trim().toUpperCase();
+    Logger.log("予定支出の記録済みGemini判定: title=" + plannedExpense.title + " response=" + normalized);
+    return normalized.indexOf("YES") === 0;
+}
+
+function calculateDateDistanceInDays(leftDate, rightDate) {
+    var left = new Date(leftDate.getFullYear(), leftDate.getMonth(), leftDate.getDate());
+    var right = new Date(rightDate.getFullYear(), rightDate.getMonth(), rightDate.getDate());
+    return Math.round((left.getTime() - right.getTime()) / (24 * 60 * 60 * 1000));
 }
 
 function formatUpcomingPlannedExpenseLines(plannedExpenses) {
