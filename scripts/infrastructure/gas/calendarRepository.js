@@ -157,21 +157,11 @@ function findWeeklyBudgetCarryoverMemoEventsForDate(date) {
 }
 
 function findWeeklyAnalysisModeEventsForDate(date) {
-    if (typeof CalendarApp === 'undefined') {
-        Logger.log("CalendarApp is unavailable in this runtime.");
-        return [];
-    }
+    var startDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    var endDate = new Date(startDate);
+    endDate.setDate(endDate.getDate() + 1);
 
-    var calendar = getTargetCalendar();
-    if (!calendar) {
-        return [];
-    }
-
-    return calendar.getEventsForDay(date).filter(function (event) {
-        if (typeof event.isAllDayEvent === 'function' && !event.isAllDayEvent()) {
-            return false;
-        }
-
+    return getCalendarEventsInRange(startDate, endDate).filter(function (event) {
         return !isWeeklyBudgetCarryoverMemo(event.getTitle(), event.getDescription());
     });
 }
