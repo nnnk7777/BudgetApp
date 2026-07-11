@@ -34,6 +34,8 @@ function analyzeExpensesWithAI(dataEntries, totalAmount, adjustedBudget, percent
         thinkingConfig: {
             thinkingBudget: 400
         }
+    }, {
+        logContext: "expense_summary"
     });
 }
 
@@ -348,6 +350,8 @@ function detectRecordedPlannedExpenseWithAI(plannedExpense, candidateEntries) {
     result = generatePreferredAiText(prompt, {
         temperature: 0,
         maxOutputTokens: 10
+    }, {
+        logContext: "planned_expense_record_check"
     });
     if (!result.text) {
         return false;
@@ -435,6 +439,8 @@ function cleanPlannedExpenseMemosWithAI(plannedExpenses) {
     var result = generatePreferredAiText(prompt, {
         temperature: 0,
         maxOutputTokens: 800
+    }, {
+        logContext: "planned_expense_memo_cleanup"
     });
     var responseText = result.text;
     if (!responseText) {

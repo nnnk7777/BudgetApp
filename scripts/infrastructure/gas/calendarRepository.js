@@ -273,6 +273,8 @@ function detectWeeklyAnalysisModeWithAI(title, description) {
     result = generatePreferredAiText(prompt, {
         temperature: 0,
         maxOutputTokens: 10
+    }, {
+        logContext: "weekly_analysis_mode_detection"
     });
     if (!result.text) {
         return null;

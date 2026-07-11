@@ -40,6 +40,8 @@ function requestCategorySuggestionsWithAI(items, historyItems, categoryNames, mo
     var aiResult = generatePreferredAiText(prompt, {
         temperature: 0.1,
         maxOutputTokens: 1200
+    }, {
+        logContext: "uncategorized_suggestion_month_" + month
     });
     var responseText = aiResult.text;
     var parseResult;

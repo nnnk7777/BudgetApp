@@ -112,11 +112,14 @@ function generatePreferredAiText(prompt, generationConfig, options) {
     var openAiResult;
     var geminiText;
     var fallbackReason;
+    var logContext;
 
     options = options || {};
+    logContext = options.logContext || "default";
     if (openAiApiKey) {
         openAiResult = generateOpenAiText(openAiApiKey, prompt, generationConfig);
         if (openAiResult && openAiResult.text) {
+            Logger.log("AI利用: context=" + logContext + " provider=openai model=" + openAiResult.model);
             return {
                 text: openAiResult.text,
                 provider: "openai",
@@ -133,6 +136,7 @@ function generatePreferredAiText(prompt, generationConfig, options) {
     if (geminiApiKey) {
         geminiText = generateGeminiText(geminiApiKey, prompt, generationConfig);
         if (geminiText) {
+            Logger.log("AI利用: context=" + logContext + " provider=gemini model=" + getGeminiModelLabel() + " fallbackReason=" + fallbackReason);
             return {
                 text: geminiText,
                 provider: "gemini",
@@ -143,6 +147,7 @@ function generatePreferredAiText(prompt, generationConfig, options) {
         }
     }
 
+    Logger.log("AI利用失敗: context=" + logContext + " fallbackReason=" + (fallbackReason || "no_provider_available"));
     return {
         text: null,
         provider: null,

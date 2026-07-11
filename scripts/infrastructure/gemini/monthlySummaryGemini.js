@@ -27,5 +27,7 @@ function analyzeMonthlyWithAI(expenseEntries, categoryTotals, totalExpenses, tot
         thinkingConfig: {
             thinkingBudget: 400
         }
+    }, {
+        logContext: "monthly_summary"
     });
 }
