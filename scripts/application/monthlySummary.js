@@ -25,7 +25,7 @@ function calculateMonthlySummary(action) {
     var categoryTotals = calculateCategoryTotals(expenseEntries);
     logMonthlySummaryDebug(month, expenseEntries, incomeEntries, categoryTotals);
 
-    var geminiAnalysis = analyzeMonthlyWithGemini(expenseEntries, categoryTotals, totalExpenses, totalIncome, adjustedBudget, percentage, dateRangeStr);
+    var aiAnalysis = analyzeMonthlyWithAI(expenseEntries, categoryTotals, totalExpenses, totalIncome, adjustedBudget, percentage, dateRangeStr);
     var body = buildMonthlySummaryMessage(
         dateRangeStr,
         totalIncome,
@@ -36,7 +36,7 @@ function calculateMonthlySummary(action) {
         expenseEntries,
         incomeEntries,
         categoryTotals,
-        geminiAnalysis
+        aiAnalysis
     );
 
     return sendMonthlySummaryResult(action, currentDate, isStaging, body);

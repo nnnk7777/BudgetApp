@@ -35,12 +35,13 @@ function buildCategorySuggestionPrompt(items, historyItems, categoryNames) {
     ].join("\n");
 }
 
-function requestCategorySuggestions(apiKey, items, historyItems, categoryNames, month, options) {
+function requestCategorySuggestionsWithAI(items, historyItems, categoryNames, month, options) {
     var prompt = buildCategorySuggestionPrompt(items, historyItems, categoryNames);
-    var responseText = generateGeminiText(apiKey, prompt, {
+    var aiResult = generatePreferredAiText(prompt, {
         temperature: 0.1,
         maxOutputTokens: 1200
     });
+    var responseText = aiResult.text;
     var parseResult;
 
     if (!responseText) {
@@ -58,6 +59,9 @@ function requestCategorySuggestions(apiKey, items, historyItems, categoryNames, 
     }
 
     return {
+        provider: aiResult.provider,
+        model: aiResult.model,
+        usedFallback: aiResult.usedFallback,
         responseText: responseText,
         parseResult: parseResult
     };
@@ -108,7 +112,7 @@ function parseCategorySuggestionResponse(text, items, categoryNames, context) {
                 return buildSkippedSuggestion(
                     item,
                     null,
-                    buildDetailedReason('Gemini応答を解析できませんでした', lineParseResult.errorDetail || parsed.errorMessage),
+                    buildDetailedReason('AI応答を解析できませんでした', lineParseResult.errorDetail || parsed.errorMessage),
                     {
                         errorCode: 'response_parse_failed',
                         errorDetail: (lineParseResult.errorDetail || 'Pipe parse failed.') + ' / ' + parsed.errorMessage,
@@ -135,10 +139,10 @@ function parseCategorySuggestionResponse(text, items, categoryNames, context) {
                 return buildSkippedSuggestion(
                     item,
                     null,
-                    buildDetailedReason('Gemini応答が配列形式ではありません', 'Gemini response was valid JSON but not an array.'),
+                    buildDetailedReason('AI応答が配列形式ではありません', 'AI response was valid JSON but not an array.'),
                     {
                         errorCode: 'response_not_array',
-                        errorDetail: 'Gemini response was valid JSON but not an array.',
+                        errorDetail: 'AI response was valid JSON but not an array.',
                         responsePreview: buildResponsePreview(cleanedText)
                     }
                 );

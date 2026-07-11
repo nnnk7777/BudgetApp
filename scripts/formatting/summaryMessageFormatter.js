@@ -53,15 +53,11 @@ function handleWeeklySummaryResult(dateRangeStr, totalAmount, dataEntries, diffe
     }
     body += "\n";
 
-    var geminiAnalysis = analyzeExpensesWithGemini(dataEntries, totalAmount, adjustedBudget, percentage, currentDate, weeklyAnalysisMode, {
+    var aiAnalysis = analyzeExpensesWithAI(dataEntries, totalAmount, adjustedBudget, percentage, currentDate, weeklyAnalysisMode, {
         plannedExpenses: nextWeekPlannedExpenses,
         plannedExpenseLabel: "来週の予定メモ"
     });
-    if (geminiAnalysis) {
-        body += "◆ Gemini分析\n" + geminiAnalysis + "\n";
-    } else {
-        body += "◆ Gemini分析\n(Geminiからの回答を取得できませんでした。ログを確認してください)\n";
-    }
+    body += buildAiSummarySection("◆ AI分析", aiAnalysis);
 
     if (action === 'mail') {
         upsertWeeklyBudgetCarryoverMemo(currentDate, difference, adjustedBudget, totalAmount, dateRangeStr);
@@ -104,7 +100,7 @@ function handleDailySummaryResult(currentDate, datesInWeek, adjustedBudget, isSt
         : "0.00";
     var categoryRankingLines = getCategoryRankingLines(dataEntries);
     var uncategorizedCount = countUncategorizedEntries(dataEntries);
-    var geminiAnalysis = analyzeExpensesWithGemini(dataEntries, totalAmount, adjustedBudget, percentage, currentDate, weeklyAnalysisMode);
+    var aiAnalysis = analyzeExpensesWithAI(dataEntries, totalAmount, adjustedBudget, percentage, currentDate, weeklyAnalysisMode);
     var subject = (isStaging ? "<test>" : "") + "家計簿日次レポート（" + formatDate(currentDate) + "）";
     var body = "++++++++++ 💸 予算サマリー 💸 ++++++++++\n";
 
@@ -147,11 +143,7 @@ function handleDailySummaryResult(currentDate, datesInWeek, adjustedBudget, isSt
     }
     body += "\n";
 
-    if (geminiAnalysis) {
-        body += "◆ Gemini分析\n" + geminiAnalysis + "\n";
-    } else {
-        body += "◆ Gemini分析\n(Geminiからの回答を取得できませんでした。ログを確認してください)\n";
-    }
+    body += buildAiSummarySection("◆ AI分析", aiAnalysis);
 
     switch (action) {
         case 'mail':

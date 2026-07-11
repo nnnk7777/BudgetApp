@@ -17,7 +17,7 @@ function logMonthlySummaryDebug(month, expenseEntries, incomeEntries, categoryTo
     }).join(", "));
 }
 
-function buildMonthlySummaryMessage(dateRangeStr, totalIncome, totalExpenses, adjustedBudget, difference, percentage, expenseEntries, incomeEntries, categoryTotals, geminiAnalysis) {
+function buildMonthlySummaryMessage(dateRangeStr, totalIncome, totalExpenses, adjustedBudget, difference, percentage, expenseEntries, incomeEntries, categoryTotals, aiAnalysis) {
     var sortedCategories = Object.keys(categoryTotals).sort(function (a, b) {
         return categoryTotals[b] - categoryTotals[a];
     });
@@ -45,11 +45,7 @@ function buildMonthlySummaryMessage(dateRangeStr, totalIncome, totalExpenses, ad
     });
     body += "\n";
 
-    if (geminiAnalysis) {
-        body += "◆ Gemini分析\n" + geminiAnalysis + "\n";
-    } else {
-        body += "◆ Gemini分析\n(Geminiからの回答を取得できませんでした。ログを確認してください)\n";
-    }
+    body += buildAiSummarySection("◆ AI分析", aiAnalysis);
 
     return body;
 }
