@@ -18,7 +18,7 @@ Google スプレッドシートの家計簿を生成・管理するための GAS
 │   ├── entrypoints
 │   │   ├── handleApi.js
 │   │   ├── apiCommon.js
-│   │   ├── availableManualEntryPoints.js
+│   │   ├── 0_manualEntryPoints.js
 │   │   ├── scheduledSummaryTriggers.js
 │   │   └── formatDateAndPriceNumbers.js
 │   ├── application
@@ -184,7 +184,7 @@ action に渡せる値は以下のとおりです。
 -   `entrypoints`
     -   GAS から直接呼ばれる入口
     -   `handleApi.js`
-    -   `availableManualEntryPoints.js`
+    -   `0_manualEntryPoints.js`
     -   `scheduledSummaryTriggers.js`
     -   `formatDateAndPriceNumbers.js`
 -   `application`

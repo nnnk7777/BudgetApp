@@ -27,7 +27,7 @@
 
 -   API リクエストの parse、hash 検証、action dispatch、JSON レスポンス生成を担当する。
 
-### [entrypoints/availableManualEntryPoints.js](./entrypoints/availableManualEntryPoints.js)
+### [entrypoints/0_manualEntryPoints.js](./entrypoints/0_manualEntryPoints.js)
 
 -   GAS の UI から手動実行しやすいエントリポイントだけをまとめたファイル。
 
