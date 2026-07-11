@@ -12,14 +12,14 @@ function handleWeeklySummaryResult(dateRangeStr, totalAmount, dataEntries, diffe
     var body = "";
 
     body += "◆ " + dateRangeStr + " の週次サマリー\n\n";
-    body += "++++++++++ 💸 予算サマリー 💸 ++++++++++\n";
+    body += "+++ 💸 予算サマリー 💸 +++\n";
     body += dateRangeStr + " の実支出: " + totalAmount + " 円\n";
     body += "\n";
     body += "予算に対して\n";
     body += "・実支出: " + percentageStr + "%\n";
     body += "（設定予算：" + adjustedBudget + "円）\n";
     body += "・分析モード: " + formatWeeklyAnalysisModeForMessage(weeklyAnalysisMode) + "\n";
-    body += "++++++++++++++++++++++++++++++++++++\n";
+    body += "++++++++++++++++++++\n";
     body += "* 予算差分：" + differenceSign + differenceAbs + "円\n\n";
     body += "◆ 前週からの持ち越し\n";
     body += formatWeeklyBudgetCarryoverSummaryForMessage(weeklyBudgetCarryoverMemo) + "\n\n";
@@ -102,7 +102,7 @@ function handleDailySummaryResult(currentDate, datesInWeek, adjustedBudget, isSt
     var uncategorizedCount = countUncategorizedEntries(dataEntries);
     var aiAnalysis = analyzeExpensesWithAI(dataEntries, totalAmount, adjustedBudget, percentage, currentDate, weeklyAnalysisMode);
     var subject = (isStaging ? "<test>" : "") + "家計簿日次レポート（" + formatDate(currentDate) + "）";
-    var body = "++++++++++ 💸 予算サマリー 💸 ++++++++++\n";
+    var body = "+++ 💸 予算サマリー 💸 +++\n";
 
     body += formatDate(datesInWeek[0]) + " から " + formatDate(currentDate) + " までの実支出: " + totalAmount + " 円\n";
     body += "今後の予定金額: " + plannedExpenseTotal + " 円\n";
@@ -116,7 +116,7 @@ function handleDailySummaryResult(currentDate, datesInWeek, adjustedBudget, isSt
     if (uncategorizedCount > 0) {
         body += "・未分類の支出: " + uncategorizedCount + "件\n";
     }
-    body += "++++++++++++++++++++++++++++++++++++\n\n";
+    body += "++++++++++++++++++++\n\n";
     body += "◆ 前週からの持ち越し\n";
     body += formatWeeklyBudgetCarryoverSummaryForMessage(weeklyBudgetCarryoverMemo) + "\n\n";
     body += "◆ カテゴリ別支出ランキング\n";

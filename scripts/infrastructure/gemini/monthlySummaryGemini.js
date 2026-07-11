@@ -17,8 +17,12 @@ function analyzeMonthlyWithAI(expenseEntries, categoryTotals, totalExpenses, tot
             return formatDate(entry.date) + " [" + (entry.category || "未分類") + "] " + entry.name + " " + entry.amount + "円";
         }).join("\n"),
         "日本語で、1) 今月の傾向 2) 予算に対する評価 3) 来月に向けた改善提案 を書いてください。",
-        "各項目は最大3つの箇条書きにし、全体で800文字以内にしてください。",
-        "Markdown見出し、#、###、太字、表、コードブロックは使わず、プレーンテキストと絵文字のみで出力してください。"
+        "出力形式のルール:",
+        "- 見出しは絵文字付きにする。例: 📊 今月の傾向 / 💸 予算評価 / ✅ 来月の改善",
+        "- セクションは3個まで",
+        "- 各セクションは最大3つの箇条書きまで",
+        "- Markdown見出し、#、###、太字、表、コードブロックは使わず、プレーンテキストと絵文字のみで出力する",
+        "- 全体で800文字以内にする"
     ].join("\n");
 
     return generatePreferredAiText(prompt, {
