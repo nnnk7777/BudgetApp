@@ -27,17 +27,29 @@ Google スプレッドシートの家計簿を生成・管理するための GAS
 │   │   ├── expenseSummary.js
 │   │   ├── monthlySummary.js
 │   │   └── uncategorizedExpenses.js
+│   ├── domain
+│   │   └── ai
+│   │       ├── expenseSummaryPrompts.js
+│   │       ├── monthlySummaryPrompt.js
+│   │       └── categorySuggestionPrompt.js
 │   ├── infrastructure
+│   │   ├── ai
+│   │   │   ├── aiClient.js
+│   │   │   ├── aiResponseParsers.js
+│   │   │   ├── expenseSummaryAi.js
+│   │   │   ├── monthlySummaryAi.js
+│   │   │   ├── categorySuggestionAi.js
+│   │   │   └── weeklyAnalysisModeAi.js
 │   │   ├── gas
 │   │   │   ├── scriptRuntime.js
 │   │   │   ├── expenseSheetRepository.js
 │   │   │   ├── monthlySheetRepository.js
-│   │   │   └── uncategorizedExpenseRepository.js
+│   │   │   ├── uncategorizedExpenseRepository.js
+│   │   │   └── calendarRepository.js
+│   │   ├── openai
+│   │   │   └── openaiClient.js
 │   │   └── gemini
-│   │       ├── geminiClient.js
-│   │       ├── expenseSummaryGemini.js
-│   │       ├── monthlySummaryGemini.js
-│   │       └── uncategorizedSuggestionGemini.js
+│   │       └── geminiClient.js
 │   ├── formatting
 │   │   ├── summaryMessageFormatter.js
 │   │   └── monthlySummaryFormatter.js
@@ -194,18 +206,32 @@ action に渡せる値は以下のとおりです。
     -   `expenseSummary.js`
     -   `monthlySummary.js`
     -   `uncategorizedExpenses.js`
+-   `domain/ai`
+    -   AI 向けのプロンプト生成と入力整形
+    -   `expenseSummaryPrompts.js`
+    -   `monthlySummaryPrompt.js`
+    -   `categorySuggestionPrompt.js`
+-   `infrastructure/ai`
+    -   AI プロバイダに依存しない呼び出し制御、応答解析、AI利用フロー
+    -   `aiClient.js`
+    -   `aiResponseParsers.js`
+    -   `expenseSummaryAi.js`
+    -   `monthlySummaryAi.js`
+    -   `categorySuggestionAi.js`
+    -   `weeklyAnalysisModeAi.js`
 -   `infrastructure/gas`
     -   SpreadsheetApp / PropertiesService / runtime 依存
     -   `scriptRuntime.js`
     -   `expenseSheetRepository.js`
     -   `monthlySheetRepository.js`
+    -   `calendarRepository.js`
     -   `uncategorizedExpenseRepository.js`
 -   `infrastructure/gemini`
-    -   Gemini API と Gemini 依存ロジック
+    -   Gemini API client のみ
     -   `geminiClient.js`
-    -   `expenseSummaryGemini.js`
-    -   `monthlySummaryGemini.js`
-    -   `uncategorizedSuggestionGemini.js`
+-   `infrastructure/openai`
+    -   OpenAI API client のみ
+    -   `openaiClient.js`
 -   `infrastructure/openai`
     -   OpenAI API と OpenAI 優先フォールバック制御
     -   `openaiClient.js`
