@@ -6,10 +6,16 @@
     -   GAS から直接呼ばれる入口
 -   [application](./application)
     -   action ごとの本処理
+-   [domain/ai](./domain/ai)
+    -   AI 向けのプロンプト生成と入力整形
+-   [infrastructure/ai](./infrastructure/ai)
+    -   AI プロバイダに依存しない呼び出し制御、応答解析、AI利用フロー
 -   [infrastructure/gas](./infrastructure/gas)
     -   SpreadsheetApp / PropertiesService / runtime 依存
 -   [infrastructure/gemini](./infrastructure/gemini)
-    -   Gemini API と Gemini 依存ロジック
+    -   Gemini API client
+-   [infrastructure/openai](./infrastructure/openai)
+    -   OpenAI API client
 -   [formatting](./formatting)
     -   mail / text の本文生成
 -   [utils](./utils)
@@ -65,6 +71,46 @@
 -   `list_uncategorized` アクションによって未分類支出の一覧を返す。
 -   `autofill_uncategorized` アクションによって、OpenAI を優先し失敗時は Gemini でカテゴリ候補を推定して高信頼のものだけ更新する。
 
+## domain/ai
+
+### [domain/ai/expenseSummaryPrompts.js](./domain/ai/expenseSummaryPrompts.js)
+
+-   日次・週次サマリー、予定支出メモ整形、節制モード判定などで使う AI プロンプト生成を担当する。
+
+### [domain/ai/monthlySummaryPrompt.js](./domain/ai/monthlySummaryPrompt.js)
+
+-   月次サマリー分析向けの AI プロンプト生成を担当する。
+
+### [domain/ai/categorySuggestionPrompt.js](./domain/ai/categorySuggestionPrompt.js)
+
+-   未分類支出のカテゴリ推定向け AI プロンプト生成を担当する。
+
+## infrastructure/ai
+
+### [infrastructure/ai/aiClient.js](./infrastructure/ai/aiClient.js)
+
+-   OpenAI 優先、Gemini フォールバックのプロバイダ選択と共通ログ出力を担当する。
+
+### [infrastructure/ai/aiResponseParsers.js](./infrastructure/ai/aiResponseParsers.js)
+
+-   AI 応答のコードブロック除去や pipe 形式応答の解析を担当する。
+
+### [infrastructure/ai/expenseSummaryAi.js](./infrastructure/ai/expenseSummaryAi.js)
+
+-   日次・週次サマリー向けの AI 呼び出しフローと、予定支出メモ整形・記録済み予定判定を担当する。
+
+### [infrastructure/ai/monthlySummaryAi.js](./infrastructure/ai/monthlySummaryAi.js)
+
+-   月次サマリー向けの AI 呼び出しフローを担当する。
+
+### [infrastructure/ai/categorySuggestionAi.js](./infrastructure/ai/categorySuggestionAi.js)
+
+-   未分類支出のカテゴリ推定における AI 呼び出しと応答解析を担当する。
+
+### [infrastructure/ai/weeklyAnalysisModeAi.js](./infrastructure/ai/weeklyAnalysisModeAi.js)
+
+-   カレンダー予定から節制モード指定かどうかを AI で補助判定する。
+
 ## infrastructure/gas
 
 ### [infrastructure/gas/scriptRuntime.js](./infrastructure/gas/scriptRuntime.js)
@@ -96,22 +142,7 @@
 
 ### [infrastructure/openai/openaiClient.js](./infrastructure/openai/openaiClient.js)
 
--   OpenAI API キー取得、モデル選択、Responses API 呼び出し、および OpenAI 優先・Gemini フォールバックの共通処理を担当する。
-
-### [infrastructure/gemini/expenseSummaryGemini.js](./infrastructure/gemini/expenseSummaryGemini.js)
-
--   日次・週次サマリー向けの Gemini 分析と、予定支出メモ整形を担当する。
-    -   現在は OpenAI 優先・Gemini フォールバックで利用する AI 分析ロジックを保持する。
-
-### [infrastructure/gemini/monthlySummaryGemini.js](./infrastructure/gemini/monthlySummaryGemini.js)
-
--   月次サマリー向けの Gemini 分析を担当する。
-    -   現在は OpenAI 優先・Gemini フォールバックで利用する月次分析ロジックを保持する。
-
-### [infrastructure/gemini/uncategorizedSuggestionGemini.js](./infrastructure/gemini/uncategorizedSuggestionGemini.js)
-
--   未分類支出のカテゴリ推定プロンプト生成、Gemini 応答解析を担当する。
-    -   現在は OpenAI 優先・Gemini フォールバックで利用するカテゴリ推定ロジックを保持する。
+-   OpenAI API キー取得、モデル選択、Responses API 呼び出しを担当する。
 
 ## formatting
 

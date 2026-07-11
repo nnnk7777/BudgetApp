@@ -256,35 +256,6 @@ function detectWeeklyAnalysisModeFromText(title, description) {
     return null;
 }
 
-function detectWeeklyAnalysisModeWithAI(title, description) {
-    var result;
-    var normalized;
-    var prompt;
-
-    prompt = [
-        "以下のGoogleカレンダー予定が、その週の家計分析を厳しめにする『節制モード』指定かどうかを判定してください。",
-        "出力は YES か NO のどちらか1語のみです。",
-        "節制モードと判断してよい例: 節制モード, 節制, 引き締め週, 節約強化週間。",
-        "支出予定、通常の予定、意味が曖昧で節制意図が読めないものは NO にしてください。",
-        "タイトル: " + String(title || ""),
-        "説明: " + String(description || "")
-    ].join("\n");
-
-    result = generatePreferredAiText(prompt, {
-        temperature: 0,
-        maxOutputTokens: 10
-    }, {
-        logContext: "weekly_analysis_mode_detection"
-    });
-    if (!result.text) {
-        return null;
-    }
-
-    normalized = String(result.text).trim().toUpperCase();
-    Logger.log("分析モードAI判定: title=" + title + " provider=" + result.provider + " response=" + normalized);
-    return normalized.indexOf("YES") === 0 ? WEEKLY_ANALYSIS_MODE_FRUGAL : null;
-}
-
 function createWeeklyAnalysisModeResult(mode, label, source) {
     return {
         mode: mode,

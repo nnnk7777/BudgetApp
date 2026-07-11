@@ -100,29 +100,6 @@ function generateGeminiText(apiKey, prompt, generationConfig) {
     return null;
 }
 
-function parsePipeResponse(text) {
-    return text
-        .replace(/```[\s\S]*?\n/g, "")
-        .replace(/```/g, "")
-        .split("\n")
-        .map(function (line) {
-            return line.trim();
-        })
-        .filter(function (line) {
-            return /^\d+\|/.test(line);
-        })
-        .map(function (line) {
-            var separatorIndex = line.indexOf("|");
-            return {
-                index: parseInt(line.substring(0, separatorIndex), 10),
-                cleanedMemo: line.substring(separatorIndex + 1).trim()
-            };
-        })
-        .filter(function (item) {
-            return !isNaN(item.index);
-        });
-}
-
 function fetchGenerativeModels(apiKey) {
     try {
         var listUrl = "https://generativelanguage.googleapis.com/v1beta/models?key=" + apiKey;
