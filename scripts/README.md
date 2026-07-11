@@ -27,7 +27,7 @@
 
 -   API リクエストの parse、hash 検証、action dispatch、JSON レスポンス生成を担当する。
 
-### [entrypoints/availableManualEntryPoints.js](./entrypoints/availableManualEntryPoints.js)
+### [entrypoints/0_manualEntryPoints.js](./entrypoints/0_manualEntryPoints.js)
 
 -   GAS の UI から手動実行しやすいエントリポイントだけをまとめたファイル。
 
@@ -63,7 +63,7 @@
 ### [application/uncategorizedExpenses.js](./application/uncategorizedExpenses.js)
 
 -   `list_uncategorized` アクションによって未分類支出の一覧を返す。
--   `autofill_uncategorized` アクションによって、Gemini でカテゴリ候補を推定し、高信頼のものだけ更新する。
+-   `autofill_uncategorized` アクションによって、OpenAI を優先し失敗時は Gemini でカテゴリ候補を推定して高信頼のものだけ更新する。
 
 ## infrastructure/gas
 
@@ -94,17 +94,24 @@
 
 -   Gemini API キー取得、モデル選択、`generateContent` 呼び出しの共通処理を担当する。
 
+### [infrastructure/openai/openaiClient.js](./infrastructure/openai/openaiClient.js)
+
+-   OpenAI API キー取得、モデル選択、Responses API 呼び出し、および OpenAI 優先・Gemini フォールバックの共通処理を担当する。
+
 ### [infrastructure/gemini/expenseSummaryGemini.js](./infrastructure/gemini/expenseSummaryGemini.js)
 
 -   日次・週次サマリー向けの Gemini 分析と、予定支出メモ整形を担当する。
+    -   現在は OpenAI 優先・Gemini フォールバックで利用する AI 分析ロジックを保持する。
 
 ### [infrastructure/gemini/monthlySummaryGemini.js](./infrastructure/gemini/monthlySummaryGemini.js)
 
 -   月次サマリー向けの Gemini 分析を担当する。
+    -   現在は OpenAI 優先・Gemini フォールバックで利用する月次分析ロジックを保持する。
 
 ### [infrastructure/gemini/uncategorizedSuggestionGemini.js](./infrastructure/gemini/uncategorizedSuggestionGemini.js)
 
 -   未分類支出のカテゴリ推定プロンプト生成、Gemini 応答解析を担当する。
+    -   現在は OpenAI 優先・Gemini フォールバックで利用するカテゴリ推定ロジックを保持する。
 
 ## formatting
 

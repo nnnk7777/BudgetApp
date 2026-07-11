@@ -1,12 +1,4 @@
-function analyzeMonthlyWithGemini(expenseEntries, categoryTotals, totalExpenses, totalIncome, adjustedBudget, percentage, dateRangeStr) {
-    var apiKey = getGeminiApiKey();
-    if (!apiKey) {
-        return null;
-    }
-
-    var expenseLines = expenseEntries.map(function (entry) {
-        return formatDate(entry.date) + " [" + (entry.category || "未分類") + "] " + entry.name + " " + entry.amount + "円";
-    });
+function analyzeMonthlyWithAI(expenseEntries, categoryTotals, totalExpenses, totalIncome, adjustedBudget, percentage, dateRangeStr) {
     var categoryLines = Object.keys(categoryTotals).map(function (key) {
         return key + ": " + categoryTotals[key] + "円";
     });
@@ -21,17 +13,25 @@ function analyzeMonthlyWithGemini(expenseEntries, categoryTotals, totalExpenses,
         "月間予算(週予算換算): " + adjustedBudget + "円 / これまでの支出: " + totalExpenses + "円 (" + percentage.toFixed(1) + "%) / 収入: " + totalIncome + "円",
         "カテゴリ別支出: " + categoryLines.join(", "),
         "支出一覧:",
-        expenseLines.join("\n"),
+        expenseEntries.map(function (entry) {
+            return formatDate(entry.date) + " [" + (entry.category || "未分類") + "] " + entry.name + " " + entry.amount + "円";
+        }).join("\n"),
         "日本語で、1) 今月の傾向 2) 予算に対する評価 3) 来月に向けた改善提案 を書いてください。",
-        "各項目は最大3つの箇条書きにし、全体で800文字以内にしてください。",
-        "Markdown見出し、#、###、太字、表、コードブロックは使わず、プレーンテキストと絵文字のみで出力してください。"
+        "出力形式のルール:",
+        "- 見出しは絵文字付きにする。例: 📊 今月の傾向 / 💸 予算評価 / ✅ 来月の改善",
+        "- セクションは3個まで",
+        "- 各セクションは最大3つの箇条書きまで",
+        "- Markdown見出し、#、###、太字、表、コードブロックは使わず、プレーンテキストと絵文字のみで出力する",
+        "- 全体で800文字以内にする"
     ].join("\n");
 
-    return generateGeminiText(apiKey, prompt, {
+    return generatePreferredAiText(prompt, {
         temperature: 0.4,
         maxOutputTokens: 1000,
         thinkingConfig: {
             thinkingBudget: 400
         }
+    }, {
+        logContext: "monthly_summary"
     });
 }

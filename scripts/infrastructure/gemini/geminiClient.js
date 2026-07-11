@@ -1,12 +1,11 @@
-function getGeminiApiKey() {
+function getGeminiApiKey(silent) {
     if (typeof PropertiesService === 'undefined') {
         return null;
     }
 
     var apiKey = PropertiesService.getScriptProperties().getProperty("GEMINI_API_KEY");
-    if (!apiKey) {
+    if (!apiKey && !silent) {
         Logger.log("Gemini API key is not set in script properties.");
-        return null;
     }
     return apiKey;
 }
@@ -35,6 +34,21 @@ function getGeminiModelsToTry(apiKey) {
     }
 
     return modelsToTry;
+}
+
+function getGeminiModelLabel() {
+    var modelFromProp;
+
+    if (typeof PropertiesService === 'undefined') {
+        return "gemini";
+    }
+
+    modelFromProp = PropertiesService.getScriptProperties().getProperty("GEMINI_MODEL");
+    if (modelFromProp && modelFromProp.indexOf("models/") === 0) {
+        modelFromProp = modelFromProp.replace(/^models\//, "");
+    }
+
+    return modelFromProp || "gemini";
 }
 
 function generateGeminiText(apiKey, prompt, generationConfig) {
@@ -134,4 +148,3 @@ function fetchGenerativeModels(apiKey) {
         return [];
     }
 }
-

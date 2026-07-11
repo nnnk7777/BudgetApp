@@ -1,22 +1,16 @@
-function analyzeExpensesWithGemini(dataEntries, totalAmount, adjustedBudget, percentage, baseDate, weeklyAnalysisMode, options) {
-    var apiKey = getGeminiApiKey();
+function analyzeExpensesWithAI(dataEntries, totalAmount, adjustedBudget, percentage, baseDate, weeklyAnalysisMode, options) {
     var analysisOptions = options || {};
     var plannedExpenses = analysisOptions.plannedExpenses || getUpcomingPlannedExpenses(baseDate);
     var plannedExpenseLabel = analysisOptions.plannedExpenseLabel || "今後の予定メモ";
-    if (!apiKey) {
-        return null;
-    }
-    var expenseLines = dataEntries.map(function (entry) {
-        return formatDate(entry.date) + " [" + (entry.category || "未分類") + "] " + entry.name + " " + entry.amount + "円";
-    });
     var upcomingExpenseLines = plannedExpenses.map(function (entry) {
         return formatDate(entry.date) + " [" + entry.title + "] " + entry.memo;
     });
+    var prompt;
     var categoryRankingLines = getCategoryRankingLines(dataEntries);
     var weeklyBudgetCarryoverMemo = getWeeklyBudgetCarryoverMemoForWeek(baseDate);
     var weeklyBudgetCarryoverGuidance = buildWeeklyBudgetCarryoverGuidanceForPrompt(weeklyBudgetCarryoverMemo);
     var weeklyAnalysisModeGuidance = buildWeeklyAnalysisModeGuidanceForPrompt(weeklyAnalysisMode);
-    var prompt = buildExpenseSummaryPrompt(
+    prompt = buildExpenseSummaryPrompt(
         dataEntries,
         totalAmount,
         adjustedBudget,
@@ -31,15 +25,17 @@ function analyzeExpensesWithGemini(dataEntries, totalAmount, adjustedBudget, per
         upcomingExpenseLines
     );
 
-    Logger.log("Geminiプロンプト：");
+    Logger.log("AI分析プロンプト：");
     Logger.log(prompt);
 
-    return generateGeminiText(apiKey, prompt, {
+    return generatePreferredAiText(prompt, {
         temperature: 0.4,
         maxOutputTokens: 1000,
         thinkingConfig: {
             thinkingBudget: 400
         }
+    }, {
+        logContext: "expense_summary"
     });
 }
 
@@ -71,7 +67,14 @@ function buildExpenseSummaryPrompt(
         buildAnalysisDateContext(baseDate),
         "与えられた分析基準日・対象期間・支出一覧だけを根拠に判断してください。曜日や週の進捗を勝手に推測しないでください。",
         "特に、基準日が火曜日なのに『今日が日曜日』と書いたり、対象週が月をまたぐのに月末で週が終わったかのように扱うのは禁止です。",
-        "1週間は月曜始まり・日曜終わりで考えて、今日までの傾向を数個と、次に意識すべき点を数個、箇条書きでまとめてください。箇条書きは最大5個までにし、それぞれに補足を付けてください。Markdown記法は使わず、プレーンな文字と絵文字のみで出力し、全体で500文字以内に収めてください。",
+        "1週間は月曜始まり・日曜終わりで考えて、今日までの傾向と次に意識すべき点を、見出し付きの短いセクションでまとめてください。",
+        "出力形式のルール:",
+        "- 見出しは絵文字付きにする。例: 📊 現状 / ⚠️ 注意点 / ✅ 次の行動",
+        "- セクションは2〜3個まで",
+        "- 各セクションの本文は1〜2個の箇条書きまで",
+        "- 箇条書きは最大5個までに収め、それぞれに短い補足を付ける",
+        "- Markdown記法は使わず、プレーンな文字と絵文字のみで出力する",
+        "- 全体で500文字以内に収める",
         "週予算: " + adjustedBudget + "円 / これまでの支出: " + totalAmount + "円 (" + percentage.toFixed(1) + "%)",
         "カテゴリ別支出ランキング: " + (categoryRankingLines.length ? categoryRankingLines.join(" / ") : "なし"),
         "今週の分析モード: " + formatWeeklyAnalysisModeForPrompt(weeklyAnalysisMode),
@@ -179,7 +182,7 @@ function getPlannedExpensesInRange(startDate, endDate) {
         });
     });
 
-    plannedExpenses = cleanPlannedExpenseMemosWithGemini(plannedExpenses);
+    plannedExpenses = cleanPlannedExpenseMemosWithAI(plannedExpenses);
     plannedExpenses = filterRecordedPlannedExpenses(plannedExpenses);
 
     plannedExpenses.sort(function (a, b) {
@@ -281,7 +284,7 @@ function shouldExcludePlannedExpense(plannedExpense, candidateEntries) {
         return false;
     }
 
-    return detectRecordedPlannedExpenseWithGemini(plannedExpense, geminiCandidates);
+    return detectRecordedPlannedExpenseWithAI(plannedExpense, geminiCandidates);
 }
 
 function findExactRecordedExpenseMatch(plannedExpense, candidateEntries) {
@@ -325,15 +328,10 @@ function isStrongExpenseCandidateForGemini(plannedExpense, entry) {
     });
 }
 
-function detectRecordedPlannedExpenseWithGemini(plannedExpense, candidateEntries) {
-    var apiKey = getGeminiApiKey();
+function detectRecordedPlannedExpenseWithAI(plannedExpense, candidateEntries) {
     var prompt;
-    var responseText;
+    var result;
     var normalized;
-
-    if (!apiKey) {
-        return false;
-    }
 
     prompt = [
         "以下のGoogleカレンダーの支出予定が、家計簿に記録済みの支出として扱ってよいか判定してください。",
@@ -356,16 +354,18 @@ function detectRecordedPlannedExpenseWithGemini(plannedExpense, candidateEntries
         }))
     ].join("\n");
 
-    responseText = generateGeminiText(apiKey, prompt, {
+    result = generatePreferredAiText(prompt, {
         temperature: 0,
         maxOutputTokens: 10
+    }, {
+        logContext: "planned_expense_record_check"
     });
-    if (!responseText) {
+    if (!result.text) {
         return false;
     }
 
-    normalized = String(responseText).trim().toUpperCase();
-    Logger.log("予定支出の記録済みGemini判定: title=" + plannedExpense.title + " response=" + normalized);
+    normalized = String(result.text).trim().toUpperCase();
+    Logger.log("予定支出の記録済みAI判定: title=" + plannedExpense.title + " provider=" + result.provider + " response=" + normalized);
     return normalized.indexOf("YES") === 0;
 }
 
@@ -417,13 +417,8 @@ function buildWeeklyBudgetCarryoverGuidanceForPrompt(memo) {
     return "前週は軽度の予算超過。分析のどこかで一度は触れつつ、今週の数値を主軸にバランスよく助言する。";
 }
 
-function cleanPlannedExpenseMemosWithGemini(plannedExpenses) {
+function cleanPlannedExpenseMemosWithAI(plannedExpenses) {
     if (!plannedExpenses.length) {
-        return plannedExpenses;
-    }
-
-    var apiKey = getGeminiApiKey();
-    if (!apiKey) {
         return plannedExpenses;
     }
 
@@ -448,10 +443,13 @@ function cleanPlannedExpenseMemosWithGemini(plannedExpenses) {
         }))
     ].join("\n");
 
-    var responseText = generateGeminiText(apiKey, prompt, {
+    var result = generatePreferredAiText(prompt, {
         temperature: 0,
         maxOutputTokens: 800
+    }, {
+        logContext: "planned_expense_memo_cleanup"
     });
+    var responseText = result.text;
     if (!responseText) {
         return plannedExpenses;
     }

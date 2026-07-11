@@ -43,9 +43,8 @@ function autofillUncategorizedExpenses(options) {
 
 function suggestExpenseCategories(items, options) {
     options = options || {};
-    var apiKey = getGeminiApiKey();
-    if (!apiKey) {
-        throw new Error('Gemini API key is not set.');
+    if (!getOpenAiApiKey(true) && !getGeminiApiKey(true)) {
+        throw new Error('OpenAI API key and Gemini API key are not set.');
     }
 
     var categoryNames = getCategoryNames();
@@ -65,19 +64,19 @@ function suggestExpenseCategories(items, options) {
             itemCount: monthItems.length,
             historyCount: historyItems.length
         };
-        var attemptResult = requestCategorySuggestions(apiKey, monthItems, historyItems, categoryNames, month, options);
+        var attemptResult = requestCategorySuggestionsWithAI(monthItems, historyItems, categoryNames, month, options);
         var responseText = attemptResult.responseText;
 
         if (!responseText) {
-            Logger.log("カテゴリ推定のGemini応答が空でした: month=" + month + " itemCount=" + monthItems.length);
+            Logger.log("カテゴリ推定のAI応答が空でした: month=" + month + " itemCount=" + monthItems.length);
             monthItems.forEach(function (item) {
                 suggestions.push(buildSkippedSuggestion(
                     item,
                     null,
-                    buildDetailedReason('Geminiから応答を取得できませんでした', 'Gemini response was empty.'),
+                    buildDetailedReason('AIから応答を取得できませんでした', 'AI response was empty.'),
                     {
                     errorCode: 'empty_response',
-                    errorDetail: 'Gemini response was empty.',
+                    errorDetail: 'AI response was empty.',
                     responsePreview: ''
                     }
                 ));
@@ -103,11 +102,12 @@ function suggestExpenseCategories(items, options) {
         var retryDebug = null;
 
         if (retryMissingIds && missingItems.length) {
-            var retryResult = requestCategorySuggestions(apiKey, missingItems, historyItems, categoryNames, month, options);
+            var retryResult = requestCategorySuggestionsWithAI(missingItems, historyItems, categoryNames, month, options);
             retryDebug = {
                 requestedIds: missingItems.map(function (item) {
                     return item.id;
                 }),
+                provider: retryResult.provider,
                 status: retryResult.parseResult.status,
                 responsePreview: retryResult.parseResult.responsePreview,
                 parseError: retryResult.parseResult.parseError || null
@@ -129,10 +129,10 @@ function suggestExpenseCategories(items, options) {
                 suggestions.push(buildSkippedSuggestion(
                     item,
                     null,
-                    buildDetailedReason('Gemini応答に対象IDが含まれていません', 'Target ID was not included in Gemini response.'),
+                    buildDetailedReason('AI応答に対象IDが含まれていません', 'Target ID was not included in AI response.'),
                     {
                     errorCode: 'missing_target_id',
-                    errorDetail: 'Target ID was not included in Gemini response.',
+                    errorDetail: 'Target ID was not included in AI response.',
                     responsePreview: buildResponsePreview(responseText)
                     }
                 ));
@@ -140,6 +140,9 @@ function suggestExpenseCategories(items, options) {
         });
 
         monthDebug.status = parseResult.status;
+        monthDebug.provider = attemptResult.provider;
+        monthDebug.model = attemptResult.model;
+        monthDebug.usedFallback = attemptResult.usedFallback;
         monthDebug.responsePreview = parseResult.responsePreview;
         monthDebug.parseError = parseResult.parseError || null;
         monthDebug.extractedJsonPreview = parseResult.extractedJsonPreview || null;

@@ -232,7 +232,7 @@ function detectWeeklyAnalysisModeFromEvent(event) {
         return createWeeklyAnalysisModeResult(ruleBasedMode, "節制モード", "rule");
     }
 
-    geminiMode = detectWeeklyAnalysisModeWithGemini(title, description);
+    geminiMode = detectWeeklyAnalysisModeWithAI(title, description);
     if (geminiMode === WEEKLY_ANALYSIS_MODE_FRUGAL) {
         return createWeeklyAnalysisModeResult(geminiMode, "節制モード", "gemini");
     }
@@ -256,15 +256,10 @@ function detectWeeklyAnalysisModeFromText(title, description) {
     return null;
 }
 
-function detectWeeklyAnalysisModeWithGemini(title, description) {
-    var apiKey = getGeminiApiKey();
-    var responseText;
+function detectWeeklyAnalysisModeWithAI(title, description) {
+    var result;
     var normalized;
     var prompt;
-
-    if (!apiKey) {
-        return null;
-    }
 
     prompt = [
         "以下のGoogleカレンダー予定が、その週の家計分析を厳しめにする『節制モード』指定かどうかを判定してください。",
@@ -275,16 +270,18 @@ function detectWeeklyAnalysisModeWithGemini(title, description) {
         "説明: " + String(description || "")
     ].join("\n");
 
-    responseText = generateGeminiText(apiKey, prompt, {
+    result = generatePreferredAiText(prompt, {
         temperature: 0,
         maxOutputTokens: 10
+    }, {
+        logContext: "weekly_analysis_mode_detection"
     });
-    if (!responseText) {
+    if (!result.text) {
         return null;
     }
 
-    normalized = String(responseText).trim().toUpperCase();
-    Logger.log("分析モードGemini判定: title=" + title + " response=" + normalized);
+    normalized = String(result.text).trim().toUpperCase();
+    Logger.log("分析モードAI判定: title=" + title + " provider=" + result.provider + " response=" + normalized);
     return normalized.indexOf("YES") === 0 ? WEEKLY_ANALYSIS_MODE_FRUGAL : null;
 }
 

@@ -1,56 +1,56 @@
 // action: text
-function availableExpenseSummaryText() {
+function expenseSummaryText() {
     return calculateExpensesSummary('text');
 }
 
-function availableDailySummaryText() {
+function dailySummaryText() {
     return calculateDailySummary('text');
 }
 
-function availableWeeklySummaryText() {
+function weeklySummaryText() {
     return calculateWeeklySummary('text');
 }
 
-function availableMonthlySummaryText() {
+function monthlySummaryText() {
     return calculateMonthlySummaryByUnit('text');
 }
 
 // action: mail
-function availableExpenseSummaryMail() {
+function expenseSummaryMail() {
     return calculateExpensesSummary('mail');
 }
 
-function availableDailySummaryMail() {
+function dailySummaryMail() {
     return calculateDailySummary('mail');
 }
 
-function availableWeeklySummaryMail() {
+function weeklySummaryMail() {
     return calculateWeeklySummary('mail');
 }
 
 // monthly summary mail
-function availableMonthlySummaryMail() {
+function monthlySummaryMail() {
     return calculateMonthlySummaryByUnit('mail');
 }
 
 // manual diagnostics
-function availableRuntimeDiagnostics() {
+function runtimeDiagnostics() {
     var result = JSON.stringify(getScriptRuntimeDiagnostics());
     Logger.log(result);
 }
 
 // action: categories
-function availableFetchCategories() {
+function fetchCategoriesManual() {
     return fetchCategories();
 }
 
 // action: list_uncategorized
-function availableListUncategorizedExpenses() {
+function listUncategorizedExpensesManual() {
     return listUncategorizedExpenses();
 }
 
 // action: autofill_uncategorized
-function availableAutofillUncategorizedExpenses() {
+function autofillUncategorizedExpensesManual() {
     return autofillUncategorizedExpenses({
         confidenceThreshold: 0.9,
         debug: true

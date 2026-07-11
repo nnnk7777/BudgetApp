@@ -18,7 +18,7 @@ Google スプレッドシートの家計簿を生成・管理するための GAS
 │   ├── entrypoints
 │   │   ├── handleApi.js
 │   │   ├── apiCommon.js
-│   │   ├── availableManualEntryPoints.js
+│   │   ├── 0_manualEntryPoints.js
 │   │   ├── scheduledSummaryTriggers.js
 │   │   └── formatDateAndPriceNumbers.js
 │   ├── application
@@ -96,10 +96,18 @@ Google スプレッドシートの家計簿を生成・管理するための GAS
     -   プロパティ：`HASH`
     -   値：`<ハッシュとして利用する値を設定>`
 
-- また、GeminiのAPI Keyを以下にて発行し、GASプロジェクトの設定にスクリプトプロパティを追加してくださプロパティを追加してください。
+- OpenAI をメイン利用するため、OpenAI Platform で API Key を発行し、GAS プロジェクトの設定にスクリプトプロパティを追加してください。
+- https://platform.openai.com/api-keys
+    -   プロパティ：`OPENAI_API_KEY`
+    -   値：`<発行したAPIキーを設定>`
+    -   任意: `OPENAI_MODEL`
+    -   例: `gpt-5.4-mini`
+
+- Gemini は OpenAI 障害時のフォールバックとして残せます。必要なら以下も設定してください。
 - https://aistudio.google.com/
     -   プロパティ：`GEMINI_API_KEY`
     -   値：`<発行したAPIキーを設定>`
+    -   任意: `GEMINI_MODEL`
 
 ## 開発・デプロイ方法
 
@@ -128,7 +136,7 @@ action に渡せる値は以下のとおりです。
 |  `add`   | 支出レコードを追加します                 |
 | `categories` | カテゴリ一覧を返します              |
 | `list_uncategorized` | カテゴリ未設定の支出一覧を返します |
-| `autofill_uncategorized` | Geminiでカテゴリを推定し、高信頼のものだけ自動反映します |
+| `autofill_uncategorized` | OpenAIを優先し、失敗時はGeminiでカテゴリを推定して高信頼のものだけ自動反映します |
 
 `add`の場合は、以下のような body を渡してください。
 
@@ -167,7 +175,7 @@ action に渡せる値は以下のとおりです。
 }
 ```
 
-`debug` を `true` にすると、Gemini の応答解析に失敗した際の詳細情報がレスポンスの `debug` および `skipped[*]` に含まれます。
+`debug` を `true` にすると、AI 応答解析に失敗した際の詳細情報がレスポンスの `debug` および `skipped[*]` に含まれます。
 
 ## scripts構成
 
@@ -176,7 +184,7 @@ action に渡せる値は以下のとおりです。
 -   `entrypoints`
     -   GAS から直接呼ばれる入口
     -   `handleApi.js`
-    -   `availableManualEntryPoints.js`
+    -   `0_manualEntryPoints.js`
     -   `scheduledSummaryTriggers.js`
     -   `formatDateAndPriceNumbers.js`
 -   `application`
@@ -198,6 +206,9 @@ action に渡せる値は以下のとおりです。
     -   `expenseSummaryGemini.js`
     -   `monthlySummaryGemini.js`
     -   `uncategorizedSuggestionGemini.js`
+-   `infrastructure/openai`
+    -   OpenAI API と OpenAI 優先フォールバック制御
+    -   `openaiClient.js`
 -   `formatting`
     -   mail / text の本文生成
     -   `summaryMessageFormatter.js`
