@@ -3,7 +3,17 @@ function buildMonthlySummaryPrompt(expenseEntries, categoryTotals, totalExpenses
         return key + ": " + categoryTotals[key] + "円";
     });
     var expenseLines = expenseEntries.map(function (entry) {
-        return formatDate(entry.date) + " [" + (entry.category || "未分類") + "] " + entry.name + " " + entry.amount + "円";
+        return (
+            "日付: " +
+            formatDate(entry.date) +
+            " / カテゴリ: " +
+            (entry.category || "未分類") +
+            " / 名称: " +
+            (entry.name || "") +
+            " / 金額: " +
+            entry.amount +
+            "円"
+        );
     }).join("\n");
 
     return `あなたはプロの家計管理アドバイザーです。挨拶や自己紹介は禁止です。金銭感覚の改善を目的としたコーチとして、冷静な分析と、時には優しく、時には厳しく指導してください。今回は月次レポートです。1か月分の支出と収入について、予算を超えないようアドバイスをください。カジュアルな敬語で対応してください。

@@ -13,7 +13,17 @@ function buildExpenseSummaryPrompt(
     upcomingExpenseLines
 ) {
     var expenseLines = dataEntries.map(function (entry) {
-        return formatDate(entry.date) + " [" + (entry.category || "未分類") + "] " + entry.name + " " + entry.amount + "円";
+        return (
+            "日付: " +
+            formatDate(entry.date) +
+            " / カテゴリ: " +
+            (entry.category || "未分類") +
+            " / 名称: " +
+            (entry.name || "") +
+            " / 金額: " +
+            entry.amount +
+            "円"
+        );
     });
     var analysisDateContext = buildAnalysisDateContext(baseDate);
     var categoryRankingText = categoryRankingLines.length ? categoryRankingLines.join(" / ") : "なし";
@@ -45,7 +55,7 @@ ${analysisDateContext}
 前週の予算差分メモ: ${weeklyBudgetCarryoverMemoText}
 前週差分の反映方針: ${weeklyBudgetCarryoverGuidance}
 ${plannedExpenseLabel}: ${upcomingExpenseText}
-以下は支出一覧(日付、カテゴリ、名称、金額)です。名称だけで内容が不明瞭な場合はカテゴリから内容を推定してください:
+以下は支出一覧です。各行には日付・カテゴリ・名称・金額を含みます。名称だけで内容が不明瞭な場合はカテゴリから内容を推定してください:
 ${expenseLines.join("\n")}`;
 
     return prompt;
