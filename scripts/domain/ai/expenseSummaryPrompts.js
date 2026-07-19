@@ -106,6 +106,7 @@ function buildCalendarMemoClassificationPrompt(calendarMemos) {
 ルール:
 - intent は planned_expense、contextual_note、reservation_info、ignore のいずれかにする
 - planned_expense: 今後発生しそうな支出。金額がなくても、外食・買い物・交通・宿泊など支出意図が明確なら該当する
+- タイトルまたはメモに明示的な金額（例: 15000円）がある予定は、定期購入を忘れていた・支出として痛い・別管理したいという相談が併記されていても、必ず planned_expense にする。金額は cleanedMemo に必ず残す
 - contextual_note: ユーザーが書いた事情・感情・意図・管理方針の相談。支出額には含めないが、助言の文脈として役立つ情報。場所や同行者のメモも含む
 - reservation_info: レストランや美容院などの予約情報。日時・店名・場所・サービス名が有用なら cleanedMemo に残す。そうでなければ空文字にする
 - ignore: Googleの自動追記、URL、案内文、会議通知など、家計サマリに不要な情報
@@ -115,7 +116,7 @@ function buildCalendarMemoClassificationPrompt(calendarMemos) {
 - 出力は各行 \`index|intent|cleanedMemo\` のみ
 - 説明文、Markdown、コードブロック、jsonという語は出力しない
 - 例: \`0|planned_expense|ランチ 1200円くらい\`
-- 例: \`1|contextual_note|定期購入を忘れていた。支出として痛い\`
+- 例: \`1|planned_expense|定期購入プロテイン 15000円。忘れていたため支出として痛い\`
 - 例: \`2|contextual_note|ふるさと納税のため週予算とは別管理にしたい\`
 - 例: \`3|reservation_info|美容院 カット\`
 ${calendarMemosJson}`;

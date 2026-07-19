@@ -388,6 +388,7 @@ function classifyAndCleanCalendarMemosWithAI(calendarMemos) {
         var classification = classifiedByIndex.hasOwnProperty(index)
             ? classifiedByIndex[index]
             : createFallbackCalendarMemoClassification(entry);
+        classification = preserveExplicitAmountAsPlannedExpense(entry, classification);
 
         return {
             title: entry.title,
@@ -401,6 +402,35 @@ function classifyAndCleanCalendarMemosWithAI(calendarMemos) {
 
     Logger.log("カレンダーメモ分類後件数: " + classifiedMemos.length);
     return classifiedMemos;
+}
+
+function preserveExplicitAmountAsPlannedExpense(entry, classification) {
+    var amounts = extractExplicitCalendarMemoAmounts(entry);
+    var cleanedMemo = String(classification.cleanedMemo || "").trim();
+
+    if (!amounts.length) {
+        return classification;
+    }
+
+    amounts.forEach(function (amount) {
+        if (cleanedMemo.indexOf(amount) === -1) {
+            cleanedMemo += (cleanedMemo ? " " : "") + amount;
+        }
+    });
+
+    return {
+        intent: "planned_expense",
+        cleanedMemo: cleanedMemo || entry.memo || entry.title
+    };
+}
+
+function extractExplicitCalendarMemoAmounts(entry) {
+    var text = [entry.title || "", entry.memo || ""].join(" ")
+        .replace(/[０-９]/g, function (digit) {
+            return String.fromCharCode(digit.charCodeAt(0) - 0xFEE0);
+        });
+
+    return text.match(/\d[\d,]*(?:\.\d+)?\s*[円¥￥]/g) || [];
 }
 
 function parseCalendarMemoClassificationResponse(text) {
