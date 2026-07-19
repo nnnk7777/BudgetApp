@@ -75,7 +75,7 @@
 
 ### [domain/ai/expenseSummaryPrompts.js](./domain/ai/expenseSummaryPrompts.js)
 
--   日次・週次サマリー、予定支出メモ整形、節制モード判定などで使う AI プロンプト生成を担当する。
+-   日次・週次サマリー、カレンダーメモの意図分類・整形、節制モード判定などで使う AI プロンプト生成を担当する。
 
 ### [domain/ai/monthlySummaryPrompt.js](./domain/ai/monthlySummaryPrompt.js)
 
@@ -97,7 +97,7 @@
 
 ### [infrastructure/ai/expenseSummaryAi.js](./infrastructure/ai/expenseSummaryAi.js)
 
--   日次・週次サマリー向けの AI 呼び出しフローと、予定支出メモ整形・記録済み予定判定を担当する。
+-   日次・週次サマリー向けの AI 呼び出しフローと、カレンダーメモの意図分類・整形、記録済み予定判定を担当する。
 
 ### [infrastructure/ai/monthlySummaryAi.js](./infrastructure/ai/monthlySummaryAi.js)
 

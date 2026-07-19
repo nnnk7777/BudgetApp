@@ -10,7 +10,9 @@ function buildExpenseSummaryPrompt(
     weeklyBudgetCarryoverMemo,
     weeklyBudgetCarryoverGuidance,
     plannedExpenseLabel,
-    upcomingExpenseLines
+    upcomingExpenseLines,
+    contextualMemoLabel,
+    contextualMemoLines
 ) {
     var expenseLines = dataEntries.map(function (entry) {
         return (
@@ -30,10 +32,12 @@ function buildExpenseSummaryPrompt(
     var weeklyAnalysisModeText = formatWeeklyAnalysisModeForPrompt(weeklyAnalysisMode);
     var weeklyBudgetCarryoverMemoText = formatWeeklyBudgetCarryoverMemoForPrompt(weeklyBudgetCarryoverMemo);
     var upcomingExpenseText = upcomingExpenseLines.length ? upcomingExpenseLines.join(" / ") : "なし";
+    var contextualMemoText = contextualMemoLines.length ? contextualMemoLines.join(" / ") : "なし";
     var prompt = `あなたはプロの家計管理アドバイザーです。挨拶や自己紹介は禁止です。金銭感覚の改善を目的としたコーチとして、冷静な分析と、時には優しく、時には厳しく指導してください。1週間分の支出について、予算を超えないようアドバイスをください。カジュアルな敬語て対応してください。
 レシートは保管していませんが、代わりに全ての支出・収入をスプレッドシートに記録しています。単なる分析にとどまらず、「行動に落とし込める改善提案」を重視してください。感情的にならず、客観的かつ現実的な判断で、飴と鞭を使い分けてください。
 通勤の交通費は給与で補填されます。食事はスーパーでまとめ買いした上でほぼ自炊しており、外食は友人と会う時が多いです。
 Googleカレンダーの今後の予定メモに書かれた支出予定も考慮して助言してください。近いうちに大きな支出予定があるなら、今週の節約を強めに促してください。
+予定に関する補助メモは、出費額の根拠にはせず、助言の具体性を高めるためだけに使ってください。
 前週の予算差分メモがあれば補助情報として参照してください。特に前週が大きく超過していた場合は、その影響を締めの一言だけで済ませず、今週の傾向分析と次に意識すべき点の両方に反映してください。
 前週超過がある場合は、裁量支出や先送りできる支出への姿勢を普段より一段引き締めて提案してください。ただし今週の週予算、実支出、予定支出を優先し、前週差分だけで過度に断定したり、今週の予算を実質的に減額したような言い方はしないでください。
 前週が予算内に収まっていた場合でも、安心しすぎる助言にはせず、今週の数値を主軸に冷静に判断してください。
@@ -55,6 +59,7 @@ ${analysisDateContext}
 前週の予算差分メモ: ${weeklyBudgetCarryoverMemoText}
 前週差分の反映方針: ${weeklyBudgetCarryoverGuidance}
 ${plannedExpenseLabel}: ${upcomingExpenseText}
+${contextualMemoLabel}: ${contextualMemoText}
 以下は支出一覧です。各行には日付・カテゴリ・名称・金額を含みます。名称だけで内容が不明瞭な場合はカテゴリから内容を推定してください:
 ${expenseLines.join("\n")}`;
 
@@ -85,8 +90,8 @@ ${plannedExpenseJson}
 ${candidateEntriesJson}`;
 }
 
-function buildPlannedExpenseMemoCleanupPrompt(plannedExpenses) {
-    var plannedExpensesJson = JSON.stringify(plannedExpenses.map(function (entry, index) {
+function buildCalendarMemoClassificationPrompt(calendarMemos) {
+    var calendarMemosJson = JSON.stringify(calendarMemos.map(function (entry, index) {
         return {
             index: index,
             title: entry.title,
@@ -95,17 +100,22 @@ function buildPlannedExpenseMemoCleanupPrompt(plannedExpenses) {
     }));
 
     return `以下はGoogleカレンダー予定のタイトルとメモです。
-目的は、支出予定として意味のある情報だけを残し、Googleの自動追記やURLや案内文など無関係な文を除去することです。
-各要素について cleanedMemo を返してください。
+各予定の意図を分類し、家計サマリに役立つ情報だけを短く整形してください。
+各要素について intent と cleanedMemo を返してください。
 ルール:
-- 支出予定として意味がある部分だけ残す
+- intent は planned_expense、contextual_note、reservation_info、ignore のいずれかにする
+- planned_expense: 今後発生しそうな支出。金額がなくても、外食・買い物・交通・宿泊など支出意図が明確なら該当する
+- contextual_note: 場所、同行者、目的など、支出額には含めないが助言の文脈として役立つ情報。例: 新宿東口
+- reservation_info: レストランや美容院などの予約情報。日時・店名・場所・サービス名が有用なら cleanedMemo に残す。そうでなければ空文字にする
+- ignore: Googleの自動追記、URL、案内文、会議通知など、家計サマリに不要な情報
 - URL、Googleの案内文、自動生成の説明、予約メール由来の定型文は削除する
-- 金額がなくても、予定に関係する買い物や外食のメモなら残してよい
-- 予定に関係する情報が何も残らないなら cleanedMemo を空文字にする
-- 出力は各行 \`index|cleanedMemo\` のみ
+- 金額、店名、場所、支出目的など意味のある情報だけを残し、タイトルと同じ内容は重複させない
+- 出力は各行 \`index|intent|cleanedMemo\` のみ
 - 説明文、Markdown、コードブロック、jsonという語は出力しない
-- 例: \`0|予定：服4000円\`
-${plannedExpensesJson}`;
+- 例: \`0|planned_expense|ランチ 1200円くらい\`
+- 例: \`1|contextual_note|新宿東口\`
+- 例: \`2|reservation_info|美容院 カット\`
+${calendarMemosJson}`;
 }
 
 function buildWeeklyAnalysisModePrompt(title, description) {

@@ -1,6 +1,9 @@
 function handleWeeklySummaryResult(dateRangeStr, totalAmount, dataEntries, difference, percentage, adjustedBudget, isStaging, action, currentDate) {
-    var nextWeekPlannedExpenses = getPlannedExpensesForNextWeek(currentDate);
+    var nextWeekCalendarMemos = getCalendarMemoEntriesInRange(getNextWeekStartDate(currentDate), getWeekAfterNextStartDate(currentDate));
+    var nextWeekPlannedExpenses = filterPlannedExpenseMemos(nextWeekCalendarMemos);
+    var nextWeekContextualMemos = filterContextualCalendarMemos(nextWeekCalendarMemos);
     var nextWeekExpenseLines = formatUpcomingPlannedExpenseLines(nextWeekPlannedExpenses);
+    var nextWeekContextualMemoLines = formatUpcomingPlannedExpenseLines(nextWeekContextualMemos);
     var nextWeekPlannedExpenseTotal = calculatePlannedExpenseTotal(nextWeekPlannedExpenses);
     var weeklyBudgetCarryoverMemo = getWeeklyBudgetCarryoverMemoForWeek(currentDate);
     var weeklyAnalysisMode = getWeeklyAnalysisMode(currentDate);
@@ -52,10 +55,15 @@ function handleWeeklySummaryResult(dateRangeStr, totalAmount, dataEntries, diffe
         body += "・なし\n";
     }
     body += "\n";
+    body += "◆ 来週の補助メモ\n";
+    body += nextWeekContextualMemoLines.length ? nextWeekContextualMemoLines.join("\n") + "\n" : "・なし\n";
+    body += "\n";
 
     var aiAnalysis = analyzeExpensesWithAI(dataEntries, totalAmount, adjustedBudget, percentage, currentDate, weeklyAnalysisMode, {
         plannedExpenses: nextWeekPlannedExpenses,
-        plannedExpenseLabel: "来週の予定メモ"
+        plannedExpenseLabel: "来週の予定支出",
+        contextualMemos: nextWeekContextualMemos,
+        contextualMemoLabel: "来週の補助メモ"
     });
     body += buildAiSummarySection("◆ AI分析", aiAnalysis);
 
@@ -79,8 +87,11 @@ function handleWeeklySummaryResult(dateRangeStr, totalAmount, dataEntries, diffe
 }
 
 function handleDailySummaryResult(currentDate, datesInWeek, adjustedBudget, isStaging, action) {
-    var upcomingPlannedExpenses = getPlannedExpensesForCurrentWeek(currentDate);
+    var upcomingCalendarMemos = getCalendarMemoEntriesInRange(currentDate, getCurrentWeekEndExclusive(currentDate));
+    var upcomingPlannedExpenses = filterPlannedExpenseMemos(upcomingCalendarMemos);
+    var upcomingContextualMemos = filterContextualCalendarMemos(upcomingCalendarMemos);
     var upcomingExpenseLines = formatUpcomingPlannedExpenseLines(upcomingPlannedExpenses);
+    var upcomingContextualMemoLines = formatUpcomingPlannedExpenseLines(upcomingContextualMemos);
     var plannedExpenseTotal = calculatePlannedExpenseTotal(upcomingPlannedExpenses);
     var weeklyBudgetCarryoverMemo = getWeeklyBudgetCarryoverMemoForWeek(currentDate);
     var weeklyAnalysisMode = getWeeklyAnalysisMode(currentDate);
@@ -100,13 +111,21 @@ function handleDailySummaryResult(currentDate, datesInWeek, adjustedBudget, isSt
         : "0.00";
     var categoryRankingLines = getCategoryRankingLines(dataEntries);
     var uncategorizedCount = countUncategorizedEntries(dataEntries);
-    var aiAnalysis = analyzeExpensesWithAI(dataEntries, totalAmount, adjustedBudget, percentage, currentDate, weeklyAnalysisMode);
+    var aiAnalysis = analyzeExpensesWithAI(dataEntries, totalAmount, adjustedBudget, percentage, currentDate, weeklyAnalysisMode, {
+        plannedExpenses: upcomingPlannedExpenses,
+        plannedExpenseLabel: "今後の予定支出",
+        contextualMemos: upcomingContextualMemos,
+        contextualMemoLabel: "今後の補助メモ"
+    });
     var subject = (isStaging ? "<test>" : "") + "家計簿日次レポート（" + formatDate(currentDate) + "）";
     var body = "+++ 💸 予算サマリー 💸 +++\n";
 
     body += formatDate(datesInWeek[0]) + " から " + formatDate(currentDate) + " までの実支出: " + totalAmount + " 円\n";
     body += "今後の予定金額: " + plannedExpenseTotal + " 円\n";
     body += "支出＋予定の合計見込み: " + (totalAmount + plannedExpenseTotal) + " 円\n";
+    body += "\n";
+    body += "◆ 直近の補助メモ\n";
+    body += upcomingContextualMemoLines.length ? upcomingContextualMemoLines.join("\n") + "\n" : "・なし\n";
     body += "\n";
     body += "予算に対して\n";
     body += "・実支出: " + percentage.toFixed(2) + "%\n";
@@ -155,6 +174,39 @@ function handleDailySummaryResult(currentDate, datesInWeek, adjustedBudget, isSt
         default:
             throw new Error('actionが定義されていません');
     }
+}
+
+function filterPlannedExpenseMemos(calendarMemos) {
+    return calendarMemos.filter(function (entry) {
+        return entry.intent === "planned_expense";
+    });
+}
+
+function filterContextualCalendarMemos(calendarMemos) {
+    return calendarMemos.filter(function (entry) {
+        return entry.intent === "contextual_note" || entry.intent === "reservation_info";
+    });
+}
+
+function getCurrentWeekEndExclusive(currentDate) {
+    var range = getWeekRange(currentDate);
+    var endDateExclusive = new Date(range.endDate);
+    endDateExclusive.setDate(endDateExclusive.getDate() + 1);
+    return endDateExclusive;
+}
+
+function getNextWeekStartDate(currentDate) {
+    var range = getWeekRange(currentDate);
+    var startDate = new Date(range.endDate);
+    startDate.setDate(startDate.getDate() + 1);
+    return startDate;
+}
+
+function getWeekAfterNextStartDate(currentDate) {
+    var startDate = getNextWeekStartDate(currentDate);
+    var endDateExclusive = new Date(startDate);
+    endDateExclusive.setDate(endDateExclusive.getDate() + 7);
+    return endDateExclusive;
 }
 
 function formatWeeklyBudgetCarryoverSummaryForMessage(memo) {
