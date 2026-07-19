@@ -37,6 +37,10 @@
 
 -   GAS の UI から手動実行しやすいエントリポイントだけをまとめたファイル。
 
+### [entrypoints/1_reapplySheetStyle.js](./entrypoints/1_reapplySheetStyle.js)
+
+-   GAS の UI から `reapplySheetStyleManual` を実行し、既存の家計簿レイアウト、入力規則、条件付き書式をクリアしてから再構築する入口。
+
 ### [entrypoints/scheduledSummaryTriggers.js](./entrypoints/scheduledSummaryTriggers.js)
 
 -   時間トリガーから日次・月次サマリーを起動する入口。

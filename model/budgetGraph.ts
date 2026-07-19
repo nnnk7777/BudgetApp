@@ -27,13 +27,13 @@ export class BudgetGraph {
         this.init();
     }
 
-    private async init() {
+    private init(): void {
         console.log("グラフ描画 start");
-        await this.removeBudgetGraph();
-        await this.initBudgetGraph();
+        this.removeBudgetGraph();
+        this.initBudgetGraph();
     }
 
-    private async removeBudgetGraph() {
+    private removeBudgetGraph(): void {
         // シート内の既存のグラフを取得
         const charts = this.sheet.getCharts();
 
@@ -44,11 +44,11 @@ export class BudgetGraph {
         console.log("グラフのリセット done");
     }
 
-    private async initBudgetGraph() {
+    private initBudgetGraph(): void {
         // 一時的なデータ範囲を作成（A1からD12まで）
         let tempRange = this.sheet.getRange(1, 1, 12, 4);
         // 一時データ表に値を設定
-        await this.initTemporaryData(tempRange);
+        this.initTemporaryData(tempRange);
         console.log("グラフ用の一時表作成 done");
 
         // グラフをシートに挿入
@@ -73,10 +73,10 @@ export class BudgetGraph {
         console.log("グラフ作成 done");
     }
 
-    private async initTemporaryData(
+    private initTemporaryData(
         tempRange: GoogleAppsScript.Spreadsheet.Range
-    ): Promise<GoogleAppsScript.Spreadsheet.Range> {
-        return tempRange
+    ): GoogleAppsScript.Spreadsheet.Range {
+        tempRange
             .setValues([
                 ...this.monthList.map((m, i) => [
                     m,
@@ -86,5 +86,7 @@ export class BudgetGraph {
                 ]),
             ])
             .setFontColor("#fff");
+
+        return tempRange;
     }
 }
