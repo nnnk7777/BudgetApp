@@ -27,8 +27,6 @@ export class MonthlyReport extends MonthlyDataBase {
 
     // 月の表示と、支出・収入のSUM関数をセット
     private init(): void {
-        this.clearSheet();
-
         // 月の表示
         const firstCell = this.sheet.getRange(
             this.options.initialRowNumber,
@@ -114,12 +112,6 @@ export class MonthlyReport extends MonthlyDataBase {
             initialOutcomingRowNumber,
             this.options.initialColumnNumber
         );
-    }
-
-    private clearSheet(): void {
-        this.sheet.clearConditionalFormatRules();
-        this.sheet.getRange(`A1:BD2000`).clearDataValidations();
-        this.sheet.getRange(`A1:BD2000`).clearFormat();
     }
 
     private setColumnsWidth(): void {

@@ -77,6 +77,8 @@ export class BudgetReportService {
             }
         }
 
+        this.clearBudgetSheetStyles();
+
         // 12ヶ月分の budgetReport を作成する。
         this.initMonthlyReports();
 
@@ -96,6 +98,12 @@ export class BudgetReportService {
         this.categorySummarySheet =
             spreadsheet.getSheetByName(this.categorySummaryReportSheetName) ||
             spreadsheet.insertSheet(this.categorySummaryReportSheetName);
+    }
+
+    private clearBudgetSheetStyles(): void {
+        this.budgetReportSheet.clearConditionalFormatRules();
+        this.budgetReportSheet.getRange("A1:BD2000").clearDataValidations();
+        this.budgetReportSheet.getRange("A1:BD2000").clearFormat();
     }
 
     private initMonthlyReports(): void {
