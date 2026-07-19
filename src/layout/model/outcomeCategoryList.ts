@@ -1,6 +1,6 @@
 import { Category } from "./category";
 import { CategoryList } from "./categoryList";
-import categories from "../config/categories.js";
+import categories from "../../config/categories.js";
 
 export class OutcomeCategoryList implements CategoryList {
     private list: Category[];

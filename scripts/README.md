@@ -63,7 +63,7 @@ flowchart LR
 | 日次・週次・月次サマリ | API、時間トリガー、手動実行 | [expenseSummary.js](./application/expenseSummary.js)、[monthlySummary.js](./application/monthlySummary.js)、[summaryMessageFormatter.js](./formatting/summaryMessageFormatter.js) |
 | 支出追加・カテゴリ取得 | API | [addExpenseRecord.js](./application/addExpenseRecord.js)、[fetchCategories.js](./application/fetchCategories.js) |
 | 未分類支出の補完 | API、手動実行 | [uncategorizedExpenses.js](./application/uncategorizedExpenses.js)、[categorySuggestionAi.js](./infrastructure/ai/categorySuggestionAi.js) |
-| シートスタイル再適用 | 手動実行 | [1_reapplySheetStyle.js](./entrypoints/1_reapplySheetStyle.js)、[main.ts](../main.ts) |
+| シートスタイル再適用 | 手動実行 | [1_reapplySheetStyle.js](./entrypoints/1_reapplySheetStyle.js)、[src/layout/main.ts](../src/layout/main.ts) |
 
 ## ファイル別説明
 
