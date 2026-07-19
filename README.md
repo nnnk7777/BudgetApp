@@ -2,71 +2,19 @@
 
 ## 概要
 
-Google スプレッドシートの家計簿を生成・管理するための GAS スクリプト
+Googleスプレッドシートを家計簿として使うためのGoogle Apps Scriptプロジェクトです。支出・収入の記録、カテゴリ別集計、週次・月次の予算サマリを1つのスプレッドシートで管理します。
+
+- Web APIから支出を追加し、カテゴリ一覧や未分類支出を取得できます。
+- 日次・週次・月次のサマリをテキストまたはメールで出力できます。
+- OpenAIを優先し、Geminiをフォールバックとして、家計サマリの助言・カレンダーメモの整理・未分類支出のカテゴリ推定に利用します。
+- Googleカレンダーの予定支出とユーザー補足メモをサマリへ反映します。
+- GASの手動実行から、スプレッドシートのレイアウト・入力規則・条件付き書式を再適用できます。
 
 ## ディレクトリ構成
 
--   Typescript のファイルは、`build.ts`で Javascript に変換した上で GAS にデプロイされます。
--   `/scripts`直下のファイルはそのまま GAS にデプロイされ、API や編集時のトリガーとして利用されます。
-
-```
-.
-├── main.ts
-├── build.ts
-├── Makefile
-├── scripts
-│   ├── entrypoints
-│   │   ├── handleApi.js
-│   │   ├── apiCommon.js
-│   │   ├── 0_manualEntryPoints.js
-│   │   ├── 1_reapplySheetStyle.js
-│   │   ├── scheduledSummaryTriggers.js
-│   │   └── formatDateAndPriceNumbers.js
-│   ├── application
-│   │   ├── addExpenseRecord.js
-│   │   ├── fetchCategories.js
-│   │   ├── expenseSummary.js
-│   │   ├── monthlySummary.js
-│   │   └── uncategorizedExpenses.js
-│   ├── domain
-│   │   └── ai
-│   │       ├── expenseSummaryPrompts.js
-│   │       ├── monthlySummaryPrompt.js
-│   │       └── categorySuggestionPrompt.js
-│   ├── infrastructure
-│   │   ├── ai
-│   │   │   ├── aiClient.js
-│   │   │   ├── aiResponseParsers.js
-│   │   │   ├── expenseSummaryAi.js
-│   │   │   ├── monthlySummaryAi.js
-│   │   │   ├── categorySuggestionAi.js
-│   │   │   └── weeklyAnalysisModeAi.js
-│   │   ├── gas
-│   │   │   ├── scriptRuntime.js
-│   │   │   ├── expenseSheetRepository.js
-│   │   │   ├── monthlySheetRepository.js
-│   │   │   ├── uncategorizedExpenseRepository.js
-│   │   │   └── calendarRepository.js
-│   │   ├── openai
-│   │   │   └── openaiClient.js
-│   │   └── gemini
-│   │       └── geminiClient.js
-│   ├── formatting
-│   │   ├── summaryMessageFormatter.js
-│   │   └── monthlySummaryFormatter.js
-│   ├── utils
-│   │   ├── expenseSummaryUtils.js
-│   │   ├── summaryDateUtils.js
-│   │   └── uncategorizedCommonUtils.js
-│   └── deployment
-│       ├── setup_claspjson.sh
-│       └── setup_clasprcjson.sh
-├── service
-├── model
-├── types
-├── config
-└── util
-```
+-   TypeScriptのレイアウト生成処理は `main.ts` を入口に `build.ts` でGAS用JavaScriptへ変換します。
+-   `scripts/` 配下はAPI、トリガー、AI分析などのGAS処理で、デプロイ時にそのまま配置されます。
+-   `scripts/` の責務分割は [scripts/README.md](./scripts/README.md) を参照してください。
 
 ## 開発準備
 
@@ -77,7 +25,7 @@ Google スプレッドシートの家計簿を生成・管理するための GAS
 -   ローカルでスタイルを再適用する場合は、対象のスプレッドシートに紐づくGASプロジェクトから実行してください。`main.ts` は実行中のスプレッドシートを対象にします。
 -   ローカルで `clasp login` を実行しておき、`~/.clasprc.json` が生成されていることを確認してください。
 -   `~/.clasprc.json` 内の以下の値をそれぞれ Github の Secret として登録してください。
--   これらの値は [prod.yml](./.github/workflows/prod.yml) と [stg.yml](./.github/workflows/stg.yml) で読み込まれて利用されます。
+    -   これらの値は [prod.yml](./.github/workflows/prod.yml) と [stg.yml](./.github/workflows/stg.yml) で読み込まれて利用されます。
 
 ```json
 {
@@ -108,18 +56,22 @@ Google スプレッドシートの家計簿を生成・管理するための GAS
     -   プロパティ：`HASH`
     -   値：`<ハッシュとして利用する値を設定>`
 
-- OpenAI をメイン利用するため、OpenAI Platform で API Key を発行し、GAS プロジェクトの設定にスクリプトプロパティを追加してください。
-- https://platform.openai.com/api-keys
+## AI設定
+
+支出サマリ、カレンダーメモの分類・整形、未分類支出のカテゴリ推定でAIを利用します。OpenAIを優先し、APIキー未設定・APIエラー・空応答の場合はGeminiを試します。
+
+- OpenAIを利用する場合は、[OpenAI Platform](https://platform.openai.com/api-keys) でAPIキーを発行し、GASのスクリプトプロパティに追加してください。
     -   プロパティ：`OPENAI_API_KEY`
     -   値：`<発行したAPIキーを設定>`
     -   任意: `OPENAI_MODEL`
     -   例: `gpt-5.4-mini`
 
-- Gemini は OpenAI 障害時のフォールバックとして残せます。必要なら以下も設定してください。
-- https://aistudio.google.com/
+- Geminiをフォールバックとして利用する場合は、[Google AI Studio](https://aistudio.google.com/) でAPIキーを発行し、GASのスクリプトプロパティに追加してください。
     -   プロパティ：`GEMINI_API_KEY`
     -   値：`<発行したAPIキーを設定>`
     -   任意: `GEMINI_MODEL`
+
+両方のプロバイダから応答を取得できない場合、サマリはAI助言なしで返します。`autofill_uncategorized` は、OpenAI・Geminiの両方のキーがない場合にエラーを返します。
 
 ## 開発・デプロイ方法
 
