@@ -19,6 +19,7 @@ Google スプレッドシートの家計簿を生成・管理するための GAS
 │   │   ├── handleApi.js
 │   │   ├── apiCommon.js
 │   │   ├── 0_manualEntryPoints.js
+│   │   ├── 1_reapplySheetStyle.js
 │   │   ├── scheduledSummaryTriggers.js
 │   │   └── formatDateAndPriceNumbers.js
 │   ├── application
@@ -73,11 +74,10 @@ Google スプレッドシートの家計簿を生成・管理するための GAS
     -   例. `金銭メモ2024`
 -   シートの「拡張機能 -> App Script」から GAS プロジェクトを作成しておいてください。
 -   clasp と Typescript をインストールしてください。
--   `main.ts` の `speadSheetName` を作成したシートと同様の名称にしてください。
-    -   例. `金銭メモ2024`
+-   ローカルでスタイルを再適用する場合は、対象のスプレッドシートに紐づくGASプロジェクトから実行してください。`main.ts` は実行中のスプレッドシートを対象にします。
 -   ローカルで `clasp login` を実行しておき、`~/.clasprc.json` が生成されていることを確認してください。
 -   `~/.clasprc.json` 内の以下の値をそれぞれ Github の Secret として登録してください。
-    -   これらの値が `.github/workflows/build-and-deploy-on-main.yml` で読み込まれて利用されます。
+-   これらの値は [prod.yml](./.github/workflows/prod.yml) と [stg.yml](./.github/workflows/stg.yml) で読み込まれて利用されます。
 
 ```json
 {
@@ -90,8 +90,8 @@ Google スプレッドシートの家計簿を生成・管理するための GAS
         "expiry_date": 000000000
     },
     "oauth2ClientSettings": {
-        "clientId": "CLIENT_ID として登録",
-        "clientSecret": "CLIENT_SECRET として登録",
+        "clientId": "CLIENTID として登録",
+        "clientSecret": "CLIENTSECRET として登録",
         "redirectUri": "http://localhost"
     },
     "isLocalCreds": false
@@ -123,9 +123,10 @@ Google スプレッドシートの家計簿を生成・管理するための GAS
 
 ## 開発・デプロイ方法
 
--   `feat/**`ブランチを切って作業をしてください。
-    -   `feat/**`ブランチの PR にコミットがされると、自動でアプリがビルドされます。ビルドが成功することを確認してください。
--   作成した PR を`main`ブランチにマージすると、SCRIPT_ID で指定した GAS プロジェクトにデプロイされます。
+-   `feat/**` または `fix/**` ブランチへプッシュすると、[stg.yml](./.github/workflows/stg.yml) がstg用GASプロジェクトへビルド・プッシュします。
+-   `main` へマージすると、[prod.yml](./.github/workflows/prod.yml) が本番用GASプロジェクトへビルド・プッシュします。
+-   ローカルでGAS成果物だけを確認する場合は `make build` を実行します。
+-   ローカルからGASへ反映する場合は、clasp設定後に `make build-and-push` を実行します。
 
 ## API 利用方法
 
@@ -141,14 +142,20 @@ Google スプレッドシートの家計簿を生成・管理するための GAS
 
 action に渡せる値は以下のとおりです。
 
-| `action` | 詳細                                     |
-| :------: | ---------------------------------------- |
-|  `mail`  | サマリをメールとして送信します           |
-|  `text`  | サマリの文字列をレスポンスとして返します |
-|  `add`   | 支出レコードを追加します                 |
-| `categories` | カテゴリ一覧を返します              |
-| `list_uncategorized` | カテゴリ未設定の支出一覧を返します |
-| `autofill_uncategorized` | OpenAIを優先し、失敗時はGeminiでカテゴリを推定して高信頼のものだけ自動反映します |
+| `action` | 詳細 |
+| :------: | --- |
+| `mail` | 日次サマリをメール送信します。日曜日は週次、月末は月次も追加送信します。 |
+| `text` | `mail` と同じ自動判定のサマリを文字列で返します。 |
+| `daily_mail` | 日次サマリだけをメール送信します。 |
+| `weekly_mail` | 週次サマリだけをメール送信します。 |
+| `monthly_mail` | 月次サマリだけをメール送信します。 |
+| `daily_text` | 日次サマリだけを文字列で返します。 |
+| `weekly_text` | 週次サマリだけを文字列で返します。 |
+| `monthly_text` | 月次サマリだけを文字列で返します。 |
+| `add` | 支出レコードを追加します。 |
+| `categories` | カテゴリ一覧を返します。 |
+| `list_uncategorized` | カテゴリ未設定の支出一覧を返します。 |
+| `autofill_uncategorized` | OpenAIを優先し、失敗時はGeminiでカテゴリを推定して高信頼のものだけ自動反映します。 |
 
 `add`の場合は、以下のような body を渡してください。
 
@@ -163,6 +170,8 @@ action に渡せる値は以下のとおりです。
     "hash": "<ハッシュとして利用する値を設定>"
 }
 ```
+
+`amount` を優先して使用します。互換入力として `price` または `cost` も指定できます。
 
 `list_uncategorized` の場合は、以下のような body を渡してください。
 
@@ -181,13 +190,19 @@ action に渡せる値は以下のとおりです。
     "options": {
         "confidenceThreshold": 0.9,
         "limit": 20,
-        "debug": true
+        "debug": true,
+        "retryMissingIds": true
     },
     "hash": "<ハッシュとして利用する値を設定>"
 }
 ```
 
-`debug` を `true` にすると、AI 応答解析に失敗した際の詳細情報がレスポンスの `debug` および `skipped[*]` に含まれます。
+`debug` を `true` にすると、AI 応答解析に失敗した際の詳細情報がレスポンスの `debug` および `skipped[*]` に含まれます。`retryMissingIds` は、AI応答から欠落したIDだけを再問い合わせするかを指定し、省略時は `true` です。
+
+## 手動実行
+
+-   GASの実行画面では [0_manualEntryPoints.js](./scripts/entrypoints/0_manualEntryPoints.js) のサマリ・未分類支出操作を実行できます。
+-   [1_reapplySheetStyle.js](./scripts/entrypoints/1_reapplySheetStyle.js) の `reapplySheetStyleManual` は、現在開いているスプレッドシートの書式・入力規則・条件付き書式をクリアしてから再構築します。
 
 ## scripts構成
 
@@ -197,6 +212,7 @@ action に渡せる値は以下のとおりです。
     -   GAS から直接呼ばれる入口
     -   `handleApi.js`
     -   `0_manualEntryPoints.js`
+    -   `1_reapplySheetStyle.js`
     -   `scheduledSummaryTriggers.js`
     -   `formatDateAndPriceNumbers.js`
 -   `application`
@@ -226,15 +242,12 @@ action に渡せる値は以下のとおりです。
     -   `monthlySheetRepository.js`
     -   `calendarRepository.js`
     -   `uncategorizedExpenseRepository.js`
+-   `infrastructure/openai`
+    -   OpenAI Responses API client
+    -   `openaiClient.js`
 -   `infrastructure/gemini`
-    -   Gemini API client のみ
+    -   Gemini API client。OpenAI障害時のフォールバックに利用する。
     -   `geminiClient.js`
--   `infrastructure/openai`
-    -   OpenAI API client のみ
-    -   `openaiClient.js`
--   `infrastructure/openai`
-    -   OpenAI API と OpenAI 優先フォールバック制御
-    -   `openaiClient.js`
 -   `formatting`
     -   mail / text の本文生成
     -   `summaryMessageFormatter.js`
