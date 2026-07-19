@@ -66,7 +66,7 @@ jobs:
 
             - name: メインスクリプトの変数置換
               run: |
-                  sed -i 's/TARGET_SHEET_NAME/'"${TARGET_SHEET_NAME}"'/g' main.ts
+                  sed -i 's/TARGET_SHEET_NAME/'"${TARGET_SHEET_NAME}"'/g' src/layout/main.ts
 
             - name: アプリのビルドとstg環境GASへのプッシュ
               run: make build-and-push

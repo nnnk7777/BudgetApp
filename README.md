@@ -12,7 +12,8 @@ Googleスプレッドシートを家計簿として使うためのGoogle Apps Sc
 
 ## ディレクトリ構成
 
--   TypeScriptのレイアウト生成処理は `main.ts` を入口に `build.ts` でGAS用JavaScriptへ変換します。
+-   TypeScriptのレイアウト生成処理は [src/layout/main.ts](./src/layout/main.ts) を入口に `build.ts` でGAS用JavaScriptへ変換します。
+-   `src/config/` はレイアウト生成とGAS実行時処理で共有する設定を管理します。
 -   `scripts/` 配下はAPI、トリガー、AI分析などのGAS処理で、デプロイ時にそのまま配置されます。
 -   `scripts/` の責務分割は [scripts/README.md](./scripts/README.md) を参照してください。
 
@@ -26,7 +27,7 @@ Googleスプレッドシートを家計簿として使うためのGoogle Apps Sc
 ```sh
 npm ci
 ```
--   ローカルでスタイルを再適用する場合は、対象のスプレッドシートに紐づくGASプロジェクトから実行してください。`main.ts` は実行中のスプレッドシートを対象にします。
+-   ローカルでスタイルを再適用する場合は、対象のスプレッドシートに紐づくGASプロジェクトから実行してください。`src/layout/main.ts` は実行中のスプレッドシートを対象にします。
 -   ローカルで `clasp login` を実行しておき、`~/.clasprc.json` が生成されていることを確認してください。
 -   `~/.clasprc.json` 内の以下の値をそれぞれ Github の Secret として登録してください。
     -   これらの値は [prod.yml](./.github/workflows/prod.yml) と [stg.yml](./.github/workflows/stg.yml) で読み込まれて利用されます。

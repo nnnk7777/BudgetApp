@@ -1,6 +1,6 @@
 {
   "scripts": {
-    "build": "npx esbuild main.ts --bundle --outdir=dist --format=iife --global-name=_entry",
+    "build": "npx esbuild src/layout/main.ts --bundle --outdir=dist --format=iife --global-name=_entry",
     "ts-node": "npx ts-node -T build.ts"
   },
   "devDependencies": {
