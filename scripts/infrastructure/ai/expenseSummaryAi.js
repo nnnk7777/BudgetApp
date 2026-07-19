@@ -1,8 +1,13 @@
 function analyzeExpensesWithAI(dataEntries, totalAmount, adjustedBudget, percentage, baseDate, weeklyAnalysisMode, options) {
     var analysisOptions = options || {};
     var plannedExpenses = analysisOptions.plannedExpenses || getUpcomingPlannedExpenses(baseDate);
+    var contextualMemos = analysisOptions.contextualMemos || [];
     var plannedExpenseLabel = analysisOptions.plannedExpenseLabel || "今後の予定メモ";
+    var contextualMemoLabel = analysisOptions.contextualMemoLabel || "予定の補助メモ";
     var upcomingExpenseLines = plannedExpenses.map(function (entry) {
+        return formatDate(entry.date) + " [" + entry.title + "] " + entry.memo;
+    });
+    var contextualMemoLines = contextualMemos.map(function (entry) {
         return formatDate(entry.date) + " [" + entry.title + "] " + entry.memo;
     });
     var prompt;
@@ -22,7 +27,9 @@ function analyzeExpensesWithAI(dataEntries, totalAmount, adjustedBudget, percent
         weeklyBudgetCarryoverMemo,
         weeklyBudgetCarryoverGuidance,
         plannedExpenseLabel,
-        upcomingExpenseLines
+        upcomingExpenseLines,
+        contextualMemoLabel,
+        contextualMemoLines
     );
 
     Logger.log("AI分析プロンプト：");
@@ -65,8 +72,14 @@ function getPlannedExpensesForNextWeek(baseDate) {
 }
 
 function getPlannedExpensesInRange(startDate, endDate) {
+    return getCalendarMemoEntriesInRange(startDate, endDate).filter(function (entry) {
+        return entry.intent === "planned_expense";
+    });
+}
+
+function getCalendarMemoEntriesInRange(startDate, endDate) {
     var events = getCalendarEventsInRange(startDate, endDate);
-    var plannedExpenses = [];
+    var calendarMemos = [];
     Logger.log(
         "予定支出検索: start=" +
             formatDate(startDate) +
@@ -85,27 +98,35 @@ function getPlannedExpensesInRange(startDate, endDate) {
         if (isWeeklyAnalysisModeEvent(title, description)) {
             return;
         }
-        if (!hasPlannedExpenseMemo(description, title)) {
+        if (!description && !hasPlannedExpenseMemo("", title)) {
             return;
         }
 
-        plannedExpenses.push({
+        calendarMemos.push({
             title: title,
             date: event.getStartTime(),
             memo: description
         });
     });
 
-    plannedExpenses = cleanPlannedExpenseMemosWithAI(plannedExpenses);
+    calendarMemos = classifyAndCleanCalendarMemosWithAI(calendarMemos);
+    var plannedExpenses = calendarMemos.filter(function (entry) {
+        return entry.intent === "planned_expense";
+    });
+    var contextualMemos = calendarMemos.filter(function (entry) {
+        return entry.intent === "contextual_note" || entry.intent === "reservation_info";
+    });
+    var userNoteMemos = buildUserNoteMemos(calendarMemos);
     plannedExpenses = filterRecordedPlannedExpenses(plannedExpenses);
 
-    plannedExpenses.sort(function (a, b) {
+    calendarMemos = plannedExpenses.concat(contextualMemos, userNoteMemos);
+    calendarMemos.sort(function (a, b) {
         return a.date.getTime() - b.date.getTime();
     });
 
-    Logger.log("予定支出取得件数: " + plannedExpenses.length);
+    Logger.log("カレンダーメモ取得件数: " + calendarMemos.length + " (予定支出: " + plannedExpenses.length + ")");
 
-    return plannedExpenses;
+    return calendarMemos;
 }
 
 function filterRecordedPlannedExpenses(plannedExpenses) {
@@ -334,12 +355,12 @@ function formatUpcomingPlannedExpenseLines(plannedExpenses) {
     });
 }
 
-function cleanPlannedExpenseMemosWithAI(plannedExpenses) {
-    if (!plannedExpenses.length) {
-        return plannedExpenses;
+function classifyAndCleanCalendarMemosWithAI(calendarMemos) {
+    if (!calendarMemos.length) {
+        return calendarMemos;
     }
 
-    var prompt = buildPlannedExpenseMemoCleanupPrompt(plannedExpenses);
+    var prompt = buildCalendarMemoClassificationPrompt(calendarMemos);
     var result = generatePreferredAiText(prompt, {
         temperature: 0,
         maxOutputTokens: 800
@@ -348,38 +369,145 @@ function cleanPlannedExpenseMemosWithAI(plannedExpenses) {
     });
     var responseText = result.text;
     if (!responseText) {
-        return plannedExpenses;
+        return classifyCalendarMemosWithFallbackRules(calendarMemos);
     }
 
-    var cleanedByIndex = {};
-    var parsedLines = parsePipeResponse(responseText);
+    var classifiedByIndex = {};
+    var parsedLines = parseCalendarMemoClassificationResponse(responseText);
     if (!parsedLines.length) {
-        Logger.log("予定メモ整形の行解析に失敗: " + responseText);
-        return plannedExpenses;
+        Logger.log("カレンダーメモ分類の行解析に失敗: " + responseText);
+        return classifyCalendarMemosWithFallbackRules(calendarMemos);
     }
 
     parsedLines.forEach(function (item) {
-        if (typeof item.index === 'number' && typeof item.cleanedMemo === 'string') {
-            cleanedByIndex[item.index] = item.cleanedMemo.trim();
+        if (typeof item.index === "number" && isCalendarMemoIntent(item.intent) && typeof item.cleanedMemo === "string") {
+            classifiedByIndex[item.index] = item;
         }
     });
 
-    var cleanedExpenses = plannedExpenses.map(function (entry, index) {
-        var cleanedMemo = cleanedByIndex.hasOwnProperty(index)
-            ? cleanedByIndex[index]
-            : entry.memo;
+    var classifiedMemos = calendarMemos.map(function (entry, index) {
+        var classification = classifiedByIndex.hasOwnProperty(index)
+            ? classifiedByIndex[index]
+            : createFallbackCalendarMemoClassification(entry);
+        classification = preserveExplicitAmountAsPlannedExpense(entry, classification);
 
         return {
             title: entry.title,
             date: entry.date,
-            memo: cleanedMemo
+            memo: classification.cleanedMemo.trim(),
+            intent: classification.intent,
+            userNote: String(classification.userNote || "").trim()
+        };
+    }).filter(function (entry) {
+        return entry.intent !== "ignore" && entry.memo !== "";
+    });
+
+    Logger.log("カレンダーメモ分類後件数: " + classifiedMemos.length);
+    return classifiedMemos;
+}
+
+function buildUserNoteMemos(calendarMemos) {
+    return calendarMemos.filter(function (entry) {
+        return entry.intent === "planned_expense" && entry.userNote;
+    }).map(function (entry) {
+        return {
+            title: entry.title,
+            date: entry.date,
+            memo: entry.userNote,
+            intent: "contextual_note"
+        };
+    });
+}
+
+function preserveExplicitAmountAsPlannedExpense(entry, classification) {
+    var amounts = extractExplicitCalendarMemoAmounts(entry);
+    var cleanedMemo = String(classification.cleanedMemo || "").trim();
+
+    if (!amounts.length) {
+        return classification;
+    }
+
+    amounts.forEach(function (amount) {
+        if (cleanedMemo.indexOf(amount) === -1) {
+            cleanedMemo += (cleanedMemo ? " " : "") + amount;
+        }
+    });
+
+    return {
+        intent: "planned_expense",
+        cleanedMemo: cleanedMemo || entry.memo || entry.title,
+        userNote: classification.userNote || ""
+    };
+}
+
+function extractExplicitCalendarMemoAmounts(entry) {
+    var text = [entry.title || "", entry.memo || ""].join(" ")
+        .replace(/[０-９]/g, function (digit) {
+            return String.fromCharCode(digit.charCodeAt(0) - 0xFEE0);
+        });
+
+    return text.match(/\d[\d,]*(?:\.\d+)?\s*[円¥￥]/g) || [];
+}
+
+function parseCalendarMemoClassificationResponse(text) {
+    return cleanAiResponseText(text)
+        .split("\n")
+        .map(function (line) {
+            var parts = line.trim().split("|");
+            return {
+                index: parseInt(parts[0], 10),
+                intent: parts[1] || "",
+                cleanedMemo: parts[2] || "",
+                userNote: parts.slice(3).join("|").trim()
+            };
+        })
+        .filter(function (item) {
+            return !isNaN(item.index) && isCalendarMemoIntent(item.intent);
+        });
+}
+
+function isCalendarMemoIntent(intent) {
+    return intent === "planned_expense" || intent === "contextual_note" || intent === "reservation_info" || intent === "ignore";
+}
+
+function classifyCalendarMemosWithFallbackRules(calendarMemos) {
+    return calendarMemos.map(function (entry) {
+        var classification = createFallbackCalendarMemoClassification(entry);
+        return {
+            title: entry.title,
+            date: entry.date,
+            memo: classification.cleanedMemo,
+            intent: classification.intent,
+            userNote: classification.userNote
         };
     }).filter(function (entry) {
         return entry.memo !== "";
     });
+}
 
-    Logger.log("予定メモ整形後件数: " + cleanedExpenses.length);
-    return cleanedExpenses;
+function createFallbackCalendarMemoClassification(entry) {
+    if (hasPlannedExpenseMemo(entry.memo, entry.title)) {
+        return {
+            intent: "planned_expense",
+            cleanedMemo: entry.memo || entry.title,
+            userNote: extractFallbackCalendarUserNote(entry.memo)
+        };
+    }
+
+    return { intent: "contextual_note", cleanedMemo: entry.memo || entry.title, userNote: "" };
+}
+
+function extractFallbackCalendarUserNote(memo) {
+    var text = String(memo || "");
+
+    if (!/(思ってたより|高かった|痛い|忘れて|後悔|不安|つらい|辛い|やばい)/.test(text)) {
+        return "";
+    }
+
+    return text
+        .replace(/\d[\d,]*(?:\.\d+)?\s*[円¥￥]/g, "")
+        .replace(/^[\s/]+|[\s/]+$/g, "")
+        .trim();
 }
 
 function hasPlannedExpenseMemo(text, title) {
@@ -396,7 +524,7 @@ function hasPlannedExpenseMemo(text, title) {
         return true;
     }
 
-    return /(交通費|食費|外食|買い物|ランチ|ディナー|飲み|会費|チケット|ホテル|宿|タクシー|電車|バス|飛行機)/.test(combined);
+    return /(交通費|食費|外食|買い物|ランチ|ディナー|飲み|会費|チケット|ホテル|宿泊|旅館|民宿|タクシー|電車|バス|飛行機)/.test(combined);
 }
 
 function sanitizePlannedExpenseMemo(text) {
