@@ -1,5 +1,5 @@
 const categories = [
-  { name: "コンビニ・お菓子", color: "#FFCA28" },
+  { name: "コンビニ・軽食", color: "#FFCA28" },
   { name: "日用品・消耗品", color: "#d5ff9e" },
   { name: "健康・美容", color: "#f5f36c" },
   { name: "漫画・本", color: "#e3c852" },
