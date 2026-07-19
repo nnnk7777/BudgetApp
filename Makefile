@@ -18,5 +18,5 @@ copy:
 
 all:
 	make copy
-	make build-and-deploy
+	make build-and-push
 	make open

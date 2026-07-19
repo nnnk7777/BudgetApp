@@ -1,27 +1,71 @@
 # 概要
 
-## ディレクトリ構成
+## 全体構成
 
--   [entrypoints](./entrypoints)
-    -   GAS から直接呼ばれる入口
--   [application](./application)
-    -   action ごとの本処理
--   [domain/ai](./domain/ai)
-    -   AI 向けのプロンプト生成と入力整形
--   [infrastructure/ai](./infrastructure/ai)
-    -   AI プロバイダに依存しない呼び出し制御、応答解析、AI利用フロー
--   [infrastructure/gas](./infrastructure/gas)
-    -   SpreadsheetApp / PropertiesService / runtime 依存
--   [infrastructure/gemini](./infrastructure/gemini)
-    -   Gemini API client
--   [infrastructure/openai](./infrastructure/openai)
-    -   OpenAI API client
--   [formatting](./formatting)
-    -   mail / text の本文生成
--   [utils](./utils)
-    -   純粋関数寄りの共通処理
--   [deployment](./deployment)
-    -   GitHub Actions 用セットアップ
+```mermaid
+flowchart TB
+    Scripts["scripts/"] --> Entrypoints["entrypoints/"]
+    Scripts --> Application["application/"]
+    Scripts --> Domain["domain/ai/"]
+    Scripts --> Infrastructure["infrastructure/"]
+    Scripts --> Formatting["formatting/"]
+    Scripts --> Utils["utils/"]
+    Scripts --> Deployment["deployment/"]
+
+    Infrastructure --> InfrastructureAI["ai/"]
+    Infrastructure --> InfrastructureGas["gas/"]
+    Infrastructure --> InfrastructureOpenAI["openai/"]
+    Infrastructure --> InfrastructureGemini["gemini/"]
+```
+
+矢印は処理順ではなく、ディレクトリの包含関係を表します。
+
+## ディレクトリと役割
+
+| ディレクトリ | 役割 |
+| --- | --- |
+| [entrypoints](./entrypoints) | GASから直接呼ばれるWeb API、時間トリガー、手動実行の入口。 |
+| [application](./application) | actionごとの処理を組み立てるユースケース層。 |
+| [domain/ai](./domain/ai) | AIへ渡すプロンプトと入力の組み立て。 |
+| [infrastructure](./infrastructure) | Spreadsheet、Calendar、OpenAI、Geminiなど外部サービスとの連携。 |
+| [formatting](./formatting) | メール・テキストで返すサマリ本文の生成。 |
+| [utils](./utils) | 日付計算、支出集計などの共通処理。 |
+| [deployment](./deployment) | GitHub Actionsで使うclasp設定ファイルの生成。 |
+
+## 主要フロー
+
+```mermaid
+flowchart LR
+    Api["Web API<br/>doPost"] --> Parse["リクエスト解析・HASH検証"]
+    Trigger["時間トリガー"] --> Summary
+    Manual["GAS手動実行"] --> Summary
+    Manual --> Reapply["シートスタイル再適用"]
+    Parse --> Dispatch["action振り分け"]
+    Dispatch --> Summary["サマリ生成"]
+    Dispatch --> Add["支出追加・カテゴリ取得"]
+    Dispatch --> Uncategorized["未分類支出の一覧・補完"]
+    Summary --> Sheet["スプレッドシート・カレンダー取得"]
+    Summary --> AI["OpenAI優先<br/>Geminiフォールバック"]
+    Sheet --> Format["メール・テキスト本文生成"]
+    AI --> Format
+    Format --> Result["メール送信 / APIレスポンス"]
+    Add --> Sheet
+    Uncategorized --> Sheet
+    Uncategorized --> AI
+    Reapply --> Layout["TypeScriptのレイアウト生成"]
+```
+
+### 処理別の入口と主なファイル
+
+| 処理 | 入口 | 主なファイル |
+| --- | --- | --- |
+| Web API | `doPost` | [handleApi.js](./entrypoints/handleApi.js)、[apiCommon.js](./entrypoints/apiCommon.js) |
+| 日次・週次・月次サマリ | API、時間トリガー、手動実行 | [expenseSummary.js](./application/expenseSummary.js)、[monthlySummary.js](./application/monthlySummary.js)、[summaryMessageFormatter.js](./formatting/summaryMessageFormatter.js) |
+| 支出追加・カテゴリ取得 | API | [addExpenseRecord.js](./application/addExpenseRecord.js)、[fetchCategories.js](./application/fetchCategories.js) |
+| 未分類支出の補完 | API、手動実行 | [uncategorizedExpenses.js](./application/uncategorizedExpenses.js)、[categorySuggestionAi.js](./infrastructure/ai/categorySuggestionAi.js) |
+| シートスタイル再適用 | 手動実行 | [1_reapplySheetStyle.js](./entrypoints/1_reapplySheetStyle.js)、[main.ts](../main.ts) |
+
+## ファイル別説明
 
 ## entrypoints
 
@@ -143,6 +187,8 @@
 ### [infrastructure/gemini/geminiClient.js](./infrastructure/gemini/geminiClient.js)
 
 -   Gemini API キー取得、モデル選択、`generateContent` 呼び出しの共通処理を担当する。
+
+## infrastructure/openai
 
 ### [infrastructure/openai/openaiClient.js](./infrastructure/openai/openaiClient.js)
 
