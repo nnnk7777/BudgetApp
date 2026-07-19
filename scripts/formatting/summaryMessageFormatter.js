@@ -55,7 +55,7 @@ function handleWeeklySummaryResult(dateRangeStr, totalAmount, dataEntries, diffe
         body += "・なし\n";
     }
     body += "\n";
-    body += "◆ 来週の補助メモ\n";
+    body += "◆ 来週のユーザー補足メモ\n";
     body += nextWeekContextualMemoLines.length ? nextWeekContextualMemoLines.join("\n") + "\n" : "・なし\n";
     body += "\n";
 
@@ -63,7 +63,7 @@ function handleWeeklySummaryResult(dateRangeStr, totalAmount, dataEntries, diffe
         plannedExpenses: nextWeekPlannedExpenses,
         plannedExpenseLabel: "来週の予定支出",
         contextualMemos: nextWeekContextualMemos,
-        contextualMemoLabel: "来週の補助メモ"
+        contextualMemoLabel: "来週のユーザー補足メモ"
     });
     body += buildAiSummarySection("◆ AI分析", aiAnalysis);
 
@@ -115,7 +115,7 @@ function handleDailySummaryResult(currentDate, datesInWeek, adjustedBudget, isSt
         plannedExpenses: upcomingPlannedExpenses,
         plannedExpenseLabel: "今後の予定支出",
         contextualMemos: upcomingContextualMemos,
-        contextualMemoLabel: "今後の補助メモ"
+        contextualMemoLabel: "今後のユーザー補足メモ"
     });
     var subject = (isStaging ? "<test>" : "") + "家計簿日次レポート（" + formatDate(currentDate) + "）";
     var body = "+++ 💸 予算サマリー 💸 +++\n";
@@ -124,7 +124,7 @@ function handleDailySummaryResult(currentDate, datesInWeek, adjustedBudget, isSt
     body += "今後の予定金額: " + plannedExpenseTotal + " 円\n";
     body += "支出＋予定の合計見込み: " + (totalAmount + plannedExpenseTotal) + " 円\n";
     body += "\n";
-    body += "◆ 直近の補助メモ\n";
+    body += "◆ 直近のユーザー補足メモ\n";
     body += upcomingContextualMemoLines.length ? upcomingContextualMemoLines.join("\n") + "\n" : "・なし\n";
     body += "\n";
     body += "予算に対して\n";
