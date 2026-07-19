@@ -102,7 +102,7 @@ function buildCalendarMemoClassificationPrompt(calendarMemos) {
 
     return `以下はGoogleカレンダー予定のタイトルとメモです。
 各予定の意図を分類し、家計サマリに役立つ情報だけを短く整形してください。
-各要素について intent と cleanedMemo を返してください。
+各要素について intent、cleanedMemo、userNote を返してください。
 ルール:
 - intent は planned_expense、contextual_note、reservation_info、ignore のいずれかにする
 - planned_expense: 今後発生しそうな支出。金額がなくても、外食・買い物・交通・宿泊など支出意図が明確なら該当する
@@ -112,13 +112,16 @@ function buildCalendarMemoClassificationPrompt(calendarMemos) {
 - ignore: Googleの自動追記、URL、案内文、会議通知など、家計サマリに不要な情報
 - URL、Googleの案内文、自動生成の説明、予約メール由来の定型文は削除する
 - contextual_note は、ユーザーの言い回しにある後悔、不安、別管理したい意図などのニュアンスを落とさず、短く整形する。事実や金額を補完・推測しない
+- userNote には、支出への感想・後悔・不安・事情・管理方針の相談だけを入れる。短い感想でも、助言に役立つなら残す。支出の事実だけなら空文字にする
+- planned_expense に分類した予定でも、感想があれば userNote に分けて残す。例: 「思ってたより高かった」「忘れていたため痛い」
 - 金額、店名、場所、支出目的、ユーザーの事情など意味のある情報だけを残し、タイトルと同じ内容は重複させない
-- 出力は各行 \`index|intent|cleanedMemo\` のみ
+- 出力は各行 \`index|intent|cleanedMemo|userNote\` のみ
 - 説明文、Markdown、コードブロック、jsonという語は出力しない
-- 例: \`0|planned_expense|ランチ 1200円くらい\`
-- 例: \`1|planned_expense|定期購入プロテイン 15000円。忘れていたため支出として痛い\`
-- 例: \`2|contextual_note|ふるさと納税のため週予算とは別管理にしたい\`
-- 例: \`3|reservation_info|美容院 カット\`
+- 例: \`0|planned_expense|ランチ 1200円くらい|\`
+- 例: \`1|planned_expense|定期購入プロテイン 15000円|忘れていたため支出として痛い\`
+- 例: \`2|planned_expense|飲み会 8000円|思ってたより高かった\`
+- 例: \`3|contextual_note|ふるさと納税のため週予算とは別管理にしたい|\`
+- 例: \`4|reservation_info|美容院 カット|\`
 ${calendarMemosJson}`;
 }
 
