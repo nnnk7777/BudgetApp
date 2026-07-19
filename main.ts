@@ -5,6 +5,11 @@ export function main() {
     const speadSheetName = "TARGET_SHEET_NAME";
     const budgetReportSheetName = "🐖 家計簿";
     const categorySummaryReportSheetName = "🦦 カテゴリ別";
+    const activeSpreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+
+    if (!activeSpreadsheet) {
+        throw new Error("アクティブなスプレッドシートを開いた状態で実行してください。");
+    }
 
     const options: Options = {
         budgetReportOption: {
@@ -25,6 +30,7 @@ export function main() {
         speadSheetName,
         budgetReportSheetName,
         categorySummaryReportSheetName,
-        options
+        options,
+        activeSpreadsheet
     );
 }

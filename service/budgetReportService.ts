@@ -15,6 +15,7 @@ export class BudgetReportService {
     private budgetReportSheet!: GoogleAppsScript.Spreadsheet.Sheet;
     private categorySummarySheet!: GoogleAppsScript.Spreadsheet.Sheet;
     private options: Options;
+    private targetSpreadsheet: GoogleAppsScript.Spreadsheet.Spreadsheet | null;
 
     private monthlyBudgetReportList: MonthlyReport[] = [];
     private monthList: string[] = [];
@@ -23,48 +24,38 @@ export class BudgetReportService {
         spreadSheetName: string,
         budgetReportSheetName: string,
         categorySummaryReportSheetName: string,
-        options: Options
+        options: Options,
+        targetSpreadsheet: GoogleAppsScript.Spreadsheet.Spreadsheet | null = null
     ) {
         this.spreadSheetName = spreadSheetName;
         this.budgetReportSheetName = budgetReportSheetName;
         this.categorySummaryReportSheetName = categorySummaryReportSheetName;
         this.options = options;
+        this.targetSpreadsheet = targetSpreadsheet;
 
         this.init();
     }
 
     private init(): void {
         // スプレッドシート、シートの初期化
-        let spreadsheet;
-        // シート検索のための初期化
-        const files = DriveApp.getFilesByName(this.spreadSheetName);
+        let spreadsheet = this.targetSpreadsheet;
         /**
          * シートの存在有無によって処理を分岐させる
-         * - 存在する： 既存のシートに対してスタイルやバリデーションルールの再適用のみをする
+         * - 手動実行時： 実行中のスプレッドシートに対してスタイルやバリデーションルールを再適用する
+         * - 対象指定なし： 同名のスプレッドシートをDriveから検索する
          * - 存在しない： 新規シートを作成する
          */
-        switch (files.hasNext()) {
-            case true:
+        if (spreadsheet) {
+            console.log("実行中のスプレッドシートにスタイルを再適用します");
+            this.initializeExistingSheets(spreadsheet);
+        } else {
+            const files = DriveApp.getFilesByName(this.spreadSheetName);
+
+            if (files.hasNext()) {
                 console.log("同一名称のシートが存在する");
-
-                // スプレッドシートが存在する場合、そのスプレッドシートを取得
                 spreadsheet = SpreadsheetApp.open(files.next());
-                this.budgetReportSheet = spreadsheet.getSheets()[0];
-
-                // シート「🦦カテゴリ別」が存在しない場合は、新しいシートとして追加
-                if (
-                    !spreadsheet.getSheetByName(
-                        this.categorySummaryReportSheetName
-                    )
-                ) {
-                    this.categorySummarySheet = spreadsheet.insertSheet(
-                        this.categorySummaryReportSheetName
-                    );
-                } else {
-                    this.categorySummarySheet = spreadsheet.getSheets()[1];
-                }
-                break;
-            case false:
+                this.initializeExistingSheets(spreadsheet);
+            } else {
                 console.log("同一名称のシートが存在しない");
 
                 /**
@@ -83,7 +74,7 @@ export class BudgetReportService {
                 this.categorySummarySheet = spreadsheet.insertSheet(
                     this.categorySummaryReportSheetName
                 );
-                break;
+            }
         }
 
         // 12ヶ月分の budgetReport を作成する。
@@ -94,6 +85,17 @@ export class BudgetReportService {
 
         // カテゴリ別レポートの作成
         this.initCategorySummaryReport();
+    }
+
+    private initializeExistingSheets(
+        spreadsheet: GoogleAppsScript.Spreadsheet.Spreadsheet
+    ): void {
+        this.budgetReportSheet =
+            spreadsheet.getSheetByName(this.budgetReportSheetName) ||
+            spreadsheet.getSheets()[0];
+        this.categorySummarySheet =
+            spreadsheet.getSheetByName(this.categorySummaryReportSheetName) ||
+            spreadsheet.insertSheet(this.categorySummaryReportSheetName);
     }
 
     private initMonthlyReports(): void {
