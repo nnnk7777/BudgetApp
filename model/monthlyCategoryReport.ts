@@ -29,15 +29,15 @@ export class MonthlyCategoryReport {
         this.init();
     }
 
-    private async init() {
+    private init(): void {
         // 月の表示
-        await this.createMonthNumberLabel();
+        this.createMonthNumberLabel();
 
         // カテゴリごとに SUM 関数をセット
-        await this.createCategorySummary();
+        this.createCategorySummary();
     }
 
-    private async createMonthNumberLabel(): Promise<void> {
+    private createMonthNumberLabel(): void {
         const monthNumCell = this.sheet.getRange(
             this.option.initialRowNumber - 1,
             this.option.initialColumnNumber,
@@ -51,7 +51,7 @@ export class MonthlyCategoryReport {
             .setHorizontalAlignment("center");
     }
 
-    private async createCategorySummary(): Promise<void> {
+    private createCategorySummary(): void {
         this.outcomeCategoryNameList.map((outcomeCategoryName, i) => {
             this.sheet
                 .getRange(

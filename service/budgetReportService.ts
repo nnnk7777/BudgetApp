@@ -33,7 +33,7 @@ export class BudgetReportService {
         this.init();
     }
 
-    private async init() {
+    private init(): void {
         // スプレッドシート、シートの初期化
         let spreadsheet;
         // シート検索のための初期化
@@ -87,16 +87,16 @@ export class BudgetReportService {
         }
 
         // 12ヶ月分の budgetReport を作成する。
-        await this.initMonthlyReports();
+        this.initMonthlyReports();
 
         // 年次レポートの作成
-        await this.initAnnualReport();
+        this.initAnnualReport();
 
         // カテゴリ別レポートの作成
-        await this.initCategorySummaryReport();
+        this.initCategorySummaryReport();
     }
 
-    private async initMonthlyReports(): Promise<void> {
+    private initMonthlyReports(): void {
         for (let i = 0; i < 12; i++) {
             let monthlyOption: MonthlyReportOption = {
                 initialColumnNumber:
@@ -112,7 +112,7 @@ export class BudgetReportService {
         }
     }
 
-    private async initAnnualReport(): Promise<void> {
+    private initAnnualReport(): void {
         new AnnualReport(
             this.budgetReportSheet,
             this.monthlyBudgetReportList,
@@ -121,7 +121,7 @@ export class BudgetReportService {
         );
     }
 
-    private async initCategorySummaryReport(): Promise<void> {
+    private initCategorySummaryReport(): void {
         new CategorySummaryReport(
             this.categorySummarySheet,
             this.monthlyBudgetReportList,

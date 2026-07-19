@@ -77,23 +77,23 @@ export class CategorySummaryReport {
         this.init();
     }
 
-    private async init() {
+    private init(): void {
         console.log("カテゴリ別サマリ作成 start");
-        await this.resetSheet();
-        await this.createCategoryLabel();
+        this.resetSheet();
+        this.createCategoryLabel();
 
-        await this.createMontylyCategoryReport();
-        await this.setMoneyRangeBackgroundColor();
+        this.createMontylyCategoryReport();
+        this.setMoneyRangeBackgroundColor();
     }
 
-    private async resetSheet(): Promise<void> {
+    private resetSheet(): void {
         this.sheet.clear();
         this.sheet.clearConditionalFormatRules();
         this.sheet.getRange(`A1:BD2000`).clearDataValidations();
         this.sheet.getRange(`A1:BD2000`).clearFormat();
     }
 
-    private async createCategoryLabel(): Promise<void> {
+    private createCategoryLabel(): void {
         this.categoryLabelRange = this.sheet.getRange(
             this.option.rowOffset,
             this.option.columnOffset,
@@ -109,7 +109,7 @@ export class CategorySummaryReport {
         console.log("カテゴリ別サマリ作成 ラベル作成完了");
     }
 
-    private async createMontylyCategoryReport(): Promise<void> {
+    private createMontylyCategoryReport(): void {
         console.log("カテゴリ別月次サマリ作成 start");
 
         this.sheet.setColumnWidth(2, 150);
@@ -130,7 +130,7 @@ export class CategorySummaryReport {
         }
     }
 
-    private async setMoneyRangeBackgroundColor(): Promise<void> {
+    private setMoneyRangeBackgroundColor(): void {
         let rules = this.sheet.getConditionalFormatRules();
 
         const range = this.sheet.getRange(

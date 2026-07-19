@@ -38,13 +38,13 @@ export class AnnualReport {
         this.init();
     }
 
-    private async init() {
-        await this.initAnnualReportStyle();
-        await this.initAnnualSummaryCells();
-        await this.initAnnualReportGraph();
+    private init(): void {
+        this.initAnnualReportStyle();
+        this.initAnnualSummaryCells();
+        this.initAnnualReportGraph();
     }
 
-    private async initAnnualReportStyle() {
+    private initAnnualReportStyle(): void {
         // 左側の3列を固定
         this.sheet.setFrozenColumns(4);
         this.sheet.setColumnWidth(3, 150);
@@ -124,7 +124,7 @@ export class AnnualReport {
             .setVerticalAlignment("middle");
     }
 
-    private async initAnnualSummaryCells() {
+    private initAnnualSummaryCells(): void {
         for (let i = 0; i < 12; i++) {
             this.roughEstimateSummaryList.push(
                 this.monthlyReports[i].getRoughEstimateCell()
@@ -155,7 +155,7 @@ export class AnnualReport {
         console.log("月次サマリとその合計値の設定 done");
     }
 
-    private async initAnnualReportGraph() {
+    private initAnnualReportGraph(): void {
         new BudgetGraph(
             this.sheet,
             this.options.columnOffset,

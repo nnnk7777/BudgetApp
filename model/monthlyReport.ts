@@ -26,8 +26,8 @@ export class MonthlyReport extends MonthlyDataBase {
     }
 
     // 月の表示と、支出・収入のSUM関数をセット
-    private async init() {
-        await this.clearSheet();
+    private init(): void {
+        this.clearSheet();
 
         // 月の表示
         const firstCell = this.sheet.getRange(
@@ -84,8 +84,8 @@ export class MonthlyReport extends MonthlyDataBase {
             SpreadsheetApp.BorderStyle.DOTTED
         );
 
-        await this.initInOut();
-        await this.setColumnsWidth();
+        this.initInOut();
+        this.setColumnsWidth();
 
         // カスタム日付フォーマットを設定
         const dateColumn = this.sheet.getRange(
@@ -99,7 +99,7 @@ export class MonthlyReport extends MonthlyDataBase {
             .setVerticalAlignment("middle");
     }
 
-    private async initInOut() {
+    private initInOut(): void {
         const initialIncomingRowNumber = this.options.initialRowNumber + 4;
         const initialOutcomingRowNumber = initialIncomingRowNumber + 15;
 
@@ -116,13 +116,13 @@ export class MonthlyReport extends MonthlyDataBase {
         );
     }
 
-    private async clearSheet() {
+    private clearSheet(): void {
         this.sheet.clearConditionalFormatRules();
         this.sheet.getRange(`A1:BD2000`).clearDataValidations();
         this.sheet.getRange(`A1:BD2000`).clearFormat();
     }
 
-    private async setColumnsWidth() {
+    private setColumnsWidth(): void {
         // 列の幅を設定する
         for (let i = 0; i < this.columnWidths.length; i++) {
             this.sheet.setColumnWidth(
