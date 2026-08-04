@@ -53,7 +53,10 @@ function getMonthlyExpenseEntries(year, month) {
 
 function getMonthlyIncomeEntries(year, month) {
     var sheet = getExpenseSheet();
-    var startRow = 22;
+    // IncomeData creates detail rows 20 through 33. The month is determined by
+    // this block's columns, so an entry must not be dropped just because its
+    // date cell contains a label such as "予定".
+    var startRow = 20;
     var endRow = 33;
     var columns = getColumnsForMonth(month);
     var dataRange = sheet.getRange(startRow, columns.dateCol, endRow - startRow + 1, 4);
@@ -65,31 +68,34 @@ function getMonthlyIncomeEntries(year, month) {
         var name = row[2];
         var amount = row[3];
 
-        var hasContent = [dateCell, name, amount].some(function (cell) {
+        var hasEntryContent = [name, amount].some(function (cell) {
             return cell !== null && cell.toString().trim() !== '';
         });
-        if (!hasContent) {
+        if (!hasEntryContent) {
             return;
         }
 
-        var entryDate;
+        var entryDate = new Date(year, month, 1);
+        var dateLabel = "";
         if (dateCell && dateCell.toString().trim() !== '') {
             if (typeof dateCell === 'string') {
-                entryDate = parseDate(dateCell, year);
+                var parsedDate = parseDate(dateCell, year);
+                if (!isNaN(parsedDate.getTime())) {
+                    entryDate = parsedDate;
+                } else {
+                    dateLabel = dateCell.toString().trim();
+                }
             } else if (Object.prototype.toString.call(dateCell) === '[object Date]') {
                 entryDate = new Date(year, dateCell.getMonth(), dateCell.getDate());
             }
-        } else {
-            entryDate = new Date(year, month, 1);
         }
 
-        if (entryDate.getFullYear() === year && entryDate.getMonth() === month) {
-            entries.push({
-                date: entryDate,
-                name: name || "",
-                amount: amount || 0
-            });
-        }
+        entries.push({
+            date: entryDate,
+            dateLabel: dateLabel,
+            name: name || "",
+            amount: amount || 0
+        });
     });
 
     return entries;

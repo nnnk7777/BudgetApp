@@ -41,7 +41,7 @@ function buildMonthlySummaryMessage(dateRangeStr, totalIncome, totalExpenses, ad
     });
     body += "\n◆ 収入一覧\n";
     incomeEntries.forEach(function (entry) {
-        body += "・" + formatDate(entry.date) + " - " + entry.name + ": " + entry.amount + "円\n";
+        body += "・" + (entry.dateLabel || formatDate(entry.date)) + " - " + entry.name + ": " + entry.amount + "円\n";
     });
     body += "\n";
 
