@@ -80,6 +80,15 @@ function getBudgetChartScalePercentage(totalAmount, adjustedBudget, displayOptio
     return (displayOptions && displayOptions.scalePercentage) || getDailyBudgetChartScalePercentage(totalAmount, adjustedBudget);
 }
 
+function getBudgetBoundaryTicks(adjustedBudget) {
+    return [99, 99.5, 100].map(function (percentage) {
+        return {
+            v: adjustedBudget * percentage / 100,
+            f: ""
+        };
+    });
+}
+
 function getDailyBudgetChartTickStep(scalePercentage) {
     if (scalePercentage > 300) {
         return 100;
@@ -233,7 +242,8 @@ function createBudgetChartBlob(totalAmount, adjustedBudget, chartLabel, chartTit
         .addColumn(Charts.ColumnType.NUMBER, "通常支出（150%超）")
         .addColumn(Charts.ColumnType.NUMBER, "承認済み特別費")
         .addColumn(Charts.ColumnType.NUMBER, "残り")
-        .addRow([chartLabel, chartAmounts.withinBudget, chartAmounts.overBudget, chartAmounts.criticalOverBudget, specialExpenseTotal, Math.max(adjustedBudget - totalAmount, 0)])
+        .addColumn(Charts.ColumnType.NUMBER, "予算上限線")
+        .addRow([chartLabel, chartAmounts.withinBudget, chartAmounts.overBudget, chartAmounts.criticalOverBudget, specialExpenseTotal, Math.max(adjustedBudget - totalAmount, 0), 0])
         .build();
     var chart = Charts.newBarChart()
         .setDataTable(chartData)
@@ -242,12 +252,22 @@ function createBudgetChartBlob(totalAmount, adjustedBudget, chartLabel, chartTit
         .setOption("titleTextStyle", { color: totalAmount > adjustedBudget ? "#b42318" : "#202124", fontSize: 15, bold: true })
         .setOption("legend", { position: "none" })
         .setOption("isStacked", true)
-        .setOption("colors", [chartTheme.color, chartTheme.overBudgetColor, "#6b1512", "#9e88f7", "#e8eaed"])
+        .setOption("colors", [chartTheme.color, chartTheme.overBudgetColor, "#6b1512", "#9e88f7", "#e8eaed", "#ffffff"])
+        .setOption("series", { 5: { targetAxisIndex: 1 } })
         .setOption("hAxis", {
             viewWindow: { min: 0, max: chartMaximum },
             ticks: options.ticks || getDailyBudgetChartTicks(adjustedBudget, scalePercentage),
             gridlines: { color: "#dadce0" },
             baselineColor: "#dadce0"
+        })
+        .setOption("hAxes", {
+            1: {
+                viewWindow: { min: 0, max: chartMaximum },
+                ticks: getBudgetBoundaryTicks(adjustedBudget),
+                textPosition: "none",
+                gridlines: { color: "#202124" },
+                baselineColor: "transparent"
+            }
         })
         .setOption("chartArea", options.chartArea || { left: 70, top: 44, width: "82%", height: "48%" })
         .build();
