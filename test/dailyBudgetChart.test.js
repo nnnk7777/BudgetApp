@@ -35,23 +35,23 @@ test('日次予算グラフのタイトルは超過額を明示する', () => {
     );
 });
 
-test('月次予算グラフのタイトルは月次予算を基準にする', () => {
+test('週次サマリ用グラフのタイトルは月次・週次の予算を基準にする', () => {
     const chart = loadChartFunctions();
 
     assert.equal(
-        chart.buildMonthlyBudgetChartTitle(170000, 160000),
-        '【緊急】月次予算の1.1倍（10000円超過）'
+        chart.buildWeeklySummaryBudgetChartTitle(170000, 160000, null, 43400, 40000),
+        '今月 170000円 / 160000円（106.3%・10000円超過）\n今週 43400円 / 40000円（108.5%・3400円超過）'
     );
 });
 
-test('月次予算グラフは分析時点の月内ペースと今週の支出を表示する', () => {
+test('週次サマリ用グラフは分析時点の月内ペースを表示する', () => {
     const chart = loadChartFunctions();
     const currentDate = new Date(2026, 1, 15);
 
     assert.equal(chart.getMonthlyBudgetPacePercentage(currentDate), 15 / 28 * 100);
     assert.equal(
-        chart.buildMonthlyBudgetChartTitle(80000, 160000, currentDate, 40000, 40000),
-        '今月の実支出 80000円 / 160000円（50.0%）\n2/15時点の目安 53.6%　｜　今週 40000円（週予算の1.0倍）'
+        chart.buildWeeklySummaryBudgetChartTitle(80000, 160000, currentDate, 40000, 40000),
+        '今月 80000円 / 160000円（50.0%）　｜　2/15時点の目安 53.6%\n今週 40000円 / 40000円（100.0%）'
     );
 });
 
@@ -111,11 +111,20 @@ test('月次予算グラフは予算を4週の目安として25%ごとに表示�
 
     assert.equal(JSON.stringify(ticks), JSON.stringify([
         { v: 0, f: '0%' },
-        { v: 40000, f: '25% 第1週' },
-        { v: 80000, f: '50% 第2週' },
-        { v: 120000, f: '75% 第3週' },
-        { v: 160000, f: '100% 第4週 予算上限' }
+        { v: 40000, f: '25% 予算の1/4' },
+        { v: 80000, f: '50% 予算の1/2' },
+        { v: 120000, f: '75% 予算の3/4' },
+        { v: 160000, f: '100% 予算上限' }
     ]));
+});
+
+test('週次サマリ用グラフは月次・週次で100%の位置を共通にする', () => {
+    const chart = loadChartFunctions();
+
+    assert.equal(
+        chart.getWeeklySummaryBudgetChartScalePercentage(80000, 160000, 159400, 40000),
+        400
+    );
 });
 
 test('HTMLメール本文はグラフを先頭に置き、テキスト本文をエスケープする', () => {
@@ -126,11 +135,11 @@ test('HTMLメール本文はグラフを先頭に置き、テキスト本文を�
     assert.match(html, /支出: &lt;1000&gt;円 &amp; 確認/);
 });
 
-test('週次HTMLメール本文は月次のグラフ1枚を表示する', () => {
+test('週次HTMLメール本文は月次・週次をまとめたグラフ1枚を表示する', () => {
     const chart = loadChartFunctions();
     const html = chart.buildWeeklySummaryHtmlBody('週次本文', 80000, 160000, new Date(2026, 1, 15), 40000, 40000);
 
-    assert.match(html, /^<img src="cid:monthlyBudgetChart"/);
-    assert.doesNotMatch(html, /cid:weeklyBudgetChart/);
+    assert.match(html, /^<img src="cid:weeklySummaryBudgetChart"/);
+    assert.doesNotMatch(html, /cid:monthlyBudgetChart/);
     assert.match(html, /週次本文/);
 });
