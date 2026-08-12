@@ -237,7 +237,7 @@ function createBudgetChartBlob(totalAmount, adjustedBudget, chartLabel, chartTit
         .setOption("titleTextStyle", { color: totalAmount > adjustedBudget ? "#b42318" : "#202124", fontSize: 15, bold: true })
         .setOption("legend", { position: "none" })
         .setOption("isStacked", true)
-        .setOption("colors", [chartTheme.color, chartTheme.overBudgetColor, "#6b1512", "#7e57c2", "#e8eaed"])
+        .setOption("colors", [chartTheme.color, chartTheme.overBudgetColor, "#6b1512", "#9e88f7", "#e8eaed"])
         .setOption("hAxis", {
             viewWindow: { min: 0, max: chartMaximum },
             ticks: options.ticks || getDailyBudgetChartTicks(adjustedBudget, scalePercentage),
