@@ -1,5 +1,6 @@
 var SPECIAL_EXPENSE_CATEGORY = "特別費";
 var SPECIAL_EXPENSE_REVIEW_CACHE_PROPERTY = "SPECIAL_EXPENSE_REVIEW_CACHE";
+var SPECIAL_EXPENSE_OPENAI_RETRY_COUNT = 2;
 
 function reviewSpecialExpensesWithAI(entries) {
     var candidates = entries.filter(function (entry) {
@@ -36,13 +37,8 @@ function reviewSpecialExpensesWithAI(entries) {
     });
 
     if (uncachedCandidates.length) {
-        aiResult = generatePreferredAiText(buildSpecialExpenseReviewPrompt(uncachedCandidates), {
-            temperature: 0,
-            maxOutputTokens: Math.max(80, uncachedCandidates.length * 40)
-        }, {
-            logContext: "special_expense_review"
-        });
-        decisions = decisions.concat(parseSpecialExpenseReviewResponse(aiResult.text, uncachedCandidates));
+        aiResult = reviewUncachedSpecialExpensesWithAI(uncachedCandidates);
+        decisions = decisions.concat(aiResult.decisions);
         cacheSpecialExpenseReviewDecisions(decisions, cachedDecisions);
     }
 
@@ -56,6 +52,67 @@ function reviewSpecialExpensesWithAI(entries) {
         hasCandidates: true,
         aiResult: aiResult
     };
+}
+
+function reviewUncachedSpecialExpensesWithAI(candidates) {
+    var unresolvedCandidates = candidates.slice();
+    var decisionsByEntryKey = {};
+    var aiResult = null;
+    var attempt;
+
+    for (attempt = 0; attempt < SPECIAL_EXPENSE_OPENAI_RETRY_COUNT && unresolvedCandidates.length; attempt++) {
+        aiResult = generateSpecialExpenseReviewText(unresolvedCandidates, {
+            logContext: "special_expense_review_openai_attempt_" + (attempt + 1),
+            skipGemini: true
+        });
+        collectSpecialExpenseDecisions(decisionsByEntryKey, parseSpecialExpenseReviewResponse(aiResult.text, unresolvedCandidates));
+        unresolvedCandidates = getUnresolvedSpecialExpenseCandidates(unresolvedCandidates, decisionsByEntryKey);
+
+        if (unresolvedCandidates.length) {
+            Logger.log("特別費AI判定のOpenAI応答が不完全なためリトライします: " + unresolvedCandidates.length + "件");
+        }
+    }
+
+    if (unresolvedCandidates.length) {
+        aiResult = generateSpecialExpenseReviewText(unresolvedCandidates, {
+            logContext: "special_expense_review_gemini_fallback",
+            skipOpenAi: true,
+            fallbackReason: "openai_response_incomplete"
+        });
+        collectSpecialExpenseDecisions(decisionsByEntryKey, parseSpecialExpenseReviewResponse(aiResult.text, unresolvedCandidates));
+        unresolvedCandidates = getUnresolvedSpecialExpenseCandidates(unresolvedCandidates, decisionsByEntryKey);
+    }
+
+    return {
+        decisions: candidates.map(function (entry) {
+            return decisionsByEntryKey[getSpecialExpenseEntryKey(entry)] || createUnresolvedSpecialExpenseDecision(entry);
+        }),
+        provider: aiResult.provider,
+        model: aiResult.model,
+        usedFallback: aiResult.usedFallback,
+        fallbackReason: aiResult.fallbackReason
+    };
+}
+
+function generateSpecialExpenseReviewText(candidates, options) {
+    return generatePreferredAiText(buildSpecialExpenseReviewPrompt(candidates), {
+        temperature: 0,
+        maxOutputTokens: Math.max(80, candidates.length * 40)
+    }, options);
+}
+
+function collectSpecialExpenseDecisions(decisionsByEntryKey, decisions) {
+    decisions.forEach(function (decision) {
+        if (decision.hasAiDecision) {
+            decisionsByEntryKey[getSpecialExpenseEntryKey(decision.entry)] = decision;
+        }
+    });
+}
+
+function getUnresolvedSpecialExpenseCandidates(candidates, decisionsByEntryKey) {
+    return candidates.filter(function (entry) {
+        return !decisionsByEntryKey[getSpecialExpenseEntryKey(entry)];
+    });
 }
 
 function parseSpecialExpenseReviewResponse(text, candidates) {
@@ -79,13 +136,17 @@ function parseSpecialExpenseReviewResponse(text, candidates) {
     });
 
     return candidates.map(function (entry, index) {
-        return decisionByIndex[index] || {
-            entry: entry,
-            approved: false,
-            reason: "AI判定を取得できなかったため",
-            hasAiDecision: false
-        };
+        return decisionByIndex[index] || createUnresolvedSpecialExpenseDecision(entry);
     });
+}
+
+function createUnresolvedSpecialExpenseDecision(entry) {
+    return {
+        entry: entry,
+        approved: false,
+        reason: "AI判定を取得できなかったため",
+        hasAiDecision: false
+    };
 }
 
 function getSpecialExpenseReviewCache() {
