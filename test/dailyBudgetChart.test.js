@@ -55,7 +55,16 @@ test('週次サマリ用の月次グラフは分析時点の月内ペースを�
     assert.equal(chart.getMonthlyBudgetPacePercentage(currentDate), 15 / 28 * 100);
     assert.equal(
         chart.buildWeeklySummaryMonthlyChartTitle(80000, 160000, currentDate),
-        '今月の予算対象支出 80000円 / 160000円（50.0%）　｜　2/15時点の目安 53.6%'
+        '今月の実支出 80000円 / 160000円（50.0%）　｜　2/15時点の目安 53.6%'
+    );
+});
+
+test('予算グラフのタイトルは通常支出と承認済み特別費を分けて表示する', () => {
+    const chart = loadChartFunctions();
+
+    assert.equal(
+        chart.buildWeeklySummaryMonthlyChartTitle(59400, 160000, new Date(2026, 1, 10), 50000),
+        '今月の実支出 59400円 / 160000円（37.1%）\n通常 9400円（5.9%）｜ 特別費 50000円（31.3%）　｜　2/10時点の目安 35.7%'
     );
 });
 

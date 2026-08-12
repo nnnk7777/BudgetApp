@@ -157,6 +157,10 @@ function calculateApprovedSpecialExpenseTotal(specialExpenseReview) {
     }));
 }
 
+function calculateApprovedSpecialExpenseTotalForEntries(entries, specialExpenseReview) {
+    return calculateTotalAmount(entries) - calculateTotalAmount(getBudgetTargetEntries(entries, specialExpenseReview));
+}
+
 function buildSpecialExpenseReviewSection(specialExpenseReview, label) {
     var lines = ["◆ " + label + "の特別費チェック"];
 

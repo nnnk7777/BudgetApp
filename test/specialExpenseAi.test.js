@@ -90,3 +90,24 @@ test('確定した特別費AI判定は保存し、同じ行を再判定しない
     assert.equal(secondReview.approvedEntries.length, 1);
     assert.equal(generated, 1);
 });
+
+test('期間内の承認済み特別費だけを合計できる', () => {
+    const context = loadSpecialExpenseAi({
+        calculateTotalAmount: (entries) => entries.reduce((sum, entry) => sum + entry.amount, 0)
+    });
+    const travel = makeEntry(10, '特別費', '福岡旅行の宿泊費', 50000);
+    const otherWeekTravel = makeEntry(17, '特別費', '次週の旅行費', 30000);
+    const review = {
+        approvedEntries: [
+            { entry: travel, approved: true, reason: '旅行費' },
+            { entry: otherWeekTravel, approved: true, reason: '旅行費' }
+        ],
+        rejectedEntries: [],
+        hasCandidates: true
+    };
+
+    assert.equal(
+        context.calculateApprovedSpecialExpenseTotalForEntries([travel], review),
+        50000
+    );
+});

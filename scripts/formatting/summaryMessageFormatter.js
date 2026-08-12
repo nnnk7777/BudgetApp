@@ -17,9 +17,11 @@ function handleWeeklySummaryResult(dateRangeStr, totalAmount, dataEntries, diffe
     var budgetTargetEntries = getBudgetTargetEntries(dataEntries, specialExpenseReview);
     var monthlyBudgetTargetEntries = getBudgetTargetEntries(monthEntries, specialExpenseReview);
     var approvedSpecialExpenseTotal = calculateApprovedSpecialExpenseTotal(specialExpenseReview);
+    var approvedWeeklySpecialExpenseTotal = calculateApprovedSpecialExpenseTotalForEntries(dataEntries, specialExpenseReview);
     var categoryRankingLines;
     var top5Entries;
     var monthlyTotalAmount;
+    var actualMonthlyTotalAmount;
     var body = "";
 
     totalAmount = calculateTotalAmount(budgetTargetEntries);
@@ -29,6 +31,7 @@ function handleWeeklySummaryResult(dateRangeStr, totalAmount, dataEntries, diffe
     differenceAbs = Math.abs(difference);
     percentageStr = percentage.toFixed(2);
     monthlyTotalAmount = calculateTotalAmount(monthlyBudgetTargetEntries);
+    actualMonthlyTotalAmount = calculateTotalAmount(monthEntries);
     categoryRankingLines = getCategoryRankingLines(budgetTargetEntries);
     top5Entries = getTopExpenseEntries(budgetTargetEntries, 5);
 
@@ -99,12 +102,12 @@ function handleWeeklySummaryResult(dateRangeStr, totalAmount, dataEntries, diffe
         case 'mail':
             var emailAddress = getTargetEmailAddress();
             var subject = (isStaging ? "<test>" : "") + "家計簿週次レポート" + "（" + dateRangeStr + "）";
-            var weeklySummaryBudgetCharts = createWeeklySummaryBudgetCharts(monthlyTotalAmount, monthlyBudget, currentDate, totalAmount, adjustedBudget);
+            var weeklySummaryBudgetCharts = createWeeklySummaryBudgetCharts(actualMonthlyTotalAmount, monthlyBudget, currentDate, actualWeeklyTotalAmount, adjustedBudget, approvedSpecialExpenseTotal, approvedWeeklySpecialExpenseTotal);
             MailApp.sendEmail({
                 to: emailAddress,
                 subject: subject,
                 body: body,
-                htmlBody: buildWeeklySummaryHtmlBody(body, monthlyTotalAmount, monthlyBudget, currentDate, totalAmount, adjustedBudget),
+                htmlBody: buildWeeklySummaryHtmlBody(body, actualMonthlyTotalAmount, monthlyBudget, currentDate, actualWeeklyTotalAmount, adjustedBudget, approvedSpecialExpenseTotal, approvedWeeklySpecialExpenseTotal),
                 inlineImages: {
                     monthlyBudgetChart: weeklySummaryBudgetCharts.monthlyBudgetChart,
                     weeklyBudgetChart: weeklySummaryBudgetCharts.weeklyBudgetChart
@@ -227,12 +230,12 @@ function handleDailySummaryResult(currentDate, datesInWeek, adjustedBudget, isSt
     switch (action) {
         case 'mail':
             var emailAddress = getTargetEmailAddress();
-            var dailyBudgetChart = createDailyBudgetChartBlob(totalAmount, adjustedBudget);
+            var dailyBudgetChart = createDailyBudgetChartBlob(actualTotalAmount, adjustedBudget, approvedSpecialExpenseTotal);
             MailApp.sendEmail({
                 to: emailAddress,
                 subject: subject,
                 body: body,
-                htmlBody: buildDailySummaryHtmlBody(body, totalAmount, adjustedBudget),
+                htmlBody: buildDailySummaryHtmlBody(body, actualTotalAmount, adjustedBudget, approvedSpecialExpenseTotal),
                 inlineImages: {
                     dailyBudgetChart: dailyBudgetChart
                 }
