@@ -150,14 +150,31 @@ test('週次サマリ用グラフは共通スケールを月次・週次の表�
     assert.equal(chart.getBudgetChartScalePercentage(64420, 160000), 100);
 });
 
-test('予算グラフは100%の位置を太線用の黒い区間として切り出す', () => {
+test('予算グラフは100%の位置を背景グリッドと同程度の幅の黒線として切り出す', () => {
     const chart = loadChartFunctions();
-    const segments = chart.getBudgetChartSegmentAmounts(59400, 9400, 50000, 40000, 150);
+    const markerAmount = chart.getBudgetChartMarkerAmount(40000, 150);
+    const segments = chart.getBudgetChartStackSegments(59400, 9400, 50000, 40000, 150);
+    const budgetLimit = segments.filter((segment) => segment.key === 'budgetLimit')[0];
 
-    assert.equal(segments.normalWithinBefore, 9400);
-    assert.equal(segments.specialBefore, 30120);
-    assert.equal(segments.marker, 480);
-    assert.equal(segments.specialAfter, 19400);
+    assert.equal(markerAmount, 60000 / 492);
+    assert.ok(Math.abs(budgetLimit.amount - markerAmount) < 0.000001);
+    assert.equal(budgetLimit.color, '#202124');
+});
+
+test('月次グラフには当日時点の目安を青い目印として置ける', () => {
+    const chart = loadChartFunctions();
+    const segments = chart.getBudgetChartStackSegments(84420, 34420, 50000, 160000, 200, 35.7);
+    const paceSegment = segments.filter((segment) => segment.key === 'pace')[0];
+
+    assert.equal(paceSegment.color, '#1a73e8');
+    assert.ok(Math.abs(paceSegment.amount - chart.getBudgetChartMarkerAmount(160000, 200) * 2) < 0.000001);
+});
+
+test('特別費には指定した薄い紫を使う', () => {
+    const chart = loadChartFunctions();
+    const segments = chart.getBudgetChartStackSegments(59400, 9400, 50000, 40000, 150);
+
+    assert.equal(segments.filter((segment) => segment.key === 'special')[0].color, '#c8baff');
 });
 
 test('HTMLメール本文はグラフを先頭に置き、テキスト本文をエスケープする', () => {

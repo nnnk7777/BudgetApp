@@ -80,45 +80,87 @@ function getBudgetChartScalePercentage(totalAmount, adjustedBudget, displayOptio
     return (displayOptions && displayOptions.scalePercentage) || getDailyBudgetChartScalePercentage(totalAmount, adjustedBudget);
 }
 
-function getBudgetChartSegmentAmounts(totalAmount, normalExpenseTotal, specialExpenseTotal, adjustedBudget, scalePercentage) {
+function getBudgetChartMarkerAmount(adjustedBudget, scalePercentage) {
+    // グラフ領域は 600px × 82% = 約492px。背景のグリッド線と同程度の1px幅にする。
+    return adjustedBudget * scalePercentage / 100 / 492;
+}
+
+function getBudgetChartStackSegments(totalAmount, normalExpenseTotal, specialExpenseTotal, adjustedBudget, scalePercentage, pacePercentage) {
     var normalAmounts = getDailyBudgetChartAmounts(normalExpenseTotal, adjustedBudget);
     var naturalSegments = [
-        { key: "normalWithin", amount: normalAmounts.withinBudget },
-        { key: "normalOver", amount: normalAmounts.overBudget },
-        { key: "normalCritical", amount: normalAmounts.criticalOverBudget },
-        { key: "special", amount: specialExpenseTotal },
-        { key: "remaining", amount: Math.max(adjustedBudget - totalAmount, 0) }
+        { key: "normalWithin", label: "通常支出（予算内）", amount: normalAmounts.withinBudget, color: getDailyBudgetChartTheme(normalExpenseTotal, adjustedBudget).color },
+        { key: "normalOver", label: "通常支出（100〜150%）", amount: normalAmounts.overBudget, color: getDailyBudgetChartTheme(normalExpenseTotal, adjustedBudget).overBudgetColor },
+        { key: "normalCritical", label: "通常支出（150%超）", amount: normalAmounts.criticalOverBudget, color: "#6b1512" },
+        { key: "special", label: "承認済み特別費", amount: specialExpenseTotal, color: "#c8baff" },
+        { key: "remaining", label: "残り", amount: Math.max(adjustedBudget - totalAmount, 0), color: "#e8eaed" }
     ];
-    var markerAmount = adjustedBudget * scalePercentage / 100 * 0.008;
-    var markerStart = adjustedBudget - markerAmount;
-    var markerEnd = adjustedBudget;
+    var markerAmount = getBudgetChartMarkerAmount(adjustedBudget, scalePercentage);
+    var markers = [{
+        key: "budgetLimit",
+        label: "予算上限",
+        start: adjustedBudget - markerAmount,
+        end: adjustedBudget,
+        color: "#202124"
+    }];
     var position = 0;
-    var result = {
-        normalWithinBefore: 0,
-        normalOverBefore: 0,
-        normalCriticalBefore: 0,
-        specialBefore: 0,
-        remainingBefore: 0,
-        marker: markerAmount,
-        normalWithinAfter: 0,
-        normalOverAfter: 0,
-        normalCriticalAfter: 0,
-        specialAfter: 0,
-        remainingAfter: 0
-    };
-
-    naturalSegments.forEach(function (segment) {
-        var segmentStart = position;
-        var segmentEnd = position + segment.amount;
-        var beforeAmount = Math.max(Math.min(segmentEnd, markerStart) - segmentStart, 0);
-        var afterAmount = Math.max(segmentEnd - Math.max(segmentStart, markerEnd), 0);
-
-        result[segment.key + "Before"] = beforeAmount;
-        result[segment.key + "After"] = afterAmount;
-        position = segmentEnd;
+    var naturalRanges = naturalSegments.map(function (segment) {
+        var range = {
+            key: segment.key,
+            label: segment.label,
+            start: position,
+            end: position + segment.amount,
+            color: segment.color
+        };
+        position = range.end;
+        return range;
     });
+    var boundaries = [0, position];
 
-    return result;
+    if (pacePercentage > 0 && pacePercentage < scalePercentage) {
+        var pacePosition = adjustedBudget * pacePercentage / 100;
+        markers.push({
+            key: "pace",
+            label: "月内ペースの目安",
+            start: pacePosition - markerAmount,
+            end: pacePosition + markerAmount,
+            color: "#1a73e8"
+        });
+    }
+
+    naturalRanges.forEach(function (range) {
+        boundaries.push(range.start, range.end);
+    });
+    markers.forEach(function (marker) {
+        boundaries.push(marker.start, marker.end);
+    });
+    boundaries.sort(function (left, right) { return left - right; });
+
+    return boundaries.reduce(function (segments, boundary, index) {
+        var nextBoundary = boundaries[index + 1];
+        var midpoint;
+        var marker;
+        var naturalRange;
+
+        if (nextBoundary === undefined || nextBoundary <= boundary) {
+            return segments;
+        }
+
+        midpoint = (boundary + nextBoundary) / 2;
+        marker = markers.find(function (currentMarker) {
+            return midpoint >= currentMarker.start && midpoint < currentMarker.end;
+        });
+        naturalRange = naturalRanges.find(function (range) {
+            return midpoint >= range.start && midpoint < range.end;
+        });
+
+        if (marker) {
+            segments.push({ key: marker.key, label: marker.label, amount: nextBoundary - boundary, color: marker.color });
+        } else if (naturalRange) {
+            segments.push({ key: naturalRange.key, label: naturalRange.label, amount: nextBoundary - boundary, color: naturalRange.color });
+        }
+
+        return segments;
+    }, []);
 }
 
 function getDailyBudgetChartTickStep(scalePercentage) {
@@ -217,7 +259,8 @@ function createWeeklySummaryMonthlyBudgetChartBlob(monthlyTotalAmount, monthlyBu
         buildWeeklySummaryMonthlyChartTitle(monthlyTotalAmount, monthlyBudget, currentDate, specialExpenseTotal),
         "monthly-budget-chart.png",
         specialExpenseTotal,
-        scalePercentage
+        scalePercentage,
+        currentDate ? getMonthlyBudgetPacePercentage(currentDate) : null
     );
 }
 
@@ -229,11 +272,12 @@ function createWeeklySummaryWeeklyBudgetChartBlob(weeklyTotalAmount, weeklyBudge
         buildWeeklySummaryWeeklyChartTitle(weeklyTotalAmount, weeklyBudget, specialExpenseTotal),
         "weekly-budget-chart.png",
         specialExpenseTotal,
-        scalePercentage
+        scalePercentage,
+        null
     );
 }
 
-function createWeeklySummaryPeriodBudgetChartBlob(totalAmount, adjustedBudget, chartLabel, chartTitle, fileName, specialExpenseTotal, scalePercentage) {
+function createWeeklySummaryPeriodBudgetChartBlob(totalAmount, adjustedBudget, chartLabel, chartTitle, fileName, specialExpenseTotal, scalePercentage, pacePercentage) {
     return createBudgetChartBlob(
         totalAmount,
         adjustedBudget,
@@ -245,7 +289,8 @@ function createWeeklySummaryPeriodBudgetChartBlob(totalAmount, adjustedBudget, c
             chartArea: { left: 70, top: specialExpenseTotal ? 66 : 48, width: "82%", height: "40%" },
             ticks: getMonthlyBudgetChartTicks(adjustedBudget, scalePercentage),
             specialExpenseTotal: specialExpenseTotal,
-            scalePercentage: scalePercentage
+            scalePercentage: scalePercentage,
+            pacePercentage: pacePercentage
         }
     );
 }
@@ -263,38 +308,19 @@ function createBudgetChartBlob(totalAmount, adjustedBudget, chartLabel, chartTit
     var options = displayOptions || {};
     var specialExpenseTotal = options.specialExpenseTotal || 0;
     var normalExpenseTotal = Math.max(totalAmount - specialExpenseTotal, 0);
-    var chartTheme = getDailyBudgetChartTheme(normalExpenseTotal, adjustedBudget);
     var scalePercentage = getBudgetChartScalePercentage(totalAmount, adjustedBudget, options);
     var chartMaximum = adjustedBudget * scalePercentage / 100;
-    var chartSegments = getBudgetChartSegmentAmounts(totalAmount, normalExpenseTotal, specialExpenseTotal, adjustedBudget, scalePercentage);
-    var chartData = Charts.newDataTable()
-        .addColumn(Charts.ColumnType.STRING, "週予算")
-        .addColumn(Charts.ColumnType.NUMBER, "通常支出（予算内・上限前）")
-        .addColumn(Charts.ColumnType.NUMBER, "通常支出（100〜150%・上限前）")
-        .addColumn(Charts.ColumnType.NUMBER, "通常支出（150%超・上限前）")
-        .addColumn(Charts.ColumnType.NUMBER, "承認済み特別費・上限前")
-        .addColumn(Charts.ColumnType.NUMBER, "残り・上限前")
-        .addColumn(Charts.ColumnType.NUMBER, "予算上限線")
-        .addColumn(Charts.ColumnType.NUMBER, "通常支出（予算内・上限後）")
-        .addColumn(Charts.ColumnType.NUMBER, "通常支出（100〜150%・上限後）")
-        .addColumn(Charts.ColumnType.NUMBER, "通常支出（150%超・上限後）")
-        .addColumn(Charts.ColumnType.NUMBER, "承認済み特別費・上限後")
-        .addColumn(Charts.ColumnType.NUMBER, "残り・上限後")
-        .addRow([
-            chartLabel,
-            chartSegments.normalWithinBefore,
-            chartSegments.normalOverBefore,
-            chartSegments.normalCriticalBefore,
-            chartSegments.specialBefore,
-            chartSegments.remainingBefore,
-            chartSegments.marker,
-            chartSegments.normalWithinAfter,
-            chartSegments.normalOverAfter,
-            chartSegments.normalCriticalAfter,
-            chartSegments.specialAfter,
-            chartSegments.remainingAfter
-        ])
-        .build();
+    var chartSegments = getBudgetChartStackSegments(totalAmount, normalExpenseTotal, specialExpenseTotal, adjustedBudget, scalePercentage, options.pacePercentage);
+    var chartDataBuilder = Charts.newDataTable()
+        .addColumn(Charts.ColumnType.STRING, "週予算");
+    var chartRow = [chartLabel];
+
+    chartSegments.forEach(function (segment) {
+        chartDataBuilder.addColumn(Charts.ColumnType.NUMBER, segment.label);
+        chartRow.push(segment.amount);
+    });
+
+    var chartData = chartDataBuilder.addRow(chartRow).build();
     var chart = Charts.newBarChart()
         .setDataTable(chartData)
         .setDimensions(600, options.height || 160)
@@ -302,19 +328,7 @@ function createBudgetChartBlob(totalAmount, adjustedBudget, chartLabel, chartTit
         .setOption("titleTextStyle", { color: totalAmount > adjustedBudget ? "#b42318" : "#202124", fontSize: 15, bold: true })
         .setOption("legend", { position: "none" })
         .setOption("isStacked", true)
-        .setOption("colors", [
-            chartTheme.color,
-            chartTheme.overBudgetColor,
-            "#6b1512",
-            "#9e88f7",
-            "#e8eaed",
-            "#202124",
-            chartTheme.color,
-            chartTheme.overBudgetColor,
-            "#6b1512",
-            "#9e88f7",
-            "#e8eaed"
-        ])
+        .setOption("colors", chartSegments.map(function (segment) { return segment.color; }))
         .setOption("hAxis", {
             viewWindow: { min: 0, max: chartMaximum },
             ticks: options.ticks || getDailyBudgetChartTicks(adjustedBudget, scalePercentage),
