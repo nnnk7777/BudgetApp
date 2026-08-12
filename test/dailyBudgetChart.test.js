@@ -150,14 +150,14 @@ test('週次サマリ用グラフは共通スケールを月次・週次の表�
     assert.equal(chart.getBudgetChartScalePercentage(64420, 160000), 100);
 });
 
-test('予算グラフは100%の位置に太い境界線用の目盛を作る', () => {
+test('予算グラフは100%の位置を太線用の黒い区間として切り出す', () => {
     const chart = loadChartFunctions();
+    const segments = chart.getBudgetChartSegmentAmounts(59400, 9400, 50000, 40000, 150);
 
-    assert.equal(JSON.stringify(chart.getBudgetBoundaryTicks(40000)), JSON.stringify([
-        { v: 39600, f: '' },
-        { v: 39800, f: '' },
-        { v: 40000, f: '' }
-    ]));
+    assert.equal(segments.normalWithinBefore, 9400);
+    assert.equal(segments.specialBefore, 30120);
+    assert.equal(segments.marker, 480);
+    assert.equal(segments.specialAfter, 19400);
 });
 
 test('HTMLメール本文はグラフを先頭に置き、テキスト本文をエスケープする', () => {
