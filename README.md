@@ -69,7 +69,7 @@ npm ci
     -   プロパティ：`OPENAI_API_KEY`
     -   値：`<発行したAPIキーを設定>`
     -   任意: `OPENAI_MODEL`
-    -   例: `gpt-5.4-mini`
+    -   例: `gpt-5.6-luna`（未設定時もこのモデルを利用）
 
 - Geminiをフォールバックとして利用する場合は、[Google AI Studio](https://aistudio.google.com/) でAPIキーを発行し、GASのスクリプトプロパティに追加してください。
     -   プロパティ：`GEMINI_API_KEY`

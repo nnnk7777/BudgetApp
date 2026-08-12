@@ -12,10 +12,10 @@ function getOpenAiApiKey(silent) {
 
 function getOpenAiModel() {
     if (typeof PropertiesService === 'undefined') {
-        return "gpt-5.4-mini";
+        return "gpt-5.6-luna";
     }
 
-    return PropertiesService.getScriptProperties().getProperty("OPENAI_MODEL") || "gpt-5.4-mini";
+    return PropertiesService.getScriptProperties().getProperty("OPENAI_MODEL") || "gpt-5.6-luna";
 }
 
 function generateOpenAiText(apiKey, prompt, generationConfig) {
