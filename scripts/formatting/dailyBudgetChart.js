@@ -23,28 +23,46 @@ function buildDailyBudgetChartTitle(totalAmount, adjustedBudget) {
     return title;
 }
 
+function getDailyBudgetChartTicks(adjustedBudget) {
+    return [0, 25, 50, 75, 100].map(function (percentage) {
+        return {
+            v: adjustedBudget * percentage / 100,
+            f: percentage + "%"
+        };
+    });
+}
+
+function getDailyBudgetChartAmounts(totalAmount, adjustedBudget) {
+    return {
+        spent: Math.min(totalAmount, adjustedBudget),
+        remaining: Math.max(adjustedBudget - totalAmount, 0)
+    };
+}
+
 function createDailyBudgetChartBlob(totalAmount, adjustedBudget) {
     var chartTheme = getDailyBudgetChartTheme(totalAmount, adjustedBudget);
-    var chartMaximum = Math.max(totalAmount, adjustedBudget, 1);
+    var chartAmounts = getDailyBudgetChartAmounts(totalAmount, adjustedBudget);
     var chartData = Charts.newDataTable()
-        .addColumn(Charts.ColumnType.STRING, "区分")
-        .addColumn(Charts.ColumnType.NUMBER, "金額")
-        .addRow(["実支出", totalAmount])
+        .addColumn(Charts.ColumnType.STRING, "週予算")
+        .addColumn(Charts.ColumnType.NUMBER, "実支出")
+        .addColumn(Charts.ColumnType.NUMBER, "残り")
+        .addRow(["今週", chartAmounts.spent, chartAmounts.remaining])
         .build();
     var chart = Charts.newBarChart()
         .setDataTable(chartData)
-        .setDimensions(600, 120)
+        .setDimensions(600, 160)
         .setOption("title", buildDailyBudgetChartTitle(totalAmount, adjustedBudget))
         .setOption("titleTextStyle", { color: "#202124", fontSize: 15, bold: true })
         .setOption("legend", { position: "none" })
-        .setOption("colors", [chartTheme.color])
+        .setOption("isStacked", true)
+        .setOption("colors", [chartTheme.color, "#e8eaed"])
         .setOption("hAxis", {
-            viewWindow: { min: 0, max: chartMaximum },
-            textPosition: "none",
-            gridlines: { color: "transparent" },
+            viewWindow: { min: 0, max: adjustedBudget },
+            ticks: getDailyBudgetChartTicks(adjustedBudget),
+            gridlines: { color: "#dadce0" },
             baselineColor: "#dadce0"
         })
-        .setOption("chartArea", { left: 70, top: 44, width: "82%", height: "32%" })
+        .setOption("chartArea", { left: 70, top: 44, width: "82%", height: "48%" })
         .build();
 
     return chart.getAs("image/png").setName("daily-budget-chart.png");

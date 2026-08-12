@@ -32,6 +32,28 @@ test('日次予算グラフのタイトルは超過額を明示する', () => {
     );
 });
 
+test('日次予算グラフは予算を100%として支出と残りを分ける', () => {
+    const chart = loadChartFunctions();
+
+    assert.equal(chart.getDailyBudgetChartAmounts(9400, 40000).spent, 9400);
+    assert.equal(chart.getDailyBudgetChartAmounts(9400, 40000).remaining, 30600);
+    assert.equal(chart.getDailyBudgetChartAmounts(43400, 40000).spent, 40000);
+    assert.equal(chart.getDailyBudgetChartAmounts(43400, 40000).remaining, 0);
+});
+
+test('日次予算グラフは0%から100%までを25%刻みで表示する', () => {
+    const chart = loadChartFunctions();
+    const ticks = chart.getDailyBudgetChartTicks(40000);
+
+    assert.equal(JSON.stringify(ticks), JSON.stringify([
+        { v: 0, f: '0%' },
+        { v: 10000, f: '25%' },
+        { v: 20000, f: '50%' },
+        { v: 30000, f: '75%' },
+        { v: 40000, f: '100%' }
+    ]));
+});
+
 test('HTMLメール本文はグラフを先頭に置き、テキスト本文をエスケープする', () => {
     const chart = loadChartFunctions();
     const html = chart.buildDailySummaryHtmlBody('支出: <1000>円 & 確認', 1000, 40000);
