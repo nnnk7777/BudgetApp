@@ -140,6 +140,16 @@ test('週次サマリ用グラフは月次・週次で100%の位置を共通に�
     );
 });
 
+test('週次サマリ用グラフは共通スケールを月次・週次の表示範囲にも使う', () => {
+    const chart = loadChartFunctions();
+
+    const commonScale = chart.getWeeklySummaryBudgetChartScalePercentage(64420, 160000, 59400, 40000);
+
+    assert.equal(commonScale, 150);
+    assert.equal(chart.getBudgetChartScalePercentage(64420, 160000, { scalePercentage: commonScale }), 150);
+    assert.equal(chart.getBudgetChartScalePercentage(64420, 160000), 100);
+});
+
 test('HTMLメール本文はグラフを先頭に置き、テキスト本文をエスケープする', () => {
     const chart = loadChartFunctions();
     const html = chart.buildDailySummaryHtmlBody('支出: <1000>円 & 確認', 1000, 40000);

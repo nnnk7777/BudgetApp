@@ -76,6 +76,10 @@ function getDailyBudgetChartScalePercentage(totalAmount, adjustedBudget) {
     return Math.max(100, Math.ceil(percentage / 25) * 25);
 }
 
+function getBudgetChartScalePercentage(totalAmount, adjustedBudget, displayOptions) {
+    return (displayOptions && displayOptions.scalePercentage) || getDailyBudgetChartScalePercentage(totalAmount, adjustedBudget);
+}
+
 function getDailyBudgetChartTickStep(scalePercentage) {
     if (scalePercentage > 300) {
         return 100;
@@ -199,7 +203,8 @@ function createWeeklySummaryPeriodBudgetChartBlob(totalAmount, adjustedBudget, c
             height: specialExpenseTotal ? 195 : 175,
             chartArea: { left: 70, top: specialExpenseTotal ? 66 : 48, width: "82%", height: "40%" },
             ticks: getMonthlyBudgetChartTicks(adjustedBudget, scalePercentage),
-            specialExpenseTotal: specialExpenseTotal
+            specialExpenseTotal: specialExpenseTotal,
+            scalePercentage: scalePercentage
         }
     );
 }
@@ -219,7 +224,7 @@ function createBudgetChartBlob(totalAmount, adjustedBudget, chartLabel, chartTit
     var normalExpenseTotal = Math.max(totalAmount - specialExpenseTotal, 0);
     var chartTheme = getDailyBudgetChartTheme(normalExpenseTotal, adjustedBudget);
     var chartAmounts = getDailyBudgetChartAmounts(normalExpenseTotal, adjustedBudget);
-    var scalePercentage = getDailyBudgetChartScalePercentage(totalAmount, adjustedBudget);
+    var scalePercentage = getBudgetChartScalePercentage(totalAmount, adjustedBudget, options);
     var chartMaximum = adjustedBudget * scalePercentage / 100;
     var chartData = Charts.newDataTable()
         .addColumn(Charts.ColumnType.STRING, "週予算")
