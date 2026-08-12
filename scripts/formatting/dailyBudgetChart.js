@@ -23,8 +23,21 @@ function buildDailyBudgetChartTitle(totalAmount, adjustedBudget) {
     return title;
 }
 
-function getDailyBudgetChartTicks(adjustedBudget) {
-    return [0, 25, 50, 75, 100].map(function (percentage) {
+function getDailyBudgetChartScalePercentage(totalAmount, adjustedBudget) {
+    var percentage = adjustedBudget ? (totalAmount / adjustedBudget) * 100 : 0;
+
+    return Math.max(100, Math.ceil(percentage / 25) * 25);
+}
+
+function getDailyBudgetChartTicks(adjustedBudget, scalePercentage) {
+    var percentages = [];
+    var percentage;
+
+    for (percentage = 0; percentage <= scalePercentage; percentage += 25) {
+        percentages.push(percentage);
+    }
+
+    return percentages.map(function (percentage) {
         return {
             v: adjustedBudget * percentage / 100,
             f: percentage + "%"
@@ -34,7 +47,8 @@ function getDailyBudgetChartTicks(adjustedBudget) {
 
 function getDailyBudgetChartAmounts(totalAmount, adjustedBudget) {
     return {
-        spent: Math.min(totalAmount, adjustedBudget),
+        withinBudget: Math.min(totalAmount, adjustedBudget),
+        overBudget: Math.max(totalAmount - adjustedBudget, 0),
         remaining: Math.max(adjustedBudget - totalAmount, 0)
     };
 }
@@ -42,11 +56,14 @@ function getDailyBudgetChartAmounts(totalAmount, adjustedBudget) {
 function createDailyBudgetChartBlob(totalAmount, adjustedBudget) {
     var chartTheme = getDailyBudgetChartTheme(totalAmount, adjustedBudget);
     var chartAmounts = getDailyBudgetChartAmounts(totalAmount, adjustedBudget);
+    var scalePercentage = getDailyBudgetChartScalePercentage(totalAmount, adjustedBudget);
+    var chartMaximum = adjustedBudget * scalePercentage / 100;
     var chartData = Charts.newDataTable()
         .addColumn(Charts.ColumnType.STRING, "週予算")
-        .addColumn(Charts.ColumnType.NUMBER, "実支出")
+        .addColumn(Charts.ColumnType.NUMBER, "予算内の支出")
+        .addColumn(Charts.ColumnType.NUMBER, "超過分")
         .addColumn(Charts.ColumnType.NUMBER, "残り")
-        .addRow(["今週", chartAmounts.spent, chartAmounts.remaining])
+        .addRow(["今週", chartAmounts.withinBudget, chartAmounts.overBudget, chartAmounts.remaining])
         .build();
     var chart = Charts.newBarChart()
         .setDataTable(chartData)
@@ -55,10 +72,10 @@ function createDailyBudgetChartBlob(totalAmount, adjustedBudget) {
         .setOption("titleTextStyle", { color: "#202124", fontSize: 15, bold: true })
         .setOption("legend", { position: "none" })
         .setOption("isStacked", true)
-        .setOption("colors", [chartTheme.color, "#e8eaed"])
+        .setOption("colors", [chartTheme.color, "#b3261e", "#e8eaed"])
         .setOption("hAxis", {
-            viewWindow: { min: 0, max: adjustedBudget },
-            ticks: getDailyBudgetChartTicks(adjustedBudget),
+            viewWindow: { min: 0, max: chartMaximum },
+            ticks: getDailyBudgetChartTicks(adjustedBudget, scalePercentage),
             gridlines: { color: "#dadce0" },
             baselineColor: "#dadce0"
         })
