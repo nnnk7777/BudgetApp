@@ -18,6 +18,10 @@ function getOpenAiModel() {
     return PropertiesService.getScriptProperties().getProperty("OPENAI_MODEL") || "gpt-5.6-luna";
 }
 
+function supportsOpenAiTemperature(model) {
+    return !/^gpt-5\.6(?:-|$)/.test(model);
+}
+
 function generateOpenAiText(apiKey, prompt, generationConfig) {
     var model = getOpenAiModel();
     var payload = {
@@ -29,7 +33,7 @@ function generateOpenAiText(apiKey, prompt, generationConfig) {
     var text;
 
     generationConfig = generationConfig || {};
-    if (generationConfig.temperature !== undefined) {
+    if (generationConfig.temperature !== undefined && supportsOpenAiTemperature(model)) {
         payload.temperature = generationConfig.temperature;
     }
     if (generationConfig.maxOutputTokens !== undefined) {
