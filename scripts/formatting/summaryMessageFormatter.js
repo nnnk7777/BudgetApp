@@ -167,7 +167,16 @@ function handleDailySummaryResult(currentDate, datesInWeek, adjustedBudget, isSt
     switch (action) {
         case 'mail':
             var emailAddress = getTargetEmailAddress();
-            MailApp.sendEmail(emailAddress, subject, body);
+            var dailyBudgetChart = createDailyBudgetChartBlob(totalAmount, adjustedBudget);
+            MailApp.sendEmail({
+                to: emailAddress,
+                subject: subject,
+                body: body,
+                htmlBody: buildDailySummaryHtmlBody(body, totalAmount, adjustedBudget),
+                inlineImages: {
+                    dailyBudgetChart: dailyBudgetChart
+                }
+            });
             return "Successfully sent mail";
         case 'text':
             return body;
