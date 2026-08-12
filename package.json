@@ -3,7 +3,7 @@
     "build": "npx esbuild src/layout/main.ts --bundle --outdir=dist --format=iife --global-name=_entry",
     "test": "node --test test/**/*.test.js",
     "ts-node": "npx ts-node -T build.ts",
-    "preview:budget-chart": "node scripts/dev/serveBudgetChartPreview.js"
+    "preview:budget-chart": "node tools/serveBudgetChartPreview.js"
   },
   "devDependencies": {
     "@types/google-apps-script": "^1.0.78",
