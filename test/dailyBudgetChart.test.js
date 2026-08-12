@@ -31,7 +31,7 @@ test('日次予算グラフのタイトルは超過額を明示する', () => {
 
     assert.equal(
         chart.buildDailyBudgetChartTitle(43400, 40000),
-        '今週の実支出 43400円 / 40000円（108.5%）  3400円超過'
+        '【緊急】週予算の1.1倍（3400円超過）'
     );
 });
 
@@ -40,10 +40,14 @@ test('日次予算グラフは予算内・超過・残りを分ける', () => {
 
     assert.equal(chart.getDailyBudgetChartAmounts(9400, 40000).withinBudget, 9400);
     assert.equal(chart.getDailyBudgetChartAmounts(9400, 40000).overBudget, 0);
+    assert.equal(chart.getDailyBudgetChartAmounts(9400, 40000).criticalOverBudget, 0);
     assert.equal(chart.getDailyBudgetChartAmounts(9400, 40000).remaining, 30600);
     assert.equal(chart.getDailyBudgetChartAmounts(43400, 40000).withinBudget, 40000);
     assert.equal(chart.getDailyBudgetChartAmounts(43400, 40000).overBudget, 3400);
+    assert.equal(chart.getDailyBudgetChartAmounts(43400, 40000).criticalOverBudget, 0);
     assert.equal(chart.getDailyBudgetChartAmounts(43400, 40000).remaining, 0);
+    assert.equal(chart.getDailyBudgetChartAmounts(159400, 40000).overBudget, 20000);
+    assert.equal(chart.getDailyBudgetChartAmounts(159400, 40000).criticalOverBudget, 99400);
 });
 
 test('日次予算グラフは超過時に25%刻みで表示範囲を広げる', () => {
@@ -70,17 +74,13 @@ test('日次予算グラフは大幅超過時に目盛りの間隔を広げる',
     const ticks = chart.getDailyBudgetChartTicks(40000, 400);
 
     assert.equal(chart.getDailyBudgetChartTickStep(200), 25);
-    assert.equal(chart.getDailyBudgetChartTickStep(400), 50);
-    assert.equal(chart.getDailyBudgetChartTickStep(425), 100);
+    assert.equal(chart.getDailyBudgetChartTickStep(300), 50);
+    assert.equal(chart.getDailyBudgetChartTickStep(400), 100);
     assert.equal(JSON.stringify(ticks), JSON.stringify([
         { v: 0, f: '0%' },
-        { v: 20000, f: '50%' },
-        { v: 40000, f: '100%' },
-        { v: 60000, f: '150%' },
+        { v: 40000, f: '100% 予算上限' },
         { v: 80000, f: '200%' },
-        { v: 100000, f: '250%' },
         { v: 120000, f: '300%' },
-        { v: 140000, f: '350%' },
         { v: 160000, f: '400%' }
     ]));
 });

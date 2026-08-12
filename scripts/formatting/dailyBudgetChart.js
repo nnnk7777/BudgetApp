@@ -26,13 +26,12 @@ function getDailyBudgetChartTheme(totalAmount, adjustedBudget) {
 
 function buildDailyBudgetChartTitle(totalAmount, adjustedBudget) {
     var percentage = adjustedBudget ? (totalAmount / adjustedBudget) * 100 : 0;
-    var title = "今週の実支出 " + totalAmount + "円 / " + adjustedBudget + "円（" + percentage.toFixed(1) + "%）";
 
     if (totalAmount > adjustedBudget) {
-        title += "  " + (totalAmount - adjustedBudget) + "円超過";
+        return "【緊急】週予算の" + (totalAmount / adjustedBudget).toFixed(1) + "倍（" + (totalAmount - adjustedBudget) + "円超過）";
     }
 
-    return title;
+    return "今週の実支出 " + totalAmount + "円 / " + adjustedBudget + "円（" + percentage.toFixed(1) + "%）";
 }
 
 function getDailyBudgetChartScalePercentage(totalAmount, adjustedBudget) {
@@ -42,7 +41,7 @@ function getDailyBudgetChartScalePercentage(totalAmount, adjustedBudget) {
 }
 
 function getDailyBudgetChartTickStep(scalePercentage) {
-    if (scalePercentage > 400) {
+    if (scalePercentage > 300) {
         return 100;
     }
 
@@ -65,7 +64,7 @@ function getDailyBudgetChartTicks(adjustedBudget, scalePercentage) {
     return percentages.map(function (percentage) {
         return {
             v: adjustedBudget * percentage / 100,
-            f: percentage + "%"
+            f: percentage === 100 && scalePercentage > 200 ? "100% 予算上限" : percentage + "%"
         };
     });
 }
@@ -73,7 +72,8 @@ function getDailyBudgetChartTicks(adjustedBudget, scalePercentage) {
 function getDailyBudgetChartAmounts(totalAmount, adjustedBudget) {
     return {
         withinBudget: Math.min(totalAmount, adjustedBudget),
-        overBudget: Math.max(totalAmount - adjustedBudget, 0),
+        overBudget: Math.min(Math.max(totalAmount - adjustedBudget, 0), adjustedBudget / 2),
+        criticalOverBudget: Math.max(totalAmount - adjustedBudget * 1.5, 0),
         remaining: Math.max(adjustedBudget - totalAmount, 0)
     };
 }
@@ -86,18 +86,19 @@ function createDailyBudgetChartBlob(totalAmount, adjustedBudget) {
     var chartData = Charts.newDataTable()
         .addColumn(Charts.ColumnType.STRING, "週予算")
         .addColumn(Charts.ColumnType.NUMBER, "予算内の支出")
-        .addColumn(Charts.ColumnType.NUMBER, "超過分")
+        .addColumn(Charts.ColumnType.NUMBER, "超過分（100〜150%）")
+        .addColumn(Charts.ColumnType.NUMBER, "超過分（150%超）")
         .addColumn(Charts.ColumnType.NUMBER, "残り")
-        .addRow(["今週", chartAmounts.withinBudget, chartAmounts.overBudget, chartAmounts.remaining])
+        .addRow(["今週", chartAmounts.withinBudget, chartAmounts.overBudget, chartAmounts.criticalOverBudget, chartAmounts.remaining])
         .build();
     var chart = Charts.newBarChart()
         .setDataTable(chartData)
         .setDimensions(600, 160)
         .setOption("title", buildDailyBudgetChartTitle(totalAmount, adjustedBudget))
-        .setOption("titleTextStyle", { color: "#202124", fontSize: 15, bold: true })
+        .setOption("titleTextStyle", { color: totalAmount > adjustedBudget ? "#b42318" : "#202124", fontSize: 15, bold: true })
         .setOption("legend", { position: "none" })
         .setOption("isStacked", true)
-        .setOption("colors", [chartTheme.color, chartTheme.overBudgetColor, "#e8eaed"])
+        .setOption("colors", [chartTheme.color, chartTheme.overBudgetColor, "#6b1512", "#e8eaed"])
         .setOption("hAxis", {
             viewWindow: { min: 0, max: chartMaximum },
             ticks: getDailyBudgetChartTicks(adjustedBudget, scalePercentage),
