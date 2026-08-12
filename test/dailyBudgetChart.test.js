@@ -20,9 +20,9 @@ test('日次予算グラフは支出割合に応じた色を返す', () => {
     assert.equal(chart.getDailyBudgetChartTheme(16000, 40000).color, '#f9ab00');
     assert.equal(chart.getDailyBudgetChartTheme(24000, 40000).color, '#f4511e');
     assert.equal(chart.getDailyBudgetChartTheme(32000, 40000).color, '#e53935');
-    assert.equal(chart.getDailyBudgetChartTheme(36000, 40000).color, '#b3261e');
-    assert.equal(chart.getDailyBudgetChartTheme(40001, 40000).color, '#7f1d1d');
-    assert.equal(chart.getDailyBudgetChartTheme(40001, 40000).overBudgetColor, '#4a1010');
+    assert.equal(chart.getDailyBudgetChartTheme(36000, 40000).color, '#c62828');
+    assert.equal(chart.getDailyBudgetChartTheme(40001, 40000).color, '#b42318');
+    assert.equal(chart.getDailyBudgetChartTheme(40001, 40000).overBudgetColor, '#8c1d18');
     assert.equal(chart.getDailyBudgetChartTheme(40001, 40000).label, '超過');
 });
 
@@ -62,6 +62,26 @@ test('日次予算グラフは超過時に25%刻みで表示範囲を広げる',
         { v: 50000, f: '125%' },
         { v: 60000, f: '150%' },
         { v: 70000, f: '175%' }
+    ]));
+});
+
+test('日次予算グラフは大幅超過時に目盛りの間隔を広げる', () => {
+    const chart = loadChartFunctions();
+    const ticks = chart.getDailyBudgetChartTicks(40000, 400);
+
+    assert.equal(chart.getDailyBudgetChartTickStep(200), 25);
+    assert.equal(chart.getDailyBudgetChartTickStep(400), 50);
+    assert.equal(chart.getDailyBudgetChartTickStep(425), 100);
+    assert.equal(JSON.stringify(ticks), JSON.stringify([
+        { v: 0, f: '0%' },
+        { v: 20000, f: '50%' },
+        { v: 40000, f: '100%' },
+        { v: 60000, f: '150%' },
+        { v: 80000, f: '200%' },
+        { v: 100000, f: '250%' },
+        { v: 120000, f: '300%' },
+        { v: 140000, f: '350%' },
+        { v: 160000, f: '400%' }
     ]));
 });
 

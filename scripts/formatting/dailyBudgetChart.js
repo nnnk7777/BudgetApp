@@ -2,11 +2,11 @@ function getDailyBudgetChartTheme(totalAmount, adjustedBudget) {
     var percentage = adjustedBudget ? (totalAmount / adjustedBudget) * 100 : 0;
 
     if (percentage > 100) {
-        return { color: "#7f1d1d", overBudgetColor: "#4a1010", label: "超過" };
+        return { color: "#b42318", overBudgetColor: "#8c1d18", label: "超過" };
     }
 
     if (percentage >= 90) {
-        return { color: "#b3261e", overBudgetColor: "#b3261e", label: "限界" };
+        return { color: "#c62828", overBudgetColor: "#c62828", label: "限界" };
     }
 
     if (percentage >= 80) {
@@ -41,11 +41,24 @@ function getDailyBudgetChartScalePercentage(totalAmount, adjustedBudget) {
     return Math.max(100, Math.ceil(percentage / 25) * 25);
 }
 
+function getDailyBudgetChartTickStep(scalePercentage) {
+    if (scalePercentage > 400) {
+        return 100;
+    }
+
+    if (scalePercentage > 200) {
+        return 50;
+    }
+
+    return 25;
+}
+
 function getDailyBudgetChartTicks(adjustedBudget, scalePercentage) {
     var percentages = [];
     var percentage;
+    var tickStep = getDailyBudgetChartTickStep(scalePercentage);
 
-    for (percentage = 0; percentage <= scalePercentage; percentage += 25) {
+    for (percentage = 0; percentage <= scalePercentage; percentage += tickStep) {
         percentages.push(percentage);
     }
 
