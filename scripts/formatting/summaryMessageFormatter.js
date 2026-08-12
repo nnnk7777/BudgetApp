@@ -79,14 +79,15 @@ function handleWeeklySummaryResult(dateRangeStr, totalAmount, dataEntries, diffe
         case 'mail':
             var emailAddress = getTargetEmailAddress();
             var subject = (isStaging ? "<test>" : "") + "家計簿週次レポート" + "（" + dateRangeStr + "）";
-            var weeklySummaryBudgetChart = createWeeklySummaryBudgetChartBlob(monthlyTotalAmount, monthlyBudget, currentDate, totalAmount, adjustedBudget);
+            var weeklySummaryBudgetCharts = createWeeklySummaryBudgetCharts(monthlyTotalAmount, monthlyBudget, currentDate, totalAmount, adjustedBudget);
             MailApp.sendEmail({
                 to: emailAddress,
                 subject: subject,
                 body: body,
                 htmlBody: buildWeeklySummaryHtmlBody(body, monthlyTotalAmount, monthlyBudget, currentDate, totalAmount, adjustedBudget),
                 inlineImages: {
-                    weeklySummaryBudgetChart: weeklySummaryBudgetChart
+                    monthlyBudgetChart: weeklySummaryBudgetCharts.monthlyBudgetChart,
+                    weeklyBudgetChart: weeklySummaryBudgetCharts.weeklyBudgetChart
                 }
             });
             return "Successfully sent mail";

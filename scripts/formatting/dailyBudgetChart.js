@@ -28,17 +28,18 @@ function buildDailyBudgetChartTitle(totalAmount, adjustedBudget) {
     return buildBudgetChartTitle(totalAmount, adjustedBudget, "今週の", "週予算");
 }
 
-function buildWeeklySummaryBudgetChartTitle(monthlyTotalAmount, monthlyBudget, currentDate, weeklyTotalAmount, weeklyBudget) {
-    var monthlyPercentage = monthlyBudget ? monthlyTotalAmount / monthlyBudget * 100 : 0;
-    var weeklyPercentage = weeklyBudget ? weeklyTotalAmount / weeklyBudget * 100 : 0;
-    var monthlyStatus = monthlyTotalAmount > monthlyBudget ? "・" + (monthlyTotalAmount - monthlyBudget) + "円超過" : "";
-    var weeklyStatus = weeklyTotalAmount > weeklyBudget ? "・" + (weeklyTotalAmount - weeklyBudget) + "円超過" : "";
-    var monthlyPace = currentDate ? "　｜　" + formatBudgetChartDate(currentDate) + "時点の目安 " + getMonthlyBudgetPacePercentage(currentDate).toFixed(1) + "%" : "";
+function buildWeeklySummaryMonthlyChartTitle(monthlyTotalAmount, monthlyBudget, currentDate) {
+    var title = buildBudgetChartTitle(monthlyTotalAmount, monthlyBudget, "今月の", "月次予算");
 
-    return (
-        "今月 " + monthlyTotalAmount + "円 / " + monthlyBudget + "円（" + monthlyPercentage.toFixed(1) + "%" + monthlyStatus + "）" + monthlyPace + "\n" +
-        "今週 " + weeklyTotalAmount + "円 / " + weeklyBudget + "円（" + weeklyPercentage.toFixed(1) + "%" + weeklyStatus + "）"
-    );
+    if (!currentDate) {
+        return title;
+    }
+
+    return title + "　｜　" + formatBudgetChartDate(currentDate) + "時点の目安 " + getMonthlyBudgetPacePercentage(currentDate).toFixed(1) + "%";
+}
+
+function buildWeeklySummaryWeeklyChartTitle(weeklyTotalAmount, weeklyBudget) {
+    return buildBudgetChartTitle(weeklyTotalAmount, weeklyBudget, "今週の", "週予算");
 }
 
 function formatBudgetChartDate(date) {
@@ -142,52 +143,50 @@ function createDailyBudgetChartBlob(totalAmount, adjustedBudget) {
     return createBudgetChartBlob(totalAmount, adjustedBudget, "今週", buildDailyBudgetChartTitle(totalAmount, adjustedBudget), "daily-budget-chart.png");
 }
 
-function createWeeklySummaryBudgetChartBlob(monthlyTotalAmount, monthlyBudget, currentDate, weeklyTotalAmount, weeklyBudget) {
-    var monthlyPercentage = monthlyBudget ? monthlyTotalAmount / monthlyBudget * 100 : 0;
-    var weeklyPercentage = weeklyBudget ? weeklyTotalAmount / weeklyBudget * 100 : 0;
-    var scalePercentage = getWeeklySummaryBudgetChartScalePercentage(monthlyTotalAmount, monthlyBudget, weeklyTotalAmount, weeklyBudget);
-    var monthlyTheme = getDailyBudgetChartTheme(monthlyPercentage, 100);
-    var weeklyTheme = getDailyBudgetChartTheme(weeklyPercentage, 100);
-    var monthlyAmounts = getDailyBudgetChartAmounts(monthlyPercentage, 100);
-    var weeklyAmounts = getDailyBudgetChartAmounts(weeklyPercentage, 100);
-    var chartData = Charts.newDataTable()
-        .addColumn(Charts.ColumnType.STRING, "予算")
-        .addColumn(Charts.ColumnType.NUMBER, "今月の予算内支出")
-        .addColumn(Charts.ColumnType.NUMBER, "今月の超過分（100〜150%）")
-        .addColumn(Charts.ColumnType.NUMBER, "今月の超過分（150%超）")
-        .addColumn(Charts.ColumnType.NUMBER, "今月の残り")
-        .addColumn(Charts.ColumnType.NUMBER, "今週の予算内支出")
-        .addColumn(Charts.ColumnType.NUMBER, "今週の超過分（100〜150%）")
-        .addColumn(Charts.ColumnType.NUMBER, "今週の超過分（150%超）")
-        .addColumn(Charts.ColumnType.NUMBER, "今週の残り")
-        .addRow(["今月", monthlyAmounts.withinBudget, monthlyAmounts.overBudget, monthlyAmounts.criticalOverBudget, monthlyAmounts.remaining, 0, 0, 0, 0])
-        .addRow(["今週", 0, 0, 0, 0, weeklyAmounts.withinBudget, weeklyAmounts.overBudget, weeklyAmounts.criticalOverBudget, weeklyAmounts.remaining])
-        .build();
-    var chart = Charts.newBarChart()
-        .setDataTable(chartData)
-        .setDimensions(600, 280)
-        .setOption("title", buildWeeklySummaryBudgetChartTitle(monthlyTotalAmount, monthlyBudget, currentDate, weeklyTotalAmount, weeklyBudget))
-        .setOption("titleTextStyle", {
-            color: monthlyTotalAmount > monthlyBudget || weeklyTotalAmount > weeklyBudget ? "#b42318" : "#202124",
-            fontSize: 14,
-            bold: true
-        })
-        .setOption("legend", { position: "none" })
-        .setOption("isStacked", true)
-        .setOption("colors", [monthlyTheme.color, monthlyTheme.overBudgetColor, "#6b1512", "#e8eaed", weeklyTheme.color, weeklyTheme.overBudgetColor, "#6b1512", "#e8eaed"])
-        .setOption("hAxis", {
-            viewWindow: { min: 0, max: scalePercentage },
-            ticks: getMonthlyBudgetChartTicks(100, scalePercentage),
-            title: "今月・今週共通の割合（100% = 各予算上限）",
-            titleTextStyle: { color: "#5f6368", fontSize: 10, italic: false },
-            textStyle: { fontSize: 10 },
-            gridlines: { color: "#dadce0" },
-            baselineColor: "#dadce0"
-        })
-        .setOption("chartArea", { left: 70, top: 76, width: "82%", height: "43%" })
-        .build();
+function createWeeklySummaryMonthlyBudgetChartBlob(monthlyTotalAmount, monthlyBudget, currentDate, scalePercentage) {
+    return createWeeklySummaryPeriodBudgetChartBlob(
+        monthlyTotalAmount,
+        monthlyBudget,
+        "今月",
+        buildWeeklySummaryMonthlyChartTitle(monthlyTotalAmount, monthlyBudget, currentDate),
+        "monthly-budget-chart.png",
+        scalePercentage
+    );
+}
 
-    return chart.getAs("image/png").setName("weekly-summary-budget-chart.png");
+function createWeeklySummaryWeeklyBudgetChartBlob(weeklyTotalAmount, weeklyBudget, scalePercentage) {
+    return createWeeklySummaryPeriodBudgetChartBlob(
+        weeklyTotalAmount,
+        weeklyBudget,
+        "今週",
+        buildWeeklySummaryWeeklyChartTitle(weeklyTotalAmount, weeklyBudget),
+        "weekly-budget-chart.png",
+        scalePercentage
+    );
+}
+
+function createWeeklySummaryPeriodBudgetChartBlob(totalAmount, adjustedBudget, chartLabel, chartTitle, fileName, scalePercentage) {
+    return createBudgetChartBlob(
+        totalAmount,
+        adjustedBudget,
+        chartLabel,
+        chartTitle,
+        fileName,
+        {
+            height: 175,
+            chartArea: { left: 70, top: 48, width: "82%", height: "44%" },
+            ticks: getMonthlyBudgetChartTicks(adjustedBudget, scalePercentage)
+        }
+    );
+}
+
+function createWeeklySummaryBudgetCharts(monthlyTotalAmount, monthlyBudget, currentDate, weeklyTotalAmount, weeklyBudget) {
+    var scalePercentage = getWeeklySummaryBudgetChartScalePercentage(monthlyTotalAmount, monthlyBudget, weeklyTotalAmount, weeklyBudget);
+
+    return {
+        monthlyBudgetChart: createWeeklySummaryMonthlyBudgetChartBlob(monthlyTotalAmount, monthlyBudget, currentDate, scalePercentage),
+        weeklyBudgetChart: createWeeklySummaryWeeklyBudgetChartBlob(weeklyTotalAmount, weeklyBudget, scalePercentage)
+    };
 }
 
 function createBudgetChartBlob(totalAmount, adjustedBudget, chartLabel, chartTitle, fileName, displayOptions) {
@@ -231,10 +230,17 @@ function buildDailySummaryHtmlBody(body, totalAmount, adjustedBudget) {
 }
 
 function buildWeeklySummaryHtmlBody(body, monthlyTotalAmount, monthlyBudget, currentDate, weeklyTotalAmount, weeklyBudget) {
-    return buildSummaryHtmlBody(body, [{
-        key: "weeklySummaryBudgetChart",
-        title: buildWeeklySummaryBudgetChartTitle(monthlyTotalAmount, monthlyBudget, currentDate, weeklyTotalAmount, weeklyBudget)
-    }]);
+    return buildSummaryHtmlBody(body, [
+        {
+            key: "monthlyBudgetChart",
+            title: buildWeeklySummaryMonthlyChartTitle(monthlyTotalAmount, monthlyBudget, currentDate),
+            marginBottom: 4
+        },
+        {
+            key: "weeklyBudgetChart",
+            title: buildWeeklySummaryWeeklyChartTitle(weeklyTotalAmount, weeklyBudget)
+        }
+    ]);
 }
 
 function buildSummaryHtmlBody(body, charts) {
@@ -242,7 +248,7 @@ function buildSummaryHtmlBody(body, charts) {
         return (
             '<img src="cid:' + chart.key + '" alt="' +
             escapeHtmlForEmail(chart.title) +
-            '" width="600" style="display:block;max-width:100%;height:auto;margin:0 0 16px;">'
+            '" width="600" style="display:block;max-width:100%;height:auto;margin:0 0 ' + (chart.marginBottom === undefined ? 16 : chart.marginBottom) + 'px;">'
         );
     }).join("");
 

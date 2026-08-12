@@ -35,23 +35,27 @@ test('日次予算グラフのタイトルは超過額を明示する', () => {
     );
 });
 
-test('週次サマリ用グラフのタイトルは月次・週次の予算を基準にする', () => {
+test('週次サマリ用の月次・週次グラフはそれぞれの予算を基準にする', () => {
     const chart = loadChartFunctions();
 
     assert.equal(
-        chart.buildWeeklySummaryBudgetChartTitle(170000, 160000, null, 43400, 40000),
-        '今月 170000円 / 160000円（106.3%・10000円超過）\n今週 43400円 / 40000円（108.5%・3400円超過）'
+        chart.buildWeeklySummaryMonthlyChartTitle(170000, 160000, null),
+        '【緊急】月次予算の1.1倍（10000円超過）'
+    );
+    assert.equal(
+        chart.buildWeeklySummaryWeeklyChartTitle(43400, 40000),
+        '【緊急】週予算の1.1倍（3400円超過）'
     );
 });
 
-test('週次サマリ用グラフは分析時点の月内ペースを表示する', () => {
+test('週次サマリ用の月次グラフは分析時点の月内ペースを表示する', () => {
     const chart = loadChartFunctions();
     const currentDate = new Date(2026, 1, 15);
 
     assert.equal(chart.getMonthlyBudgetPacePercentage(currentDate), 15 / 28 * 100);
     assert.equal(
-        chart.buildWeeklySummaryBudgetChartTitle(80000, 160000, currentDate, 40000, 40000),
-        '今月 80000円 / 160000円（50.0%）　｜　2/15時点の目安 53.6%\n今週 40000円 / 40000円（100.0%）'
+        chart.buildWeeklySummaryMonthlyChartTitle(80000, 160000, currentDate),
+        '今月の実支出 80000円 / 160000円（50.0%）　｜　2/15時点の目安 53.6%'
     );
 });
 
@@ -135,11 +139,12 @@ test('HTMLメール本文はグラフを先頭に置き、テキスト本文を�
     assert.match(html, /支出: &lt;1000&gt;円 &amp; 確認/);
 });
 
-test('週次HTMLメール本文は月次・週次をまとめたグラフ1枚を表示する', () => {
+test('週次HTMLメール本文は月次・週次のグラフを順に表示する', () => {
     const chart = loadChartFunctions();
     const html = chart.buildWeeklySummaryHtmlBody('週次本文', 80000, 160000, new Date(2026, 1, 15), 40000, 40000);
 
-    assert.match(html, /^<img src="cid:weeklySummaryBudgetChart"/);
-    assert.doesNotMatch(html, /cid:monthlyBudgetChart/);
+    assert.match(html, /^<img src="cid:monthlyBudgetChart"/);
+    assert.match(html, /<img src="cid:weeklyBudgetChart"/);
+    assert.match(html, /monthlyBudgetChart"[^>]+margin:0 0 4px/);
     assert.match(html, /週次本文/);
 });
