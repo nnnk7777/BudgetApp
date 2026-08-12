@@ -107,9 +107,9 @@ function getMonthlyBudgetChartTicks(adjustedBudget, scalePercentage) {
     return percentages.map(function (percentage) {
         var labels = {
             0: "0%",
-            25: "25% 予算の1/4",
-            50: "50% 予算の1/2",
-            75: "75% 予算の3/4",
+            25: "25%",
+            50: "50%",
+            75: "75%",
             100: "100% 予算上限"
         };
         return {
@@ -165,7 +165,7 @@ function createWeeklySummaryBudgetChartBlob(monthlyTotalAmount, monthlyBudget, c
         .build();
     var chart = Charts.newBarChart()
         .setDataTable(chartData)
-        .setDimensions(600, 260)
+        .setDimensions(600, 280)
         .setOption("title", buildWeeklySummaryBudgetChartTitle(monthlyTotalAmount, monthlyBudget, currentDate, weeklyTotalAmount, weeklyBudget))
         .setOption("titleTextStyle", {
             color: monthlyTotalAmount > monthlyBudget || weeklyTotalAmount > weeklyBudget ? "#b42318" : "#202124",
@@ -178,10 +178,13 @@ function createWeeklySummaryBudgetChartBlob(monthlyTotalAmount, monthlyBudget, c
         .setOption("hAxis", {
             viewWindow: { min: 0, max: scalePercentage },
             ticks: getMonthlyBudgetChartTicks(100, scalePercentage),
+            title: "今月・今週共通の割合（100% = 各予算上限）",
+            titleTextStyle: { color: "#5f6368", fontSize: 10, italic: false },
+            textStyle: { fontSize: 10 },
             gridlines: { color: "#dadce0" },
             baselineColor: "#dadce0"
         })
-        .setOption("chartArea", { left: 70, top: 76, width: "82%", height: "48%" })
+        .setOption("chartArea", { left: 70, top: 76, width: "82%", height: "43%" })
         .build();
 
     return chart.getAs("image/png").setName("weekly-summary-budget-chart.png");

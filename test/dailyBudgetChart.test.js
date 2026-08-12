@@ -105,15 +105,15 @@ test('日次予算グラフは大幅超過時に目盛りの間隔を広げる',
     ]));
 });
 
-test('月次予算グラフは予算を4週の目安として25%ごとに表示する', () => {
+test('週次サマリ用グラフは共通の割合を25%ごとに表示する', () => {
     const chart = loadChartFunctions();
     const ticks = chart.getMonthlyBudgetChartTicks(160000, 100);
 
     assert.equal(JSON.stringify(ticks), JSON.stringify([
         { v: 0, f: '0%' },
-        { v: 40000, f: '25% 予算の1/4' },
-        { v: 80000, f: '50% 予算の1/2' },
-        { v: 120000, f: '75% 予算の3/4' },
+        { v: 40000, f: '25%' },
+        { v: 80000, f: '50%' },
+        { v: 120000, f: '75%' },
         { v: 160000, f: '100% 予算上限' }
     ]));
 });
