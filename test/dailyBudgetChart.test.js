@@ -157,7 +157,7 @@ test('予算グラフは100%の位置を背景グリッドと同程度の幅の�
     const budgetLimit = segments.filter((segment) => segment.key === 'budgetLimit')[0];
 
     assert.equal(markerAmount, 60000 / 492);
-    assert.ok(Math.abs(budgetLimit.amount - markerAmount) < 0.000001);
+    assert.ok(Math.abs(budgetLimit.amount - markerAmount * 3) < 0.000001);
     assert.equal(budgetLimit.color, '#202124');
 });
 
@@ -167,7 +167,7 @@ test('月次グラフには当日時点の目安を青い目印として置け�
     const paceSegment = segments.filter((segment) => segment.key === 'pace')[0];
 
     assert.equal(paceSegment.color, '#1a73e8');
-    assert.ok(Math.abs(paceSegment.amount - chart.getBudgetChartMarkerAmount(160000, 200) * 2) < 0.000001);
+    assert.ok(Math.abs(paceSegment.amount - chart.getBudgetChartMarkerAmount(160000, 200) * 3) < 0.000001);
 });
 
 test('特別費には指定した薄い紫を使う', () => {

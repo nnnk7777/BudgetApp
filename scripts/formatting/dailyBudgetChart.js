@@ -95,10 +95,11 @@ function getBudgetChartStackSegments(totalAmount, normalExpenseTotal, specialExp
         { key: "remaining", label: "残り", amount: Math.max(adjustedBudget - totalAmount, 0), color: "#e8eaed" }
     ];
     var markerAmount = getBudgetChartMarkerAmount(adjustedBudget, scalePercentage);
+    var budgetMarkerAmount = markerAmount * 3;
     var markers = [{
         key: "budgetLimit",
         label: "予算上限",
-        start: adjustedBudget - markerAmount,
+        start: adjustedBudget - budgetMarkerAmount,
         end: adjustedBudget,
         color: "#202124"
     }];
@@ -121,8 +122,8 @@ function getBudgetChartStackSegments(totalAmount, normalExpenseTotal, specialExp
         markers.push({
             key: "pace",
             label: "月内ペースの目安",
-            start: pacePosition - markerAmount,
-            end: pacePosition + markerAmount,
+            start: pacePosition - markerAmount * 1.5,
+            end: pacePosition + markerAmount * 1.5,
             color: "#1a73e8"
         });
     }
