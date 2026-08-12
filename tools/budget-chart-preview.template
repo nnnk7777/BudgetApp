@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>予算グラフプレビュー</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; background: #f8f9fa; color: #202124; font-family: Arial, "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif; }
+    main { max-width: 980px; margin: 0 auto; padding: 28px 20px 48px; }
+    h1 { margin: 0 0 8px; font-size: 24px; }
+    .description { margin: 0 0 20px; color: #5f6368; font-size: 14px; }
+    .controls, .preview { background: #fff; border: 1px solid #dadce0; border-radius: 8px; }
+    .controls { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; padding: 18px; margin-bottom: 20px; }
+    .control { display: grid; gap: 5px; font-size: 13px; font-weight: 700; }
+    input { width: 100%; border: 1px solid #bdc1c6; border-radius: 4px; padding: 8px; font: inherit; font-weight: 400; }
+    .buttons { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 8px; }
+    button { appearance: none; border: 1px solid #dadce0; border-radius: 4px; padding: 8px 12px; background: #fff; color: #202124; font: inherit; cursor: pointer; }
+    button:hover { background: #f1f3f4; }
+    .preview { padding: 20px; overflow-x: auto; }
+    .mail-subject { margin: 0 0 12px; font-size: 16px; font-weight: 700; }
+    .legend { display: flex; flex-wrap: wrap; gap: 14px; margin: 0 0 12px; color: #5f6368; font-size: 12px; }
+    .legend span::before { display: inline-block; width: 10px; height: 10px; margin-right: 5px; vertical-align: -1px; content: ""; background: var(--color); }
+    svg { display: block; width: 600px; max-width: 100%; height: auto; background: #fff; }
+    @media (max-width: 640px) { .controls { grid-template-columns: repeat(2, minmax(0, 1fr)); } main { padding: 18px 12px 32px; } }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>週次メール用 予算グラフプレビュー</h1>
+    <p class="description">入力を変えると、月次・週次のグラフを即時に描き直します。</p>
+    <section class="controls" aria-label="グラフの入力">
+      <label class="control">分析日<input id="currentDate" type="date" value="2026-02-10"></label>
+      <label class="control">月次予算<input id="monthlyBudget" type="number" min="0" step="1000" value="160000"></label>
+      <label class="control">月次の通常支出<input id="monthlyNormal" type="number" min="0" step="100" value="34420"></label>
+      <label class="control">月次の特別費<input id="monthlySpecial" type="number" min="0" step="100" value="50000"></label>
+      <label class="control">週予算<input id="weeklyBudget" type="number" min="0" step="1000" value="40000"></label>
+      <label class="control">週次の通常支出<input id="weeklyNormal" type="number" min="0" step="100" value="29400"></label>
+      <label class="control">週次の特別費<input id="weeklySpecial" type="number" min="0" step="100" value="50000"></label>
+      <div class="buttons">
+        <button type="button" data-preset="current">現在の例</button>
+        <button type="button" data-preset="under">予算内</button>
+        <button type="button" data-preset="travel">旅行で大幅超過</button>
+        <button id="download" type="button">PNGとして保存</button>
+      </div>
+    </section>
+    <section class="preview" aria-label="週次メールのグラフプレビュー">
+      <p class="mail-subject">&lt;test&gt;家計簿週次レポート</p>
+      <div class="legend">
+        <span style="--color:#c8baff">特別費</span>
+        <span style="--color:#1a73e8">月内ペースの目安</span>
+        <span style="--color:#202124">予算上限</span>
+      </div>
+      <svg id="chart" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 430" role="img" aria-label="月次と週次の予算グラフ"></svg>
+    </section>
+  </main>
+  <script src="/scripts/formatting/dailyBudgetChart.js"></script>
+  <script>
+    const chartElement = document.getElementById('chart');
+    const inputIds = ['currentDate', 'monthlyBudget', 'monthlyNormal', 'monthlySpecial', 'weeklyBudget', 'weeklyNormal', 'weeklySpecial'];
+    const presets = {
+      current: { currentDate: '2026-02-10', monthlyBudget: 160000, monthlyNormal: 34420, monthlySpecial: 50000, weeklyBudget: 40000, weeklyNormal: 29400, weeklySpecial: 50000 },
+      under: { currentDate: '2026-02-10', monthlyBudget: 160000, monthlyNormal: 24000, monthlySpecial: 0, weeklyBudget: 40000, weeklyNormal: 9400, weeklySpecial: 0 },
+      travel: { currentDate: '2026-02-10', monthlyBudget: 160000, monthlyNormal: 34420, monthlySpecial: 250000, weeklyBudget: 40000, weeklyNormal: 29400, weeklySpecial: 150000 }
+    };
+
+    function numberValue(id) { return Math.max(Number(document.getElementById(id).value) || 0, 0); }
+    function escapeSvg(value) { return String(value).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+    function textLines(text, x, y, color) {
+      return text.split('\n').map((line, index) => '<text x="' + x + '" y="' + (y + index * 19) + '" fill="' + color + '" font-size="15" font-weight="700">' + escapeSvg(line) + '</text>').join('');
+    }
+    function renderPeriod(options) {
+      const x = 70;
+      const width = 492;
+      const barY = options.y + 72;
+      const barHeight = 48;
+      const total = options.normal + options.special;
+      const maximum = options.budget * options.scale / 100;
+      const segments = getBudgetChartStackSegments(total, options.normal, options.special, options.budget, options.scale, options.pace);
+      let offset = 0;
+      let markup = textLines(options.title, x, options.y + 18, total > options.budget ? '#b42318' : '#202124');
+
+      markup += '<text x="' + (x - 14) + '" y="' + (barY + 30) + '" text-anchor="end" fill="#202124" font-size="13" font-weight="700">' + options.label + '</text>';
+      getMonthlyBudgetChartTicks(options.budget, options.scale).forEach((tick) => {
+        const tickX = x + tick.v / maximum * width;
+        const label = tick.f.replace(' 予算上限', '');
+        markup += '<line x1="' + tickX + '" y1="' + (barY - 12) + '" x2="' + tickX + '" y2="' + (barY + barHeight + 8) + '" stroke="#dadce0" stroke-width="1" />';
+        markup += '<text x="' + tickX + '" y="' + (barY + barHeight + 31) + '" text-anchor="middle" fill="#5f6368" font-size="12">' + escapeSvg(label) + '</text>';
+        if (tick.f.indexOf('予算上限') !== -1) {
+          markup += '<text x="' + tickX + '" y="' + (barY + barHeight + 46) + '" text-anchor="middle" fill="#202124" font-size="11">予算上限</text>';
+        }
+      });
+      segments.forEach((segment) => {
+        const segmentWidth = segment.amount / maximum * width;
+        markup += '<rect x="' + (x + offset) + '" y="' + barY + '" width="' + segmentWidth + '" height="' + barHeight + '" fill="' + segment.color + '" />';
+        offset += segmentWidth;
+      });
+      return markup;
+    }
+    function render() {
+      const currentDate = new Date(document.getElementById('currentDate').value + 'T00:00:00');
+      const monthlyBudget = numberValue('monthlyBudget');
+      const monthlyNormal = numberValue('monthlyNormal');
+      const monthlySpecial = numberValue('monthlySpecial');
+      const weeklyBudget = numberValue('weeklyBudget');
+      const weeklyNormal = numberValue('weeklyNormal');
+      const weeklySpecial = numberValue('weeklySpecial');
+      const monthlyTotal = monthlyNormal + monthlySpecial;
+      const weeklyTotal = weeklyNormal + weeklySpecial;
+      const scale = getWeeklySummaryBudgetChartScalePercentage(monthlyTotal, monthlyBudget, weeklyTotal, weeklyBudget);
+      const pace = getMonthlyBudgetPacePercentage(currentDate);
+
+      chartElement.innerHTML = renderPeriod({ y: 0, label: '今月', budget: monthlyBudget, normal: monthlyNormal, special: monthlySpecial, scale: scale, pace: pace, title: buildWeeklySummaryMonthlyChartTitle(monthlyTotal, monthlyBudget, currentDate, monthlySpecial) }) +
+        renderPeriod({ y: 210, label: '今週', budget: weeklyBudget, normal: weeklyNormal, special: weeklySpecial, scale: scale, pace: null, title: buildWeeklySummaryWeeklyChartTitle(weeklyTotal, weeklyBudget, weeklySpecial) });
+    }
+    function downloadPng() {
+      const source = new XMLSerializer().serializeToString(chartElement);
+      const image = new Image();
+      const canvas = document.createElement('canvas');
+      const context = canvas.getContext('2d');
+      const blob = new Blob([source], { type: 'image/svg+xml;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      canvas.width = 1200;
+      canvas.height = 860;
+      image.onload = () => {
+        context.fillStyle = '#ffffff';
+        context.fillRect(0, 0, canvas.width, canvas.height);
+        context.drawImage(image, 0, 0, canvas.width, canvas.height);
+        URL.revokeObjectURL(url);
+        const link = document.createElement('a');
+        link.download = 'weekly-budget-chart-preview.png';
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+      };
+      image.src = url;
+    }
+
+    inputIds.forEach((id) => document.getElementById(id).addEventListener('input', render));
+    document.querySelectorAll('[data-preset]').forEach((button) => button.addEventListener('click', () => {
+      Object.entries(presets[button.dataset.preset]).forEach(([id, value]) => { document.getElementById(id).value = value; });
+      render();
+    }));
+    document.getElementById('download').addEventListener('click', downloadPng);
+    render();
+  </script>
+</body>
+</html>

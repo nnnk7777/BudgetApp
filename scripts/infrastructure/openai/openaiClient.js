@@ -12,10 +12,14 @@ function getOpenAiApiKey(silent) {
 
 function getOpenAiModel() {
     if (typeof PropertiesService === 'undefined') {
-        return "gpt-5.4-mini";
+        return "gpt-5.6-luna";
     }
 
-    return PropertiesService.getScriptProperties().getProperty("OPENAI_MODEL") || "gpt-5.4-mini";
+    return PropertiesService.getScriptProperties().getProperty("OPENAI_MODEL") || "gpt-5.6-luna";
+}
+
+function supportsOpenAiTemperature(model) {
+    return !/^gpt-5\.6(?:-|$)/.test(model);
 }
 
 function generateOpenAiText(apiKey, prompt, generationConfig) {
@@ -29,7 +33,7 @@ function generateOpenAiText(apiKey, prompt, generationConfig) {
     var text;
 
     generationConfig = generationConfig || {};
-    if (generationConfig.temperature !== undefined) {
+    if (generationConfig.temperature !== undefined && supportsOpenAiTemperature(model)) {
         payload.temperature = generationConfig.temperature;
     }
     if (generationConfig.maxOutputTokens !== undefined) {

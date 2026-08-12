@@ -35,6 +35,39 @@ test('日次予算グラフのタイトルは超過額を明示する', () => {
     );
 });
 
+test('週次サマリ用の月次・週次グラフはそれぞれの予算を基準にする', () => {
+    const chart = loadChartFunctions();
+
+    assert.equal(
+        chart.buildWeeklySummaryMonthlyChartTitle(170000, 160000, null),
+        '【緊急】月次予算の1.1倍（10000円超過）'
+    );
+    assert.equal(
+        chart.buildWeeklySummaryWeeklyChartTitle(43400, 40000),
+        '【緊急】週予算の1.1倍（3400円超過）'
+    );
+});
+
+test('週次サマリ用の月次グラフは分析時点の月内ペースを表示する', () => {
+    const chart = loadChartFunctions();
+    const currentDate = new Date(2026, 1, 15);
+
+    assert.equal(chart.getMonthlyBudgetPacePercentage(currentDate), 15 / 28 * 100);
+    assert.equal(
+        chart.buildWeeklySummaryMonthlyChartTitle(80000, 160000, currentDate),
+        '今月の実支出 80000円 / 160000円（50.0%）　｜　2/15時点の目安 53.6%'
+    );
+});
+
+test('予算グラフのタイトルは通常支出と承認済み特別費を分けて表示する', () => {
+    const chart = loadChartFunctions();
+
+    assert.equal(
+        chart.buildWeeklySummaryMonthlyChartTitle(59400, 160000, new Date(2026, 1, 10), 50000),
+        '今月の実支出 59400円 / 160000円（37.1%）\n通常 9400円（5.9%）｜ 特別費 50000円（31.3%）　｜　2/10時点の目安 35.7%'
+    );
+});
+
 test('日次予算グラフは予算内・超過・残りを分ける', () => {
     const chart = loadChartFunctions();
 
@@ -85,10 +118,79 @@ test('日次予算グラフは大幅超過時に目盛りの間隔を広げる',
     ]));
 });
 
+test('週次サマリ用グラフは共通の割合を25%ごとに表示する', () => {
+    const chart = loadChartFunctions();
+    const ticks = chart.getMonthlyBudgetChartTicks(160000, 100);
+
+    assert.equal(JSON.stringify(ticks), JSON.stringify([
+        { v: 0, f: '0%' },
+        { v: 40000, f: '25%' },
+        { v: 80000, f: '50%' },
+        { v: 120000, f: '75%' },
+        { v: 160000, f: '100% 予算上限' }
+    ]));
+});
+
+test('週次サマリ用グラフは月次・週次で100%の位置を共通にする', () => {
+    const chart = loadChartFunctions();
+
+    assert.equal(
+        chart.getWeeklySummaryBudgetChartScalePercentage(80000, 160000, 159400, 40000),
+        400
+    );
+});
+
+test('週次サマリ用グラフは共通スケールを月次・週次の表示範囲にも使う', () => {
+    const chart = loadChartFunctions();
+
+    const commonScale = chart.getWeeklySummaryBudgetChartScalePercentage(64420, 160000, 59400, 40000);
+
+    assert.equal(commonScale, 150);
+    assert.equal(chart.getBudgetChartScalePercentage(64420, 160000, { scalePercentage: commonScale }), 150);
+    assert.equal(chart.getBudgetChartScalePercentage(64420, 160000), 100);
+});
+
+test('予算グラフは100%の位置を背景グリッドと同程度の幅の黒線として切り出す', () => {
+    const chart = loadChartFunctions();
+    const markerAmount = chart.getBudgetChartMarkerAmount(40000, 150);
+    const segments = chart.getBudgetChartStackSegments(59400, 9400, 50000, 40000, 150);
+    const budgetLimit = segments.filter((segment) => segment.key === 'budgetLimit')[0];
+
+    assert.equal(markerAmount, 60000 / 492);
+    assert.ok(Math.abs(budgetLimit.amount - markerAmount * 3) < 0.000001);
+    assert.equal(budgetLimit.color, '#202124');
+});
+
+test('月次グラフには当日時点の目安を青い目印として置ける', () => {
+    const chart = loadChartFunctions();
+    const segments = chart.getBudgetChartStackSegments(84420, 34420, 50000, 160000, 200, 35.7);
+    const paceSegment = segments.filter((segment) => segment.key === 'pace')[0];
+
+    assert.equal(paceSegment.color, '#1a73e8');
+    assert.ok(Math.abs(paceSegment.amount - chart.getBudgetChartMarkerAmount(160000, 200) * 3) < 0.000001);
+});
+
+test('特別費には指定した薄い紫を使う', () => {
+    const chart = loadChartFunctions();
+    const segments = chart.getBudgetChartStackSegments(59400, 9400, 50000, 40000, 150);
+
+    assert.equal(segments.filter((segment) => segment.key === 'special')[0].color, '#c8baff');
+});
+
 test('HTMLメール本文はグラフを先頭に置き、テキスト本文をエスケープする', () => {
     const chart = loadChartFunctions();
     const html = chart.buildDailySummaryHtmlBody('支出: <1000>円 & 確認', 1000, 40000);
 
     assert.match(html, /^<img src="cid:dailyBudgetChart"/);
     assert.match(html, /支出: &lt;1000&gt;円 &amp; 確認/);
+});
+
+test('週次HTMLメール本文は月次・週次のグラフを順に表示する', () => {
+    const chart = loadChartFunctions();
+    const html = chart.buildWeeklySummaryHtmlBody('週次本文', 80000, 160000, new Date(2026, 1, 15), 40000, 40000);
+
+    assert.match(html, /^<img src="cid:monthlyBudgetChart"/);
+    assert.match(html, /<img src="cid:weeklyBudgetChart"/);
+    assert.match(html, /monthlyBudgetChart"[^>]+margin:0 0 4px/);
+    assert.match(html, /週次本文/);
 });
