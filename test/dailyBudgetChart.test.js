@@ -15,11 +15,14 @@ function loadChartFunctions() {
 test('日次予算グラフは支出割合に応じた色を返す', () => {
     const chart = loadChartFunctions();
 
-    assert.equal(chart.getDailyBudgetChartTheme(27000, 40000).color, '#188038');
-    assert.equal(chart.getDailyBudgetChartTheme(27000, 40000).label, '予算内');
-    assert.equal(chart.getDailyBudgetChartTheme(28000, 40000).color, '#f9ab00');
-    assert.equal(chart.getDailyBudgetChartTheme(28000, 40000).label, '注意');
-    assert.equal(chart.getDailyBudgetChartTheme(40001, 40000).color, '#d93025');
+    assert.equal(chart.getDailyBudgetChartTheme(15600, 40000).color, '#188038');
+    assert.equal(chart.getDailyBudgetChartTheme(15600, 40000).label, '予算内');
+    assert.equal(chart.getDailyBudgetChartTheme(16000, 40000).color, '#f9ab00');
+    assert.equal(chart.getDailyBudgetChartTheme(24000, 40000).color, '#f4511e');
+    assert.equal(chart.getDailyBudgetChartTheme(32000, 40000).color, '#e53935');
+    assert.equal(chart.getDailyBudgetChartTheme(36000, 40000).color, '#b3261e');
+    assert.equal(chart.getDailyBudgetChartTheme(40001, 40000).color, '#7f1d1d');
+    assert.equal(chart.getDailyBudgetChartTheme(40001, 40000).overBudgetColor, '#4a1010');
     assert.equal(chart.getDailyBudgetChartTheme(40001, 40000).label, '超過');
 });
 

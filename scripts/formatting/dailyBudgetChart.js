@@ -2,14 +2,26 @@ function getDailyBudgetChartTheme(totalAmount, adjustedBudget) {
     var percentage = adjustedBudget ? (totalAmount / adjustedBudget) * 100 : 0;
 
     if (percentage > 100) {
-        return { color: "#d93025", label: "超過" };
+        return { color: "#7f1d1d", overBudgetColor: "#4a1010", label: "超過" };
     }
 
-    if (percentage >= 70) {
-        return { color: "#f9ab00", label: "注意" };
+    if (percentage >= 90) {
+        return { color: "#b3261e", overBudgetColor: "#b3261e", label: "限界" };
     }
 
-    return { color: "#188038", label: "予算内" };
+    if (percentage >= 80) {
+        return { color: "#e53935", overBudgetColor: "#e53935", label: "危険" };
+    }
+
+    if (percentage >= 60) {
+        return { color: "#f4511e", overBudgetColor: "#f4511e", label: "警戒" };
+    }
+
+    if (percentage >= 40) {
+        return { color: "#f9ab00", overBudgetColor: "#f9ab00", label: "注意" };
+    }
+
+    return { color: "#188038", overBudgetColor: "#188038", label: "予算内" };
 }
 
 function buildDailyBudgetChartTitle(totalAmount, adjustedBudget) {
@@ -72,7 +84,7 @@ function createDailyBudgetChartBlob(totalAmount, adjustedBudget) {
         .setOption("titleTextStyle", { color: "#202124", fontSize: 15, bold: true })
         .setOption("legend", { position: "none" })
         .setOption("isStacked", true)
-        .setOption("colors", [chartTheme.color, "#b3261e", "#e8eaed"])
+        .setOption("colors", [chartTheme.color, chartTheme.overBudgetColor, "#e8eaed"])
         .setOption("hAxis", {
             viewWindow: { min: 0, max: chartMaximum },
             ticks: getDailyBudgetChartTicks(adjustedBudget, scalePercentage),
