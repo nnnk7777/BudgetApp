@@ -55,7 +55,7 @@ test('週次サマリ用の月次グラフは分析時点の月内ペースを�
     assert.equal(chart.getMonthlyBudgetPacePercentage(currentDate), 15 / 28 * 100);
     assert.equal(
         chart.buildWeeklySummaryMonthlyChartTitle(80000, 160000, currentDate),
-        '今月の実支出 80000円 / 160000円（50.0%）　｜　2/15時点の目安 53.6%'
+        '今月の予算対象支出 80000円 / 160000円（50.0%）　｜　2/15時点の目安 53.6%'
     );
 });
 

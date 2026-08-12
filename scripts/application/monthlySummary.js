@@ -14,7 +14,10 @@ function calculateMonthlySummary(action) {
     var expenseEntries = getMonthlyExpenseEntries(year, month);
     var incomeEntries = getMonthlyIncomeEntries(year, month);
 
-    var totalExpenses = calculateTotalAmount(expenseEntries);
+    var specialExpenseReview = reviewSpecialExpensesWithAI(expenseEntries);
+    var budgetTargetExpenseEntries = getBudgetTargetEntries(expenseEntries, specialExpenseReview);
+    var actualTotalExpenses = calculateTotalAmount(expenseEntries);
+    var totalExpenses = calculateTotalAmount(budgetTargetExpenseEntries);
     var totalIncome = calculateTotalAmount(incomeEntries);
 
     var daysInMonth = endOfMonth.getDate();
@@ -22,21 +25,23 @@ function calculateMonthlySummary(action) {
     var difference = totalExpenses - adjustedBudget;
     var percentage = adjustedBudget ? (totalExpenses / adjustedBudget) * 100 : 0;
 
-    var categoryTotals = calculateCategoryTotals(expenseEntries);
-    logMonthlySummaryDebug(month, expenseEntries, incomeEntries, categoryTotals);
+    var categoryTotals = calculateCategoryTotals(budgetTargetExpenseEntries);
+    logMonthlySummaryDebug(month, budgetTargetExpenseEntries, incomeEntries, categoryTotals);
 
-    var aiAnalysis = analyzeMonthlyWithAI(expenseEntries, categoryTotals, totalExpenses, totalIncome, adjustedBudget, percentage, dateRangeStr);
+    var aiAnalysis = analyzeMonthlyWithAI(budgetTargetExpenseEntries, categoryTotals, totalExpenses, totalIncome, adjustedBudget, percentage, dateRangeStr);
     var body = buildMonthlySummaryMessage(
         dateRangeStr,
         totalIncome,
         totalExpenses,
+        actualTotalExpenses,
         adjustedBudget,
         difference,
         percentage,
         expenseEntries,
         incomeEntries,
         categoryTotals,
-        aiAnalysis
+        aiAnalysis,
+        specialExpenseReview
     );
 
     return sendMonthlySummaryResult(action, currentDate, isStaging, body);

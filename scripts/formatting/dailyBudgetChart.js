@@ -24,12 +24,12 @@ function getDailyBudgetChartTheme(totalAmount, adjustedBudget) {
     return { color: "#188038", overBudgetColor: "#188038", label: "予算内" };
 }
 
-function buildDailyBudgetChartTitle(totalAmount, adjustedBudget) {
-    return buildBudgetChartTitle(totalAmount, adjustedBudget, "今週の", "週予算");
+function buildDailyBudgetChartTitle(totalAmount, adjustedBudget, expenseLabel) {
+    return buildBudgetChartTitle(totalAmount, adjustedBudget, "今週の", "週予算", expenseLabel);
 }
 
 function buildWeeklySummaryMonthlyChartTitle(monthlyTotalAmount, monthlyBudget, currentDate) {
-    var title = buildBudgetChartTitle(monthlyTotalAmount, monthlyBudget, "今月の", "月次予算");
+    var title = buildBudgetChartTitle(monthlyTotalAmount, monthlyBudget, "今月の", "月次予算", "予算対象支出");
 
     if (!currentDate) {
         return title;
@@ -39,21 +39,22 @@ function buildWeeklySummaryMonthlyChartTitle(monthlyTotalAmount, monthlyBudget, 
 }
 
 function buildWeeklySummaryWeeklyChartTitle(weeklyTotalAmount, weeklyBudget) {
-    return buildBudgetChartTitle(weeklyTotalAmount, weeklyBudget, "今週の", "週予算");
+    return buildBudgetChartTitle(weeklyTotalAmount, weeklyBudget, "今週の", "週予算", "予算対象支出");
 }
 
 function formatBudgetChartDate(date) {
     return (date.getMonth() + 1) + "/" + date.getDate();
 }
 
-function buildBudgetChartTitle(totalAmount, adjustedBudget, periodPrefix, budgetLabel) {
+function buildBudgetChartTitle(totalAmount, adjustedBudget, periodPrefix, budgetLabel, expenseLabel) {
     var percentage = adjustedBudget ? (totalAmount / adjustedBudget) * 100 : 0;
+    var resolvedExpenseLabel = expenseLabel || "実支出";
 
     if (totalAmount > adjustedBudget) {
         return "【緊急】" + budgetLabel + "の" + (totalAmount / adjustedBudget).toFixed(1) + "倍（" + (totalAmount - adjustedBudget) + "円超過）";
     }
 
-    return periodPrefix + "実支出 " + totalAmount + "円 / " + adjustedBudget + "円（" + percentage.toFixed(1) + "%）";
+    return periodPrefix + resolvedExpenseLabel + " " + totalAmount + "円 / " + adjustedBudget + "円（" + percentage.toFixed(1) + "%）";
 }
 
 function getDailyBudgetChartScalePercentage(totalAmount, adjustedBudget) {
@@ -140,7 +141,7 @@ function getDailyBudgetChartAmounts(totalAmount, adjustedBudget) {
 }
 
 function createDailyBudgetChartBlob(totalAmount, adjustedBudget) {
-    return createBudgetChartBlob(totalAmount, adjustedBudget, "今週", buildDailyBudgetChartTitle(totalAmount, adjustedBudget), "daily-budget-chart.png");
+    return createBudgetChartBlob(totalAmount, adjustedBudget, "今週", buildDailyBudgetChartTitle(totalAmount, adjustedBudget, "予算対象支出"), "daily-budget-chart.png");
 }
 
 function createWeeklySummaryMonthlyBudgetChartBlob(monthlyTotalAmount, monthlyBudget, currentDate, scalePercentage) {
@@ -224,7 +225,7 @@ function createBudgetChartBlob(totalAmount, adjustedBudget, chartLabel, chartTit
 }
 
 function buildDailySummaryHtmlBody(body, totalAmount, adjustedBudget) {
-    var chartTitle = buildDailyBudgetChartTitle(totalAmount, adjustedBudget);
+    var chartTitle = buildDailyBudgetChartTitle(totalAmount, adjustedBudget, "予算対象支出");
 
     return buildSummaryHtmlBody(body, [{ key: "dailyBudgetChart", title: chartTitle }]);
 }

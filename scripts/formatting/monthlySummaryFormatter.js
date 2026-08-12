@@ -17,7 +17,7 @@ function logMonthlySummaryDebug(month, expenseEntries, incomeEntries, categoryTo
     }).join(", "));
 }
 
-function buildMonthlySummaryMessage(dateRangeStr, totalIncome, totalExpenses, adjustedBudget, difference, percentage, expenseEntries, incomeEntries, categoryTotals, aiAnalysis) {
+function buildMonthlySummaryMessage(dateRangeStr, totalIncome, totalExpenses, actualTotalExpenses, adjustedBudget, difference, percentage, expenseEntries, incomeEntries, categoryTotals, aiAnalysis, specialExpenseReview) {
     var sortedCategories = Object.keys(categoryTotals).sort(function (a, b) {
         return categoryTotals[b] - categoryTotals[a];
     });
@@ -25,10 +25,12 @@ function buildMonthlySummaryMessage(dateRangeStr, totalIncome, totalExpenses, ad
 
     body += "◆ " + dateRangeStr + " の月次サマリー\n\n";
     body += "収入合計: " + totalIncome + "円\n";
-    body += "支出合計: " + totalExpenses + "円\n";
+    body += "予算対象支出合計: " + totalExpenses + "円\n";
+    body += "実支出合計: " + actualTotalExpenses + "円\n";
     body += "月間予算(週予算換算): " + adjustedBudget + "円\n";
     body += "予算差分: " + (difference >= 0 ? "+" : "-") + Math.abs(difference) + "円\n";
     body += "予算消化率: " + percentage.toFixed(2) + "%\n\n";
+    body += buildSpecialExpenseReviewSection(specialExpenseReview, "今月") + "\n";
     body += "◆ カテゴリ別支出\n";
 
     sortedCategories.forEach(function (category) {

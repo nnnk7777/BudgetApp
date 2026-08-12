@@ -18,6 +18,7 @@ const categories = [
   { name: "プレゼント・お土産", color: "#cfaee6" },
   { name: "家賃", color: "#f0819f" },
   { name: "公共料金など", color: "#545454", textColor: "#ffffff" },
+  { name: "特別費", color: "#6d4c41", textColor: "#ffffff" },
   { name: "その他", color: "#c7c7c7" },
 ];
 

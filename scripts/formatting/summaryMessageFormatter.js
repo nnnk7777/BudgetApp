@@ -7,25 +7,45 @@ function handleWeeklySummaryResult(dateRangeStr, totalAmount, dataEntries, diffe
     var nextWeekPlannedExpenseTotal = calculatePlannedExpenseTotal(nextWeekPlannedExpenses);
     var weeklyBudgetCarryoverMemo = getWeeklyBudgetCarryoverMemoForWeek(currentDate);
     var weeklyAnalysisMode = getWeeklyAnalysisMode(currentDate);
-    var differenceSign = difference >= 0 ? "+" : "-";
-    var differenceAbs = Math.abs(difference);
-    var percentageStr = percentage.toFixed(2);
-    var categoryRankingLines = getCategoryRankingLines(dataEntries);
-    var top5Entries = getTopExpenseEntries(dataEntries, 5);
+    var differenceSign;
+    var differenceAbs;
+    var percentageStr;
+    var actualWeeklyTotalAmount = totalAmount;
     var monthlyBudget = adjustedBudget * 4;
-    var monthlyTotalAmount = getCurrentMonthExpenseTotal(currentDate);
+    var monthEntries = getCurrentMonthExpenseEntries(currentDate);
+    var specialExpenseReview = reviewSpecialExpensesWithAI(monthEntries);
+    var budgetTargetEntries = getBudgetTargetEntries(dataEntries, specialExpenseReview);
+    var monthlyBudgetTargetEntries = getBudgetTargetEntries(monthEntries, specialExpenseReview);
+    var approvedSpecialExpenseTotal = calculateApprovedSpecialExpenseTotal(specialExpenseReview);
+    var categoryRankingLines;
+    var top5Entries;
+    var monthlyTotalAmount;
     var body = "";
+
+    totalAmount = calculateTotalAmount(budgetTargetEntries);
+    difference = totalAmount - adjustedBudget;
+    percentage = adjustedBudget ? (totalAmount / adjustedBudget) * 100 : 0;
+    differenceSign = difference >= 0 ? "+" : "-";
+    differenceAbs = Math.abs(difference);
+    percentageStr = percentage.toFixed(2);
+    monthlyTotalAmount = calculateTotalAmount(monthlyBudgetTargetEntries);
+    categoryRankingLines = getCategoryRankingLines(budgetTargetEntries);
+    top5Entries = getTopExpenseEntries(budgetTargetEntries, 5);
 
     body += "◆ " + dateRangeStr + " の週次サマリー\n\n";
     body += "+++ 💸 予算サマリー 💸 +++\n";
-    body += dateRangeStr + " の実支出: " + totalAmount + " 円\n";
+    body += dateRangeStr + " の予算対象支出: " + totalAmount + " 円\n";
+    body += dateRangeStr + " の実支出合計: " + actualWeeklyTotalAmount + " 円\n";
+    body += "今月の承認済み特別費: " + approvedSpecialExpenseTotal + " 円\n";
     body += "\n";
     body += "予算に対して\n";
-    body += "・実支出: " + percentageStr + "%\n";
+    body += "・予算対象支出: " + percentageStr + "%\n";
     body += "（設定予算：" + adjustedBudget + "円）\n";
     body += "・分析モード: " + formatWeeklyAnalysisModeForMessage(weeklyAnalysisMode) + "\n";
     body += "++++++++++++++++++++\n";
     body += "* 予算差分：" + differenceSign + differenceAbs + "円\n\n";
+    body += buildSpecialExpenseReviewSection(specialExpenseReview, "今月");
+    body += "\n";
     body += "◆ 前週からの持ち越し\n";
     body += formatWeeklyBudgetCarryoverSummaryForMessage(weeklyBudgetCarryoverMemo) + "\n\n";
     body += "◆ カテゴリ別支出ランキング\n";
@@ -61,7 +81,7 @@ function handleWeeklySummaryResult(dateRangeStr, totalAmount, dataEntries, diffe
     body += nextWeekContextualMemoLines.length ? nextWeekContextualMemoLines.join("\n") + "\n" : "・なし\n";
     body += "\n";
 
-    var aiAnalysis = analyzeExpensesWithAI(dataEntries, totalAmount, adjustedBudget, percentage, currentDate, weeklyAnalysisMode, {
+    var aiAnalysis = analyzeExpensesWithAI(budgetTargetEntries, totalAmount, adjustedBudget, percentage, currentDate, weeklyAnalysisMode, {
         plannedExpenses: nextWeekPlannedExpenses,
         plannedExpenseLabel: "来週の予定支出",
         contextualMemos: nextWeekContextualMemos,
@@ -98,13 +118,17 @@ function handleWeeklySummaryResult(dateRangeStr, totalAmount, dataEntries, diffe
     }
 }
 
-function getCurrentMonthExpenseTotal(currentDate) {
+function getCurrentMonthExpenseEntries(currentDate) {
     var monthEntries = getMonthlyExpenseEntries(currentDate.getFullYear(), currentDate.getMonth());
     var endOfCurrentDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate(), 23, 59, 59, 999);
 
-    return calculateTotalAmount(monthEntries.filter(function (entry) {
+    return monthEntries.filter(function (entry) {
         return entry.date <= endOfCurrentDate;
-    }));
+    });
+}
+
+function getCurrentMonthExpenseTotal(currentDate) {
+    return calculateTotalAmount(getCurrentMonthExpenseEntries(currentDate));
 }
 
 function handleDailySummaryResult(currentDate, datesInWeek, adjustedBudget, isStaging, action) {
@@ -119,20 +143,31 @@ function handleDailySummaryResult(currentDate, datesInWeek, adjustedBudget, isSt
     var datesUpToToday = datesInWeek.filter(function (date) {
         return date <= currentDate;
     });
-    var dataEntries = getExpenseEntriesForDates(datesUpToToday).reverse().map(function (entry) {
-        if (entry.name.length >= 16) {
-            entry.name = entry.name.substring(0, 14) + "...";
+    var rawDataEntries = getExpenseEntriesForDates(datesUpToToday).reverse();
+    var specialExpenseReview = reviewSpecialExpensesWithAI(rawDataEntries);
+    var budgetTargetEntries = getBudgetTargetEntries(rawDataEntries, specialExpenseReview);
+    var actualTotalAmount = calculateTotalAmount(rawDataEntries);
+    var approvedSpecialExpenseTotal = calculateApprovedSpecialExpenseTotal(specialExpenseReview);
+    var dataEntries = rawDataEntries.map(function (entry) {
+        var displayEntry = {
+            date: entry.date,
+            category: entry.category,
+            name: entry.name,
+            amount: entry.amount
+        };
+        if (displayEntry.name.length >= 16) {
+            displayEntry.name = displayEntry.name.substring(0, 14) + "...";
         }
-        return entry;
+        return displayEntry;
     });
-    var totalAmount = calculateTotalAmount(dataEntries);
+    var totalAmount = calculateTotalAmount(budgetTargetEntries);
     var percentage = (totalAmount / adjustedBudget) * 100;
     var projectedPercentage = adjustedBudget
         ? (((totalAmount + plannedExpenseTotal) / adjustedBudget) * 100).toFixed(2)
         : "0.00";
-    var categoryRankingLines = getCategoryRankingLines(dataEntries);
-    var uncategorizedCount = countUncategorizedEntries(dataEntries);
-    var aiAnalysis = analyzeExpensesWithAI(dataEntries, totalAmount, adjustedBudget, percentage, currentDate, weeklyAnalysisMode, {
+    var categoryRankingLines = getCategoryRankingLines(budgetTargetEntries);
+    var uncategorizedCount = countUncategorizedEntries(budgetTargetEntries);
+    var aiAnalysis = analyzeExpensesWithAI(budgetTargetEntries, totalAmount, adjustedBudget, percentage, currentDate, weeklyAnalysisMode, {
         plannedExpenses: upcomingPlannedExpenses,
         plannedExpenseLabel: "今後の予定支出",
         contextualMemos: upcomingContextualMemos,
@@ -141,7 +176,9 @@ function handleDailySummaryResult(currentDate, datesInWeek, adjustedBudget, isSt
     var subject = (isStaging ? "<test>" : "") + "家計簿日次レポート（" + formatDate(currentDate) + "）";
     var body = "+++ 💸 予算サマリー 💸 +++\n";
 
-    body += formatDate(datesInWeek[0]) + " から " + formatDate(currentDate) + " までの実支出: " + totalAmount + " 円\n";
+    body += formatDate(datesInWeek[0]) + " から " + formatDate(currentDate) + " までの予算対象支出: " + totalAmount + " 円\n";
+    body += "実支出合計: " + actualTotalAmount + " 円\n";
+    body += "承認済み特別費: " + approvedSpecialExpenseTotal + " 円\n";
     body += "今後の予定金額: " + plannedExpenseTotal + " 円\n";
     body += "支出＋予定の合計見込み: " + (totalAmount + plannedExpenseTotal) + " 円\n";
     body += "\n";
@@ -149,7 +186,7 @@ function handleDailySummaryResult(currentDate, datesInWeek, adjustedBudget, isSt
     body += upcomingContextualMemoLines.length ? upcomingContextualMemoLines.join("\n") + "\n" : "・なし\n";
     body += "\n";
     body += "予算に対して\n";
-    body += "・実支出: " + percentage.toFixed(2) + "%\n";
+    body += "・予算対象支出: " + percentage.toFixed(2) + "%\n";
     body += "・合計見込み: " + projectedPercentage + "%\n";
     body += "（設定予算：" + adjustedBudget + "円）\n";
     body += "・分析モード: " + formatWeeklyAnalysisModeForMessage(weeklyAnalysisMode) + "\n";
@@ -157,6 +194,8 @@ function handleDailySummaryResult(currentDate, datesInWeek, adjustedBudget, isSt
         body += "・未分類の支出: " + uncategorizedCount + "件\n";
     }
     body += "++++++++++++++++++++\n\n";
+    body += buildSpecialExpenseReviewSection(specialExpenseReview, "今週");
+    body += "\n";
     body += "◆ 前週からの持ち越し\n";
     body += formatWeeklyBudgetCarryoverSummaryForMessage(weeklyBudgetCarryoverMemo) + "\n\n";
     body += "◆ カテゴリ別支出ランキング\n";
