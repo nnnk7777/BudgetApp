@@ -12,6 +12,8 @@ function handleWeeklySummaryResult(dateRangeStr, totalAmount, dataEntries, diffe
     var percentageStr = percentage.toFixed(2);
     var categoryRankingLines = getCategoryRankingLines(dataEntries);
     var top5Entries = getTopExpenseEntries(dataEntries, 5);
+    var monthlyBudget = adjustedBudget * 4;
+    var monthlyTotalAmount = getCurrentMonthExpenseTotal(currentDate);
     var body = "";
 
     body += "◆ " + dateRangeStr + " の週次サマリー\n\n";
@@ -77,13 +79,33 @@ function handleWeeklySummaryResult(dateRangeStr, totalAmount, dataEntries, diffe
         case 'mail':
             var emailAddress = getTargetEmailAddress();
             var subject = (isStaging ? "<test>" : "") + "家計簿週次レポート" + "（" + dateRangeStr + "）";
-            MailApp.sendEmail(emailAddress, subject, body);
+            var weeklyBudgetChart = createDailyBudgetChartBlob(totalAmount, adjustedBudget);
+            var monthlyBudgetChart = createMonthlyBudgetChartBlob(monthlyTotalAmount, monthlyBudget);
+            MailApp.sendEmail({
+                to: emailAddress,
+                subject: subject,
+                body: body,
+                htmlBody: buildWeeklySummaryHtmlBody(body, totalAmount, adjustedBudget, monthlyTotalAmount, monthlyBudget),
+                inlineImages: {
+                    weeklyBudgetChart: weeklyBudgetChart,
+                    monthlyBudgetChart: monthlyBudgetChart
+                }
+            });
             return "Successfully sent mail";
         case 'text':
             return body;
         default:
             throw new Error('actionが定義されていません');
     }
+}
+
+function getCurrentMonthExpenseTotal(currentDate) {
+    var monthEntries = getMonthlyExpenseEntries(currentDate.getFullYear(), currentDate.getMonth());
+    var endOfCurrentDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate(), 23, 59, 59, 999);
+
+    return calculateTotalAmount(monthEntries.filter(function (entry) {
+        return entry.date <= endOfCurrentDate;
+    }));
 }
 
 function handleDailySummaryResult(currentDate, datesInWeek, adjustedBudget, isStaging, action) {

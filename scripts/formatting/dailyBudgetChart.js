@@ -25,13 +25,21 @@ function getDailyBudgetChartTheme(totalAmount, adjustedBudget) {
 }
 
 function buildDailyBudgetChartTitle(totalAmount, adjustedBudget) {
+    return buildBudgetChartTitle(totalAmount, adjustedBudget, "今週の", "週予算");
+}
+
+function buildMonthlyBudgetChartTitle(totalAmount, adjustedBudget) {
+    return buildBudgetChartTitle(totalAmount, adjustedBudget, "今月の", "月次予算");
+}
+
+function buildBudgetChartTitle(totalAmount, adjustedBudget, periodPrefix, budgetLabel) {
     var percentage = adjustedBudget ? (totalAmount / adjustedBudget) * 100 : 0;
 
     if (totalAmount > adjustedBudget) {
-        return "【緊急】週予算の" + (totalAmount / adjustedBudget).toFixed(1) + "倍（" + (totalAmount - adjustedBudget) + "円超過）";
+        return "【緊急】" + budgetLabel + "の" + (totalAmount / adjustedBudget).toFixed(1) + "倍（" + (totalAmount - adjustedBudget) + "円超過）";
     }
 
-    return "今週の実支出 " + totalAmount + "円 / " + adjustedBudget + "円（" + percentage.toFixed(1) + "%）";
+    return periodPrefix + "実支出 " + totalAmount + "円 / " + adjustedBudget + "円（" + percentage.toFixed(1) + "%）";
 }
 
 function getDailyBudgetChartScalePercentage(totalAmount, adjustedBudget) {
@@ -79,6 +87,14 @@ function getDailyBudgetChartAmounts(totalAmount, adjustedBudget) {
 }
 
 function createDailyBudgetChartBlob(totalAmount, adjustedBudget) {
+    return createBudgetChartBlob(totalAmount, adjustedBudget, "今週", buildDailyBudgetChartTitle(totalAmount, adjustedBudget), "daily-budget-chart.png");
+}
+
+function createMonthlyBudgetChartBlob(totalAmount, adjustedBudget) {
+    return createBudgetChartBlob(totalAmount, adjustedBudget, "今月", buildMonthlyBudgetChartTitle(totalAmount, adjustedBudget), "monthly-budget-chart.png");
+}
+
+function createBudgetChartBlob(totalAmount, adjustedBudget, chartLabel, chartTitle, fileName) {
     var chartTheme = getDailyBudgetChartTheme(totalAmount, adjustedBudget);
     var chartAmounts = getDailyBudgetChartAmounts(totalAmount, adjustedBudget);
     var scalePercentage = getDailyBudgetChartScalePercentage(totalAmount, adjustedBudget);
@@ -89,12 +105,12 @@ function createDailyBudgetChartBlob(totalAmount, adjustedBudget) {
         .addColumn(Charts.ColumnType.NUMBER, "超過分（100〜150%）")
         .addColumn(Charts.ColumnType.NUMBER, "超過分（150%超）")
         .addColumn(Charts.ColumnType.NUMBER, "残り")
-        .addRow(["今週", chartAmounts.withinBudget, chartAmounts.overBudget, chartAmounts.criticalOverBudget, chartAmounts.remaining])
+        .addRow([chartLabel, chartAmounts.withinBudget, chartAmounts.overBudget, chartAmounts.criticalOverBudget, chartAmounts.remaining])
         .build();
     var chart = Charts.newBarChart()
         .setDataTable(chartData)
         .setDimensions(600, 160)
-        .setOption("title", buildDailyBudgetChartTitle(totalAmount, adjustedBudget))
+        .setOption("title", chartTitle)
         .setOption("titleTextStyle", { color: totalAmount > adjustedBudget ? "#b42318" : "#202124", fontSize: 15, bold: true })
         .setOption("legend", { position: "none" })
         .setOption("isStacked", true)
@@ -108,16 +124,33 @@ function createDailyBudgetChartBlob(totalAmount, adjustedBudget) {
         .setOption("chartArea", { left: 70, top: 44, width: "82%", height: "48%" })
         .build();
 
-    return chart.getAs("image/png").setName("daily-budget-chart.png");
+    return chart.getAs("image/png").setName(fileName);
 }
 
 function buildDailySummaryHtmlBody(body, totalAmount, adjustedBudget) {
     var chartTitle = buildDailyBudgetChartTitle(totalAmount, adjustedBudget);
 
+    return buildSummaryHtmlBody(body, [{ key: "dailyBudgetChart", title: chartTitle }]);
+}
+
+function buildWeeklySummaryHtmlBody(body, weeklyTotalAmount, weeklyBudget, monthlyTotalAmount, monthlyBudget) {
+    return buildSummaryHtmlBody(body, [
+        { key: "weeklyBudgetChart", title: buildDailyBudgetChartTitle(weeklyTotalAmount, weeklyBudget) },
+        { key: "monthlyBudgetChart", title: buildMonthlyBudgetChartTitle(monthlyTotalAmount, monthlyBudget) }
+    ]);
+}
+
+function buildSummaryHtmlBody(body, charts) {
+    var chartHtml = charts.map(function (chart) {
+        return (
+            '<img src="cid:' + chart.key + '" alt="' +
+            escapeHtmlForEmail(chart.title) +
+            '" width="600" style="display:block;max-width:100%;height:auto;margin:0 0 16px;">'
+        );
+    }).join("");
+
     return (
-        '<img src="cid:dailyBudgetChart" alt="' +
-        escapeHtmlForEmail(chartTitle) +
-        '" width="600" style="display:block;max-width:100%;height:auto;margin:0 0 16px;">' +
+        chartHtml +
         '<pre style="font-family:monospace;white-space:pre-wrap;line-height:1.5;">' +
         escapeHtmlForEmail(body) +
         "</pre>"

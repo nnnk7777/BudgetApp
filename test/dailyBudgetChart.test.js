@@ -35,6 +35,15 @@ test('日次予算グラフのタイトルは超過額を明示する', () => {
     );
 });
 
+test('月次予算グラフのタイトルは月次予算を基準にする', () => {
+    const chart = loadChartFunctions();
+
+    assert.equal(
+        chart.buildMonthlyBudgetChartTitle(170000, 160000),
+        '【緊急】月次予算の1.1倍（10000円超過）'
+    );
+});
+
 test('日次予算グラフは予算内・超過・残りを分ける', () => {
     const chart = loadChartFunctions();
 
@@ -91,4 +100,13 @@ test('HTMLメール本文はグラフを先頭に置き、テキスト本文を�
 
     assert.match(html, /^<img src="cid:dailyBudgetChart"/);
     assert.match(html, /支出: &lt;1000&gt;円 &amp; 確認/);
+});
+
+test('週次HTMLメール本文は週次と月次のグラフをこの順で表示する', () => {
+    const chart = loadChartFunctions();
+    const html = chart.buildWeeklySummaryHtmlBody('週次本文', 40000, 40000, 80000, 160000);
+
+    assert.match(html, /^<img src="cid:weeklyBudgetChart"/);
+    assert.ok(html.indexOf('cid:weeklyBudgetChart') < html.indexOf('cid:monthlyBudgetChart'));
+    assert.match(html, /週次本文/);
 });
