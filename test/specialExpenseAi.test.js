@@ -49,6 +49,56 @@ test('特別費AI判定は不完全な応答を予算対象に残す', () => {
     assert.equal(decisions[1].reason, 'AI判定を取得できなかったため');
 });
 
+test('特別費AI判定はOpenAIの不完全な応答を未判定の行だけリトライする', () => {
+    const prompts = [];
+    const context = loadSpecialExpenseAi({
+        buildSpecialExpenseReviewPrompt: (entries) => {
+            prompts.push(entries.map((entry) => entry.name));
+            return 'prompt';
+        },
+        generatePreferredAiText: (_prompt, _config, options) => {
+            if (options.logContext === 'special_expense_review_openai_attempt_1') {
+                return { text: '0|approved|旅行の宿泊費' };
+            }
+            return { text: '0|approved|旅行の航空券' };
+        },
+        Logger: { log: () => {} }
+    });
+    const hotel = makeEntry(10, '特別費', '福岡旅行ホテル代', 34900);
+    const flight = makeEntry(11, '特別費', '旅行帰りチケット：福岡→羽田', 24870);
+
+    const review = context.reviewSpecialExpensesWithAI([hotel, flight]);
+
+    assert.equal(JSON.stringify(prompts), JSON.stringify([['福岡旅行ホテル代', '旅行帰りチケット：福岡→羽田'], ['旅行帰りチケット：福岡→羽田']]));
+    assert.equal(review.approvedEntries.length, 2);
+    assert.equal(review.rejectedEntries.length, 0);
+});
+
+test('特別費AI判定はOpenAIの再試行後にGeminiへフォールバックする', () => {
+    const optionsHistory = [];
+    const context = loadSpecialExpenseAi({
+        buildSpecialExpenseReviewPrompt: () => 'prompt',
+        generatePreferredAiText: (_prompt, _config, options) => {
+            optionsHistory.push(options);
+            if (options.skipOpenAi) {
+                return { text: '0|approved|旅行費', provider: 'gemini', model: 'gemini', usedFallback: true, fallbackReason: options.fallbackReason };
+            }
+            return { text: null, provider: null, model: null, usedFallback: false };
+        },
+        Logger: { log: () => {} }
+    });
+    const hotel = makeEntry(10, '特別費', '福岡旅行ホテル代', 34900);
+
+    const review = context.reviewSpecialExpensesWithAI([hotel]);
+
+    assert.equal(optionsHistory.length, 3);
+    assert.equal(optionsHistory[0].skipGemini, true);
+    assert.equal(optionsHistory[1].skipGemini, true);
+    assert.equal(optionsHistory[2].skipOpenAi, true);
+    assert.equal(optionsHistory[2].fallbackReason, 'openai_response_incomplete');
+    assert.equal(review.approvedEntries.length, 1);
+});
+
 test('特別費AI判定の文面は支出の必要性ではなく分類だけを審査する', () => {
     const context = loadSpecialExpenseAi({
         buildSpecialExpenseReviewPrompt: () => 'prompt',

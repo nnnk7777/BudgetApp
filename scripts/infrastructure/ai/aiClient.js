@@ -8,7 +8,7 @@ function generatePreferredAiText(prompt, generationConfig, options) {
 
     options = options || {};
     logContext = options.logContext || "default";
-    if (openAiApiKey) {
+    if (openAiApiKey && !options.skipOpenAi) {
         openAiResult = generateOpenAiText(openAiApiKey, prompt, generationConfig);
         if (openAiResult && openAiResult.text) {
             Logger.log("AI利用: context=" + logContext + " provider=openai model=" + openAiResult.model);
@@ -21,11 +21,13 @@ function generatePreferredAiText(prompt, generationConfig, options) {
         }
 
         fallbackReason = "openai_unavailable";
+    } else if (options.skipOpenAi) {
+        fallbackReason = options.fallbackReason || "openai_skipped";
     } else {
         fallbackReason = "openai_api_key_missing";
     }
 
-    if (geminiApiKey) {
+    if (geminiApiKey && !options.skipGemini) {
         geminiText = generateGeminiText(geminiApiKey, prompt, generationConfig);
         if (geminiText) {
             Logger.log("AI利用: context=" + logContext + " provider=gemini model=" + getGeminiModelLabel() + " fallbackReason=" + fallbackReason);
