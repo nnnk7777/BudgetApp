@@ -44,6 +44,17 @@ test('月次予算グラフのタイトルは月次予算を基準にする', ()
     );
 });
 
+test('月次予算グラフは分析時点の月内ペースと今週の支出を表示する', () => {
+    const chart = loadChartFunctions();
+    const currentDate = new Date(2026, 1, 15);
+
+    assert.equal(chart.getMonthlyBudgetPacePercentage(currentDate), 15 / 28 * 100);
+    assert.equal(
+        chart.buildMonthlyBudgetChartTitle(80000, 160000, currentDate, 40000, 40000),
+        '今月の実支出 80000円 / 160000円（50.0%）\n2/15時点の目安 53.6%　｜　今週 40000円（週予算の1.0倍）'
+    );
+});
+
 test('日次予算グラフは予算内・超過・残りを分ける', () => {
     const chart = loadChartFunctions();
 
@@ -94,6 +105,19 @@ test('日次予算グラフは大幅超過時に目盛りの間隔を広げる',
     ]));
 });
 
+test('月次予算グラフは予算を4週の目安として25%ごとに表示する', () => {
+    const chart = loadChartFunctions();
+    const ticks = chart.getMonthlyBudgetChartTicks(160000, 100);
+
+    assert.equal(JSON.stringify(ticks), JSON.stringify([
+        { v: 0, f: '0%' },
+        { v: 40000, f: '25% 第1週' },
+        { v: 80000, f: '50% 第2週' },
+        { v: 120000, f: '75% 第3週' },
+        { v: 160000, f: '100% 第4週 予算上限' }
+    ]));
+});
+
 test('HTMLメール本文はグラフを先頭に置き、テキスト本文をエスケープする', () => {
     const chart = loadChartFunctions();
     const html = chart.buildDailySummaryHtmlBody('支出: <1000>円 & 確認', 1000, 40000);
@@ -102,11 +126,11 @@ test('HTMLメール本文はグラフを先頭に置き、テキスト本文を�
     assert.match(html, /支出: &lt;1000&gt;円 &amp; 確認/);
 });
 
-test('週次HTMLメール本文は週次と月次のグラフをこの順で表示する', () => {
+test('週次HTMLメール本文は月次のグラフ1枚を表示する', () => {
     const chart = loadChartFunctions();
-    const html = chart.buildWeeklySummaryHtmlBody('週次本文', 40000, 40000, 80000, 160000);
+    const html = chart.buildWeeklySummaryHtmlBody('週次本文', 80000, 160000, new Date(2026, 1, 15), 40000, 40000);
 
-    assert.match(html, /^<img src="cid:weeklyBudgetChart"/);
-    assert.ok(html.indexOf('cid:weeklyBudgetChart') < html.indexOf('cid:monthlyBudgetChart'));
+    assert.match(html, /^<img src="cid:monthlyBudgetChart"/);
+    assert.doesNotMatch(html, /cid:weeklyBudgetChart/);
     assert.match(html, /週次本文/);
 });

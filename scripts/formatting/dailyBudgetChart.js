@@ -28,8 +28,22 @@ function buildDailyBudgetChartTitle(totalAmount, adjustedBudget) {
     return buildBudgetChartTitle(totalAmount, adjustedBudget, "今週の", "週予算");
 }
 
-function buildMonthlyBudgetChartTitle(totalAmount, adjustedBudget) {
-    return buildBudgetChartTitle(totalAmount, adjustedBudget, "今月の", "月次予算");
+function buildMonthlyBudgetChartTitle(totalAmount, adjustedBudget, currentDate, weeklyTotalAmount, weeklyBudget) {
+    var title = buildBudgetChartTitle(totalAmount, adjustedBudget, "今月の", "月次予算");
+
+    if (!currentDate) {
+        return title;
+    }
+
+    return (
+        title + "\n" +
+        formatBudgetChartDate(currentDate) + "時点の目安 " + getMonthlyBudgetPacePercentage(currentDate).toFixed(1) + "%" +
+        "　｜　今週 " + weeklyTotalAmount + "円（週予算の" + (weeklyTotalAmount / weeklyBudget).toFixed(1) + "倍）"
+    );
+}
+
+function formatBudgetChartDate(date) {
+    return (date.getMonth() + 1) + "/" + date.getDate();
 }
 
 function buildBudgetChartTitle(totalAmount, adjustedBudget, periodPrefix, budgetLabel) {
@@ -77,6 +91,35 @@ function getDailyBudgetChartTicks(adjustedBudget, scalePercentage) {
     });
 }
 
+function getMonthlyBudgetPacePercentage(currentDate) {
+    var daysInMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).getDate();
+    return currentDate.getDate() / daysInMonth * 100;
+}
+
+function getMonthlyBudgetChartTicks(adjustedBudget, scalePercentage) {
+    var percentages = [0, 25, 50, 75, 100];
+    var tickStep = getDailyBudgetChartTickStep(scalePercentage);
+    var percentage;
+
+    for (percentage = 100 + tickStep; percentage <= scalePercentage; percentage += tickStep) {
+        percentages.push(percentage);
+    }
+
+    return percentages.map(function (percentage) {
+        var labels = {
+            0: "0%",
+            25: "25% 第1週",
+            50: "50% 第2週",
+            75: "75% 第3週",
+            100: "100% 第4週 予算上限"
+        };
+        return {
+            v: adjustedBudget * percentage / 100,
+            f: labels[percentage] || percentage + "%"
+        };
+    });
+}
+
 function getDailyBudgetChartAmounts(totalAmount, adjustedBudget) {
     return {
         withinBudget: Math.min(totalAmount, adjustedBudget),
@@ -90,15 +133,28 @@ function createDailyBudgetChartBlob(totalAmount, adjustedBudget) {
     return createBudgetChartBlob(totalAmount, adjustedBudget, "今週", buildDailyBudgetChartTitle(totalAmount, adjustedBudget), "daily-budget-chart.png");
 }
 
-function createMonthlyBudgetChartBlob(totalAmount, adjustedBudget) {
-    return createBudgetChartBlob(totalAmount, adjustedBudget, "今月", buildMonthlyBudgetChartTitle(totalAmount, adjustedBudget), "monthly-budget-chart.png");
+function createMonthlyBudgetChartBlob(totalAmount, adjustedBudget, currentDate, weeklyTotalAmount, weeklyBudget) {
+    var scalePercentage = getDailyBudgetChartScalePercentage(totalAmount, adjustedBudget);
+    return createBudgetChartBlob(
+        totalAmount,
+        adjustedBudget,
+        "今月",
+        buildMonthlyBudgetChartTitle(totalAmount, adjustedBudget, currentDate, weeklyTotalAmount, weeklyBudget),
+        "monthly-budget-chart.png",
+        {
+            height: 205,
+            chartArea: { left: 70, top: 70, width: "82%", height: "38%" },
+            ticks: getMonthlyBudgetChartTicks(adjustedBudget, scalePercentage)
+        }
+    );
 }
 
-function createBudgetChartBlob(totalAmount, adjustedBudget, chartLabel, chartTitle, fileName) {
+function createBudgetChartBlob(totalAmount, adjustedBudget, chartLabel, chartTitle, fileName, displayOptions) {
     var chartTheme = getDailyBudgetChartTheme(totalAmount, adjustedBudget);
     var chartAmounts = getDailyBudgetChartAmounts(totalAmount, adjustedBudget);
     var scalePercentage = getDailyBudgetChartScalePercentage(totalAmount, adjustedBudget);
     var chartMaximum = adjustedBudget * scalePercentage / 100;
+    var options = displayOptions || {};
     var chartData = Charts.newDataTable()
         .addColumn(Charts.ColumnType.STRING, "週予算")
         .addColumn(Charts.ColumnType.NUMBER, "予算内の支出")
@@ -109,7 +165,7 @@ function createBudgetChartBlob(totalAmount, adjustedBudget, chartLabel, chartTit
         .build();
     var chart = Charts.newBarChart()
         .setDataTable(chartData)
-        .setDimensions(600, 160)
+        .setDimensions(600, options.height || 160)
         .setOption("title", chartTitle)
         .setOption("titleTextStyle", { color: totalAmount > adjustedBudget ? "#b42318" : "#202124", fontSize: 15, bold: true })
         .setOption("legend", { position: "none" })
@@ -117,11 +173,11 @@ function createBudgetChartBlob(totalAmount, adjustedBudget, chartLabel, chartTit
         .setOption("colors", [chartTheme.color, chartTheme.overBudgetColor, "#6b1512", "#e8eaed"])
         .setOption("hAxis", {
             viewWindow: { min: 0, max: chartMaximum },
-            ticks: getDailyBudgetChartTicks(adjustedBudget, scalePercentage),
+            ticks: options.ticks || getDailyBudgetChartTicks(adjustedBudget, scalePercentage),
             gridlines: { color: "#dadce0" },
             baselineColor: "#dadce0"
         })
-        .setOption("chartArea", { left: 70, top: 44, width: "82%", height: "48%" })
+        .setOption("chartArea", options.chartArea || { left: 70, top: 44, width: "82%", height: "48%" })
         .build();
 
     return chart.getAs("image/png").setName(fileName);
@@ -133,11 +189,11 @@ function buildDailySummaryHtmlBody(body, totalAmount, adjustedBudget) {
     return buildSummaryHtmlBody(body, [{ key: "dailyBudgetChart", title: chartTitle }]);
 }
 
-function buildWeeklySummaryHtmlBody(body, weeklyTotalAmount, weeklyBudget, monthlyTotalAmount, monthlyBudget) {
-    return buildSummaryHtmlBody(body, [
-        { key: "weeklyBudgetChart", title: buildDailyBudgetChartTitle(weeklyTotalAmount, weeklyBudget) },
-        { key: "monthlyBudgetChart", title: buildMonthlyBudgetChartTitle(monthlyTotalAmount, monthlyBudget) }
-    ]);
+function buildWeeklySummaryHtmlBody(body, monthlyTotalAmount, monthlyBudget, currentDate, weeklyTotalAmount, weeklyBudget) {
+    return buildSummaryHtmlBody(body, [{
+        key: "monthlyBudgetChart",
+        title: buildMonthlyBudgetChartTitle(monthlyTotalAmount, monthlyBudget, currentDate, weeklyTotalAmount, weeklyBudget)
+    }]);
 }
 
 function buildSummaryHtmlBody(body, charts) {
