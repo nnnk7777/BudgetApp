@@ -4,12 +4,17 @@ function analyzeExpensesWithAI(dataEntries, totalAmount, adjustedBudget, percent
     var contextualMemos = analysisOptions.contextualMemos || [];
     var plannedExpenseLabel = analysisOptions.plannedExpenseLabel || "今後の予定メモ";
     var contextualMemoLabel = analysisOptions.contextualMemoLabel || "予定の補助メモ";
+    var saleIncomeEntries = analysisOptions.saleIncomeEntries || [];
     var upcomingExpenseLines = plannedExpenses.map(function (entry) {
         return formatDate(entry.date) + " [" + entry.title + "] " + entry.memo;
     });
     var contextualMemoLines = contextualMemos.map(function (entry) {
         return formatDate(entry.date) + " [" + entry.title + "] " + entry.memo;
     });
+    var saleIncomeLines = saleIncomeEntries.map(function (entry) {
+        return formatDate(entry.date) + " [" + entry.name + "] " + entry.amount + "円";
+    });
+    var saleIncomeTotal = calculateTotalAmount(saleIncomeEntries);
     var prompt;
     var categoryRankingLines = getCategoryRankingLines(dataEntries);
     var weeklyBudgetCarryoverMemo = getWeeklyBudgetCarryoverMemoForWeek(baseDate);
@@ -29,7 +34,9 @@ function analyzeExpensesWithAI(dataEntries, totalAmount, adjustedBudget, percent
         plannedExpenseLabel,
         upcomingExpenseLines,
         contextualMemoLabel,
-        contextualMemoLines
+        contextualMemoLines,
+        saleIncomeLines,
+        saleIncomeTotal
     );
 
     Logger.log("AI分析プロンプト：");

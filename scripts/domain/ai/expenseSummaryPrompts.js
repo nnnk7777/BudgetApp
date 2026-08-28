@@ -12,7 +12,9 @@ function buildExpenseSummaryPrompt(
     plannedExpenseLabel,
     upcomingExpenseLines,
     contextualMemoLabel,
-    contextualMemoLines
+    contextualMemoLines,
+    saleIncomeLines,
+    saleIncomeTotal
 ) {
     var expenseLines = dataEntries.map(function (entry) {
         return (
@@ -33,6 +35,7 @@ function buildExpenseSummaryPrompt(
     var weeklyBudgetCarryoverMemoText = formatWeeklyBudgetCarryoverMemoForPrompt(weeklyBudgetCarryoverMemo);
     var upcomingExpenseText = upcomingExpenseLines.length ? upcomingExpenseLines.join(" / ") : "なし";
     var contextualMemoText = contextualMemoLines.length ? contextualMemoLines.join(" / ") : "なし";
+    var saleIncomeText = saleIncomeLines.length ? saleIncomeLines.join(" / ") : "なし";
     var prompt = `あなたはプロの家計管理アドバイザーです。挨拶や自己紹介は禁止です。金銭感覚の改善を目的としたコーチとして、冷静な分析と、時には優しく、時には厳しく指導してください。1週間分の支出について、予算を超えないようアドバイスをください。カジュアルな敬語て対応してください。
 レシートは保管していませんが、代わりに全ての支出・収入をスプレッドシートに記録しています。単なる分析にとどまらず、「行動に落とし込める改善提案」を重視してください。感情的にならず、客観的かつ現実的な判断で、飴と鞭を使い分けてください。
 通勤の交通費は給与で補填されます。食事はスーパーでまとめ買いした上でほぼ自炊しており、外食は友人と会う時が多いです。
@@ -61,6 +64,9 @@ ${analysisDateContext}
 前週差分の反映方針: ${weeklyBudgetCarryoverGuidance}
 ${plannedExpenseLabel}: ${upcomingExpenseText}
 ${contextualMemoLabel}: ${contextualMemoText}
+今週の売却収入: ${saleIncomeTotal}円
+売却収入一覧: ${saleIncomeText}
+売却収入は、同週の買い替えなどの支出の実質負担を読むための補助情報です。関連が読み取れる支出があれば、売却額を踏まえて負担を評価してください。ただし、売却収入を週予算から単純に差し引いたり、収入だけを理由に支出超過を問題なしと判断したりしてはいけません。
 以下は支出一覧です。各行には日付・カテゴリ・名称・金額を含みます。名称だけで内容が不明瞭な場合はカテゴリから内容を推定してください:
 ${expenseLines.join("\n")}`;
 
