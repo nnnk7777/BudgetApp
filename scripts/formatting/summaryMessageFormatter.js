@@ -5,6 +5,8 @@ function handleWeeklySummaryResult(dateRangeStr, totalAmount, dataEntries, diffe
     var nextWeekExpenseLines = formatUpcomingPlannedExpenseLines(nextWeekPlannedExpenses);
     var nextWeekContextualMemoLines = formatUpcomingPlannedExpenseLines(nextWeekContextualMemos);
     var nextWeekPlannedExpenseTotal = calculatePlannedExpenseTotal(nextWeekPlannedExpenses);
+    var saleIncomeEntries = getSaleIncomeEntriesForDates(getDatesInWeek(currentDate));
+    var saleIncomeTotal = calculateTotalAmount(saleIncomeEntries);
     var weeklyBudgetCarryoverMemo = getWeeklyBudgetCarryoverMemoForWeek(currentDate);
     var weeklyAnalysisMode = getWeeklyAnalysisMode(currentDate);
     var differenceSign;
@@ -49,6 +51,8 @@ function handleWeeklySummaryResult(dateRangeStr, totalAmount, dataEntries, diffe
     body += "* 予算差分：" + differenceSign + differenceAbs + "円\n\n";
     body += buildSpecialExpenseReviewSection(specialExpenseReview, "今月");
     body += "\n";
+    body += buildSaleIncomeSummarySection(saleIncomeEntries, saleIncomeTotal, actualWeeklyTotalAmount);
+    body += "\n";
     body += "◆ 前週からの持ち越し\n";
     body += formatWeeklyBudgetCarryoverSummaryForMessage(weeklyBudgetCarryoverMemo) + "\n\n";
     body += "◆ カテゴリ別支出ランキング\n";
@@ -88,7 +92,8 @@ function handleWeeklySummaryResult(dateRangeStr, totalAmount, dataEntries, diffe
         plannedExpenses: nextWeekPlannedExpenses,
         plannedExpenseLabel: "来週の予定支出",
         contextualMemos: nextWeekContextualMemos,
-        contextualMemoLabel: "来週のユーザー補足メモ"
+        contextualMemoLabel: "来週のユーザー補足メモ",
+        saleIncomeEntries: saleIncomeEntries
     });
     body += buildAiSummarySection("◆ AI分析", aiAnalysis);
 
@@ -147,6 +152,8 @@ function handleDailySummaryResult(currentDate, datesInWeek, adjustedBudget, isSt
         return date <= currentDate;
     });
     var rawDataEntries = getExpenseEntriesForDates(datesUpToToday).reverse();
+    var saleIncomeEntries = getSaleIncomeEntriesForDates(datesUpToToday);
+    var saleIncomeTotal = calculateTotalAmount(saleIncomeEntries);
     var specialExpenseReview = reviewSpecialExpensesWithAI(rawDataEntries);
     var budgetTargetEntries = getBudgetTargetEntries(rawDataEntries, specialExpenseReview);
     var actualTotalAmount = calculateTotalAmount(rawDataEntries);
@@ -174,7 +181,8 @@ function handleDailySummaryResult(currentDate, datesInWeek, adjustedBudget, isSt
         plannedExpenses: upcomingPlannedExpenses,
         plannedExpenseLabel: "今後の予定支出",
         contextualMemos: upcomingContextualMemos,
-        contextualMemoLabel: "今後のユーザー補足メモ"
+        contextualMemoLabel: "今後のユーザー補足メモ",
+        saleIncomeEntries: saleIncomeEntries
     });
     var subject = (isStaging ? "<test>" : "") + "家計簿日次レポート（" + formatDate(currentDate) + "）";
     var body = "+++ 💸 予算サマリー 💸 +++\n";
@@ -198,6 +206,8 @@ function handleDailySummaryResult(currentDate, datesInWeek, adjustedBudget, isSt
     }
     body += "++++++++++++++++++++\n\n";
     body += buildSpecialExpenseReviewSection(specialExpenseReview, "今週");
+    body += "\n";
+    body += buildSaleIncomeSummarySection(saleIncomeEntries, saleIncomeTotal, actualTotalAmount);
     body += "\n";
     body += "◆ 前週からの持ち越し\n";
     body += formatWeeklyBudgetCarryoverSummaryForMessage(weeklyBudgetCarryoverMemo) + "\n\n";
@@ -246,6 +256,25 @@ function handleDailySummaryResult(currentDate, datesInWeek, adjustedBudget, isSt
         default:
             throw new Error('actionが定義されていません');
     }
+}
+
+function buildSaleIncomeSummarySection(saleIncomeEntries, saleIncomeTotal, actualTotalAmount) {
+    if (!saleIncomeEntries.length) {
+        return "";
+    }
+
+    var lines = [
+        "◆ 売却収入（分析の補足）",
+        "・売却収入: " + saleIncomeTotal + "円",
+        "・売却を差し引いた実質支出: " + (actualTotalAmount - saleIncomeTotal) + "円"
+    ];
+
+    saleIncomeEntries.forEach(function (entry) {
+        lines.push("・" + formatDate(entry.date) + " - " + entry.name + ": " + entry.amount + "円");
+    });
+    lines.push("※予算対象支出・支出割合は、売却収入を差し引かずに計算しています。");
+
+    return lines.join("\n") + "\n";
 }
 
 function filterPlannedExpenseMemos(calendarMemos) {

@@ -65,6 +65,7 @@ function getMonthlyIncomeEntries(year, month) {
 
     data.forEach(function (row) {
         var dateCell = row[0];
+        var category = row[1];
         var name = row[2];
         var amount = row[3];
 
@@ -77,26 +78,66 @@ function getMonthlyIncomeEntries(year, month) {
 
         var entryDate = new Date(year, month, 1);
         var dateLabel = "";
+        var hasActualDate = false;
         if (dateCell && dateCell.toString().trim() !== '') {
             if (typeof dateCell === 'string') {
                 var parsedDate = parseDate(dateCell, year);
                 if (!isNaN(parsedDate.getTime())) {
                     entryDate = parsedDate;
+                    hasActualDate = true;
                 } else {
                     dateLabel = dateCell.toString().trim();
                 }
             } else if (Object.prototype.toString.call(dateCell) === '[object Date]') {
                 entryDate = new Date(year, dateCell.getMonth(), dateCell.getDate());
+                hasActualDate = true;
             }
         }
 
         entries.push({
             date: entryDate,
             dateLabel: dateLabel,
+            hasActualDate: hasActualDate,
+            category: category || "未分類",
             name: name || "",
             amount: amount || 0
         });
     });
 
     return entries;
+}
+
+function getIncomeEntriesForDates(dates) {
+    var targetDateKeys = {};
+    var targetMonths = {};
+    var entries = [];
+
+    dates.forEach(function (date) {
+        var monthKey = date.getFullYear() + "-" + date.getMonth();
+
+        targetDateKeys[getIncomeEntryDateKey(date)] = true;
+        targetMonths[monthKey] = {
+            year: date.getFullYear(),
+            month: date.getMonth()
+        };
+    });
+
+    Object.keys(targetMonths).forEach(function (monthKey) {
+        var targetMonth = targetMonths[monthKey];
+        entries = entries.concat(getMonthlyIncomeEntries(targetMonth.year, targetMonth.month));
+    });
+
+    return entries.filter(function (entry) {
+        return entry.hasActualDate && targetDateKeys[getIncomeEntryDateKey(entry.date)];
+    });
+}
+
+function getSaleIncomeEntriesForDates(dates) {
+    return getIncomeEntriesForDates(dates).filter(function (entry) {
+        return String(entry.category || "").trim() === "売却";
+    });
+}
+
+function getIncomeEntryDateKey(date) {
+    return date.getFullYear() + "-" + date.getMonth() + "-" + date.getDate();
 }
