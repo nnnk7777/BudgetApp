@@ -1,13 +1,24 @@
 name: Build App on Staging
 
 on:
-    push:
+    pull_request:
         branches:
-            - "feat**"
-            - "fix**"
+            - main
+        types:
+            - opened
+            - reopened
+            - synchronize
+
+permissions:
+    contents: read
+
+concurrency:
+    group: staging-gas-deployment
+    cancel-in-progress: true
 
 jobs:
     Build-Budget-App-on-Staging:
+        if: github.event.pull_request.head.repo.full_name == github.repository
         runs-on: ubuntu-latest
         timeout-minutes: 1
 
@@ -21,6 +32,7 @@ jobs:
             CLIENT_ID: ${{ secrets.CLIENTID }}
             CLIENT_SECRET: ${{ secrets.CLIENTSECRET }}
             SCRIPT_ID: ${{ secrets.SCRIPT_ID_STG }}
+            GAS_DEPLOYMENT_ID: ${{ secrets.GAS_DEPLOYMENT_ID_STG }}
             # コード内で置換される変数
             TARGET_EMAIL_ADDRESS: ${{ secrets.TARGET_EMAIL_ADDRESS_STG }}
             TARGET_SHEET_NAME: "金銭メモstg"
@@ -29,6 +41,8 @@ jobs:
         steps:
             - name: リポジトリのチェックアウト
               uses: actions/checkout@v3
+              with:
+                  ref: ${{ github.event.pull_request.head.sha }}
 
             - name: Node.jsのセットアップ
               uses: actions/setup-node@v3
@@ -68,5 +82,19 @@ jobs:
               run: |
                   sed -i 's/TARGET_SHEET_NAME/'"${TARGET_SHEET_NAME}"'/g' src/layout/main.ts
 
+            - name: stg環境のGASデプロイIDを確認
+              run: |
+                  test -n "$GAS_DEPLOYMENT_ID" || {
+                      echo "GAS_DEPLOYMENT_ID_STG Secret が未設定です。"
+                      exit 1
+                  }
+
             - name: アプリのビルドとstg環境GASへのプッシュ
               run: make build-and-push
+
+            - name: stg環境のGASデプロイを新バージョンへ更新
+              run: |
+                  COMMIT_SUBJECT="$(git log -1 --format=%s)"
+                  clasp create-deployment \
+                    --deploymentId "$GAS_DEPLOYMENT_ID" \
+                    --description "$COMMIT_SUBJECT"
