@@ -185,6 +185,16 @@ test('HTMLメール本文はグラフを先頭に置き、テキスト本文を�
     assert.match(html, /支出: &lt;1000&gt;円 &amp; 確認/);
 });
 
+test('月次メール本文は月次予算グラフを先頭に置く', () => {
+    const chart = loadChartFunctions();
+    const html = chart.buildMonthlySummaryHtmlBody('月次本文', 193000, 193000, 100000);
+
+    assert.match(html, /^<img src="cid:monthlySummaryBudgetChart"/);
+    assert.match(html, /今月の実支出 193000円 \/ 193000円/);
+    assert.match(html, /特別費 100000円/);
+    assert.match(html, /月次本文/);
+});
+
 test('週次HTMLメール本文は月次・週次のグラフを順に表示する', () => {
     const chart = loadChartFunctions();
     const html = chart.buildWeeklySummaryHtmlBody('週次本文', 80000, 160000, new Date(2026, 1, 15), 40000, 40000);
