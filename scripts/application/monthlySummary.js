@@ -1,6 +1,5 @@
 // 月次サマリーのメイン処理
 function calculateMonthlySummary(action) {
-    var budgetPerWeek = 45000;
     var runtimeContext = getScriptRuntimeContext();
     var currentDate = runtimeContext.currentDate;
     var isStaging = runtimeContext.isStaging;
@@ -20,8 +19,7 @@ function calculateMonthlySummary(action) {
     var totalExpenses = calculateTotalAmount(budgetTargetExpenseEntries);
     var totalIncome = calculateTotalAmount(incomeEntries);
 
-    var daysInMonth = endOfMonth.getDate();
-    var adjustedBudget = Math.round((budgetPerWeek * daysInMonth / 7) / 100) * 100;
+    var adjustedBudget = calculateMonthlyBudgetForDate(currentDate);
     var difference = totalExpenses - adjustedBudget;
     var percentage = adjustedBudget ? (totalExpenses / adjustedBudget) * 100 : 0;
 

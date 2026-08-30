@@ -13,7 +13,7 @@ function handleWeeklySummaryResult(dateRangeStr, totalAmount, dataEntries, diffe
     var differenceAbs;
     var percentageStr;
     var actualWeeklyTotalAmount = totalAmount;
-    var monthlyBudget = adjustedBudget * 4;
+    var monthlyBudget = calculateMonthlyBudgetForDate(currentDate);
     var monthEntries = getCurrentMonthExpenseEntries(currentDate);
     var specialExpenseReview = reviewSpecialExpensesWithAI(monthEntries);
     var budgetTargetEntries = getBudgetTargetEntries(dataEntries, specialExpenseReview);
