@@ -44,5 +44,13 @@ function calculateMonthlySummary(action) {
         specialExpenseReview
     );
 
-    return sendMonthlySummaryResult(action, currentDate, isStaging, body);
+    return sendMonthlySummaryResult(
+        action,
+        currentDate,
+        isStaging,
+        body,
+        actualTotalExpenses,
+        adjustedBudget,
+        calculateApprovedSpecialExpenseTotal(specialExpenseReview)
+    );
 }

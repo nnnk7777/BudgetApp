@@ -52,13 +52,31 @@ function buildMonthlySummaryMessage(dateRangeStr, totalIncome, totalExpenses, ac
     return body;
 }
 
-function sendMonthlySummaryResult(action, currentDate, isStaging, body) {
+function sendMonthlySummaryResult(action, currentDate, isStaging, body, actualTotalExpenses, adjustedBudget, approvedSpecialExpenseTotal) {
     switch (action) {
         case 'mail':
             var emailAddress = getTargetEmailAddress();
             var subjectPrefix = isStaging ? "<test>" : "";
             var subject = subjectPrefix + "家計簿月次レポート（" + (currentDate.getMonth() + 1) + "月）";
-            MailApp.sendEmail(emailAddress, subject, body);
+            var monthlyBudgetChart = createMonthlySummaryBudgetChartBlob(
+                actualTotalExpenses,
+                adjustedBudget,
+                approvedSpecialExpenseTotal
+            );
+            MailApp.sendEmail({
+                to: emailAddress,
+                subject: subject,
+                body: body,
+                htmlBody: buildMonthlySummaryHtmlBody(
+                    body,
+                    actualTotalExpenses,
+                    adjustedBudget,
+                    approvedSpecialExpenseTotal
+                ),
+                inlineImages: {
+                    monthlySummaryBudgetChart: monthlyBudgetChart
+                }
+            });
             return "Successfully sent monthly summary mail";
         case 'text':
             return body;

@@ -42,6 +42,10 @@ function buildWeeklySummaryWeeklyChartTitle(weeklyTotalAmount, weeklyBudget, spe
     return buildBudgetChartTitleWithSpecialExpense(weeklyTotalAmount, weeklyBudget, "今週の", "週予算", specialExpenseTotal);
 }
 
+function buildMonthlySummaryBudgetChartTitle(totalAmount, adjustedBudget, specialExpenseTotal) {
+    return buildBudgetChartTitleWithSpecialExpense(totalAmount, adjustedBudget, "今月の", "月次予算", specialExpenseTotal);
+}
+
 function formatBudgetChartDate(date) {
     return (date.getMonth() + 1) + "/" + date.getDate();
 }
@@ -252,6 +256,19 @@ function createDailyBudgetChartBlob(totalAmount, adjustedBudget, specialExpenseT
     );
 }
 
+function createMonthlySummaryBudgetChartBlob(totalAmount, adjustedBudget, specialExpenseTotal) {
+    return createWeeklySummaryPeriodBudgetChartBlob(
+        totalAmount,
+        adjustedBudget,
+        "今月",
+        buildMonthlySummaryBudgetChartTitle(totalAmount, adjustedBudget, specialExpenseTotal),
+        "monthly-summary-budget-chart.png",
+        specialExpenseTotal || 0,
+        getDailyBudgetChartScalePercentage(totalAmount, adjustedBudget),
+        null
+    );
+}
+
 function createWeeklySummaryMonthlyBudgetChartBlob(monthlyTotalAmount, monthlyBudget, currentDate, specialExpenseTotal, scalePercentage) {
     return createWeeklySummaryPeriodBudgetChartBlob(
         monthlyTotalAmount,
@@ -346,6 +363,13 @@ function buildDailySummaryHtmlBody(body, totalAmount, adjustedBudget, specialExp
     var chartTitle = buildDailyBudgetChartTitle(totalAmount, adjustedBudget, specialExpenseTotal || 0);
 
     return buildSummaryHtmlBody(body, [{ key: "dailyBudgetChart", title: chartTitle }]);
+}
+
+function buildMonthlySummaryHtmlBody(body, totalAmount, adjustedBudget, specialExpenseTotal) {
+    return buildSummaryHtmlBody(body, [{
+        key: "monthlySummaryBudgetChart",
+        title: buildMonthlySummaryBudgetChartTitle(totalAmount, adjustedBudget, specialExpenseTotal || 0)
+    }]);
 }
 
 function buildWeeklySummaryHtmlBody(body, monthlyTotalAmount, monthlyBudget, currentDate, weeklyTotalAmount, weeklyBudget, monthlySpecialExpenseTotal, weeklySpecialExpenseTotal) {
