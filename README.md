@@ -59,6 +59,8 @@ npm ci
 
 -   stg環境の既存GASデプロイを更新する場合は、GASの「デプロイを管理」で対象デプロイのデプロイIDを確認し、`GAS_DEPLOYMENT_ID_STG` としてGitHub Secretへ登録してください。stg用workflowはPRの先頭コミットを反映した後、このデプロイを新バージョンへ更新し、コミット件名を説明に設定します。
 
+-   Prod環境の既存GASデプロイを更新する場合も、対象デプロイのデプロイIDを `GAS_DEPLOYMENT_ID_PROD` としてGitHub Secretへ登録してください。Prod用workflowは `main` へマージされたPRのコミットを反映した後、このデプロイをコミット件名付きの新バージョンへ更新します。
+
 -   GAS プロジェクトの設定から、スクリプトプロパティを設定してください。
 -   後述の API 実行の際に利用される値です。
     -   プロパティ：`HASH`
@@ -84,7 +86,7 @@ npm ci
 ## 開発・デプロイ方法
 
 -   `main` 宛てのPRを作成・再オープン・更新すると、[stg.yml](./.github/workflows/stg.yml) がstg用GASプロジェクトへビルド・プッシュし、`GAS_DEPLOYMENT_ID_STG` で指定した既存デプロイをコミット件名付きの新バージョンへ更新します。外部forkからのPRは対象外です。
--   `main` へマージすると、[prod.yml](./.github/workflows/prod.yml) が本番用GASプロジェクトへビルド・プッシュします。
+-   `main` 宛てのPRがマージされると、[prod.yml](./.github/workflows/prod.yml) がProd用GASプロジェクトへビルド・プッシュし、`GAS_DEPLOYMENT_ID_PROD` で指定した既存デプロイをコミット件名付きの新バージョンへ更新します。
 -   ローカルでGAS成果物だけを確認する場合は `make build` を実行します。
 -   ローカルからGASへ反映する場合は、clasp設定後に `make build-and-push` を実行します。
 

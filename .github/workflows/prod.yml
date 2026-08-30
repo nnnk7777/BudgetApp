@@ -1,12 +1,22 @@
 name: Budget App Deploy Workflow
 
 on:
-    push:
+    pull_request:
         branches:
             - main
+        types:
+            - closed
+
+permissions:
+    contents: read
+
+concurrency:
+    group: production-gas-deployment
+    cancel-in-progress: false
 
 jobs:
     Build-And-Deploy-Budget-App:
+        if: github.event.pull_request.merged == true
         runs-on: ubuntu-latest
         timeout-minutes: 5
 
@@ -20,6 +30,7 @@ jobs:
             CLIENT_ID: ${{ secrets.CLIENTID }}
             CLIENT_SECRET: ${{ secrets.CLIENTSECRET }}
             SCRIPT_ID: ${{ secrets.SCRIPT_ID }}
+            GAS_DEPLOYMENT_ID: ${{ secrets.GAS_DEPLOYMENT_ID_PROD }}
             # コード内で置換される変数
             TARGET_EMAIL_ADDRESS: ${{ secrets.TARGET_EMAIL_ADDRESS }}
             TARGET_SHEET_NAME: "金銭メモ2026"
@@ -28,6 +39,8 @@ jobs:
         steps:
             - name: リポジトリのチェックアウト
               uses: actions/checkout@v3
+              with:
+                  ref: ${{ github.event.pull_request.merge_commit_sha }}
 
             - name: Node.jsのセットアップ
               uses: actions/setup-node@v3
@@ -67,5 +80,19 @@ jobs:
               run: |
                   sed -i 's/TARGET_SHEET_NAME/'"${TARGET_SHEET_NAME}"'/g' src/layout/main.ts
 
+            - name: Prod環境のGASデプロイIDを確認
+              run: |
+                  test -n "$GAS_DEPLOYMENT_ID" || {
+                      echo "GAS_DEPLOYMENT_ID_PROD Secret が未設定です。"
+                      exit 1
+                  }
+
             - name: アプリのビルドとGASへのプッシュ
               run: make build-and-push
+
+            - name: Prod環境のGASデプロイを新バージョンへ更新
+              run: |
+                  COMMIT_SUBJECT="$(git log -1 --format=%s)"
+                  clasp create-deployment \
+                    --deploymentId "$GAS_DEPLOYMENT_ID" \
+                    --description "$COMMIT_SUBJECT"
