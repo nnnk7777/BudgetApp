@@ -50,18 +50,16 @@ function runSummaryByUnit(unit, action) {
 }
 
 function buildDailySummaryResult(action) {
-    var budgetPerWeek = 40000;
     var runtimeContext = getScriptRuntimeContext();
     var currentDate = runtimeContext.currentDate;
     var isStaging = runtimeContext.isStaging;
     var datesInWeek = getDatesInWeek(currentDate);
-    var adjustedBudget = Math.round((budgetPerWeek * datesInWeek.length / 7) / 100) * 100;
+    var adjustedBudget = calculateBudgetForDays(datesInWeek.length);
 
     return handleDailySummaryResult(currentDate, datesInWeek, adjustedBudget, isStaging, action);
 }
 
 function buildWeeklySummaryResult(action) {
-    var budgetPerWeek = 40000;
     var runtimeContext = getScriptRuntimeContext();
     var currentDate = runtimeContext.currentDate;
     var isStaging = runtimeContext.isStaging;
@@ -71,7 +69,7 @@ function buildWeeklySummaryResult(action) {
     var dateRangeStr = formatDate(startOfWeek) + "〜" + formatDate(endOfWeek);
     var dataEntries = getExpenseEntriesForDates(datesInWeek);
     var totalAmount = calculateTotalAmount(dataEntries);
-    var adjustedBudget = Math.round((budgetPerWeek * datesInWeek.length / 7) / 100) * 100;
+    var adjustedBudget = calculateBudgetForDays(datesInWeek.length);
     var difference = totalAmount - adjustedBudget;
     var percentage = adjustedBudget ? (totalAmount / adjustedBudget) * 100 : 0;
 
