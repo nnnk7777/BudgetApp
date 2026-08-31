@@ -1,11 +1,9 @@
 name: Budget App Deploy Workflow
 
 on:
-    pull_request:
+    push:
         branches:
             - main
-        types:
-            - closed
 
 permissions:
     contents: read
@@ -16,7 +14,6 @@ concurrency:
 
 jobs:
     Build-And-Deploy-Budget-App:
-        if: github.event.pull_request.merged == true
         runs-on: ubuntu-latest
         timeout-minutes: 5
 
@@ -40,7 +37,7 @@ jobs:
             - name: リポジトリのチェックアウト
               uses: actions/checkout@v3
               with:
-                  ref: ${{ github.event.pull_request.merge_commit_sha }}
+                  ref: ${{ github.sha }}
 
             - name: Node.jsのセットアップ
               uses: actions/setup-node@v3
