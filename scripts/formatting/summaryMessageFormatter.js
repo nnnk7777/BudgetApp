@@ -190,59 +190,32 @@ function handleDailySummaryResult(currentDate, datesInWeek, adjustedBudget, isSt
         saleIncomeEntries: saleIncomeEntries
     });
     var subject = (isStaging ? "<test>" : "") + "家計簿日次レポート（" + formatDate(currentDate) + "）";
-    var body = "+++ 💸 予算サマリー 💸 +++\n";
-
-    body += formatDate(datesInWeek[0]) + " から " + formatDate(currentDate) + " までの予算対象支出: " + totalAmount + " 円\n";
-    body += "実支出合計: " + actualTotalAmount + " 円\n";
-    body += "承認済み特別費: " + approvedSpecialExpenseTotal + " 円\n";
-    body += "今後の予定金額: " + plannedExpenseTotal + " 円\n";
-    body += "支出＋予定の合計見込み: " + (totalAmount + plannedExpenseTotal) + " 円\n";
-    body += "\n";
-    body += "◆ 直近のユーザー補足メモ\n";
-    body += upcomingContextualMemoLines.length ? upcomingContextualMemoLines.join("\n") + "\n" : "・なし\n";
-    body += "\n";
-    body += "予算に対して\n";
-    body += "・予算対象支出: " + percentage.toFixed(2) + "%\n";
-    body += "・合計見込み: " + projectedPercentage + "%\n";
-    body += "（設定予算：" + adjustedBudget + "円）\n";
-    body += "・分析モード: " + formatWeeklyAnalysisModeForMessage(weeklyAnalysisMode) + "\n";
-    if (uncategorizedCount > 0) {
-        body += "・未分類の支出: " + uncategorizedCount + "件\n";
-    }
-    body += "++++++++++++++++++++\n\n";
-    body += buildSpecialExpenseReviewSection(specialExpenseReview, "今週");
-    body += "\n";
-    body += buildSaleIncomeSummarySection(saleIncomeEntries, saleIncomeTotal, actualTotalAmount);
-    body += "\n";
-    body += "◆ 前週からの持ち越し\n";
-    body += formatWeeklyBudgetCarryoverSummaryForMessage(weeklyBudgetCarryoverMemo) + "\n\n";
-    body += "◆ カテゴリ別支出ランキング\n";
-    if (categoryRankingLines.length) {
-        categoryRankingLines.forEach(function (line) {
-            body += line + "\n";
-        });
-    } else {
-        body += "・なし\n";
-    }
-    body += "\n";
-    body += "◆ 普段より増えたカテゴリ\n";
-    body += formatCategorySpendingIncreaseSummary(categorySpendingIncreaseSummary) + "\n\n";
-    body += "詳細:\n";
-    dataEntries.forEach(function (entry) {
-        body += "・" + formatDate(entry.date) + " - " + entry.name + ": " + entry.amount + "円\n";
+    var body = buildDailySummaryDecisionSection({
+        totalAmount: totalAmount,
+        actualTotalAmount: actualTotalAmount,
+        plannedExpenseTotal: plannedExpenseTotal,
+        adjustedBudget: adjustedBudget,
+        percentage: percentage,
+        projectedPercentage: projectedPercentage,
+        weeklyAnalysisMode: weeklyAnalysisMode,
+        weeklyBudgetCarryoverMemo: weeklyBudgetCarryoverMemo,
+        categorySpendingIncreaseSummary: categorySpendingIncreaseSummary,
+        uncategorizedCount: uncategorizedCount,
+        approvedSpecialExpenseTotal: approvedSpecialExpenseTotal
     });
-    body += "\n";
-    body += "◆ 直近の予定支出\n";
-    if (upcomingExpenseLines.length) {
-        upcomingExpenseLines.forEach(function (line) {
-            body += line + "\n";
-        });
-    } else {
-        body += "・なし\n";
-    }
-    body += "\n";
 
-    body += buildAiSummarySection("◆ AI分析", aiAnalysis);
+    body += "\n\n" + buildAiSummarySection("◆ AI分析", aiAnalysis);
+    body += "\n\n" + buildDailySummaryDetailsSection({
+        upcomingContextualMemoLines: upcomingContextualMemoLines,
+        specialExpenseReview: specialExpenseReview,
+        saleIncomeEntries: saleIncomeEntries,
+        saleIncomeTotal: saleIncomeTotal,
+        actualTotalAmount: actualTotalAmount,
+        weeklyBudgetCarryoverMemo: weeklyBudgetCarryoverMemo,
+        categoryRankingLines: categoryRankingLines,
+        dataEntries: dataEntries,
+        upcomingExpenseLines: upcomingExpenseLines
+    });
 
     switch (action) {
         case 'mail':
@@ -263,6 +236,76 @@ function handleDailySummaryResult(currentDate, datesInWeek, adjustedBudget, isSt
         default:
             throw new Error('actionが定義されていません');
     }
+}
+
+function buildDailySummaryDecisionSection(options) {
+    var projectedTotalAmount = options.totalAmount + options.plannedExpenseTotal;
+    var signals = [];
+    var lines = [
+        "◆ 今日の判断",
+        "・予定込み着地: " + projectedTotalAmount + "円 / " + options.adjustedBudget + "円（" + options.projectedPercentage + "%）",
+        "・今週の実績: " + options.totalAmount + "円（" + options.percentage.toFixed(2) + "%）",
+        "・分析モード: " + formatWeeklyAnalysisModeForMessage(options.weeklyAnalysisMode)
+    ];
+
+    if (projectedTotalAmount > options.adjustedBudget) {
+        signals.push("・予定込みで予算を" + (projectedTotalAmount - options.adjustedBudget) + "円超過する見込みです。");
+    }
+    if (options.weeklyBudgetCarryoverMemo && options.weeklyBudgetCarryoverMemo.difference > 0) {
+        signals.push(formatWeeklyBudgetCarryoverSummaryForMessage(options.weeklyBudgetCarryoverMemo));
+    }
+    if (options.uncategorizedCount > 0) {
+        signals.push("・未分類の支出: " + options.uncategorizedCount + "件");
+    }
+    if (options.approvedSpecialExpenseTotal > 0) {
+        signals.push("・今週の承認済み特別費: " + options.approvedSpecialExpenseTotal + "円");
+    }
+    (options.categorySpendingIncreaseSummary.increases || []).forEach(function (entry) {
+        signals.push("・" + entry.category + ": 同曜日時点の平均より +" + entry.difference + "円");
+    });
+
+    if (!signals.length) {
+        lines.push("・注意: 現時点で特に確認が必要な項目はありません。");
+        return lines.join("\n");
+    }
+
+    lines.push("注意:");
+    return lines.concat(signals.slice(0, 3)).join("\n");
+}
+
+function buildDailySummaryDetailsSection(options) {
+    var lines = ["◆ 詳細・確認用"];
+
+    if (options.upcomingContextualMemoLines.length) {
+        lines.push("◆ 直近のユーザー補足メモ");
+        lines = lines.concat(options.upcomingContextualMemoLines);
+    }
+    if (options.specialExpenseReview.hasCandidates) {
+        lines.push(buildSpecialExpenseReviewSection(options.specialExpenseReview, "今週").trim());
+    }
+    if (options.saleIncomeEntries.length) {
+        lines.push(buildSaleIncomeSummarySection(options.saleIncomeEntries, options.saleIncomeTotal, options.actualTotalAmount).trim());
+    }
+    if (options.weeklyBudgetCarryoverMemo && options.weeklyBudgetCarryoverMemo.difference <= 0) {
+        lines.push("◆ 前週からの持ち越し");
+        lines.push(formatWeeklyBudgetCarryoverSummaryForMessage(options.weeklyBudgetCarryoverMemo));
+    }
+    if (options.categoryRankingLines.length) {
+        lines.push("◆ カテゴリ別支出ランキング");
+        lines = lines.concat(options.categoryRankingLines);
+    }
+    if (options.dataEntries.length) {
+        lines.push("◆ 支出詳細");
+        options.dataEntries.forEach(function (entry) {
+            lines.push("・" + formatDate(entry.date) + " - " + entry.name + ": " + entry.amount + "円");
+        });
+    }
+    if (options.upcomingExpenseLines.length) {
+        lines.push("◆ 直近の予定支出");
+        lines = lines.concat(options.upcomingExpenseLines);
+    }
+
+    return lines.join("\n");
 }
 
 function buildSaleIncomeSummarySection(saleIncomeEntries, saleIncomeTotal, actualTotalAmount) {
