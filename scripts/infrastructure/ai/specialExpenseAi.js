@@ -205,6 +205,15 @@ function getBudgetTargetEntries(entries, specialExpenseReview) {
     });
 }
 
+function getBudgetTargetEntriesWithCachedSpecialExpenseDecisions(entries) {
+    var cachedDecisions = getSpecialExpenseReviewCache();
+
+    return entries.filter(function (entry) {
+        var cachedDecision = cachedDecisions[getSpecialExpenseEntryKey(entry)];
+        return !(cachedDecision && cachedDecision.approved);
+    });
+}
+
 function getSpecialExpenseEntryKey(entry) {
     var date = entry.date;
     var dateKey = date.getFullYear() + "-" + (date.getMonth() + 1) + "-" + date.getDate();

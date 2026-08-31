@@ -21,6 +21,7 @@ function handleWeeklySummaryResult(dateRangeStr, totalAmount, dataEntries, diffe
     var approvedSpecialExpenseTotal = calculateApprovedSpecialExpenseTotal(specialExpenseReview);
     var approvedWeeklySpecialExpenseTotal = calculateApprovedSpecialExpenseTotalForEntries(dataEntries, specialExpenseReview);
     var categoryRankingLines;
+    var categorySpendingIncreaseSummary;
     var top5Entries;
     var monthlyTotalAmount;
     var actualMonthlyTotalAmount;
@@ -35,6 +36,7 @@ function handleWeeklySummaryResult(dateRangeStr, totalAmount, dataEntries, diffe
     monthlyTotalAmount = calculateTotalAmount(monthlyBudgetTargetEntries);
     actualMonthlyTotalAmount = calculateTotalAmount(monthEntries);
     categoryRankingLines = getCategoryRankingLines(budgetTargetEntries);
+    categorySpendingIncreaseSummary = getCategorySpendingIncreaseSummary(budgetTargetEntries, getDatesInWeek(currentDate));
     top5Entries = getTopExpenseEntries(budgetTargetEntries, 5);
 
     body += "◆ " + dateRangeStr + " の週次サマリー\n\n";
@@ -64,6 +66,8 @@ function handleWeeklySummaryResult(dateRangeStr, totalAmount, dataEntries, diffe
         body += "・なし\n";
     }
     body += "\n";
+    body += "◆ 普段より増えたカテゴリ\n";
+    body += formatCategorySpendingIncreaseSummary(categorySpendingIncreaseSummary) + "\n\n";
     body += "◆ 支出TOP5\n";
     top5Entries.forEach(function (entry) {
         body += "・" + formatDate(entry.date) + " - " + entry.name + ": " + entry.amount + "円\n";
@@ -176,6 +180,7 @@ function handleDailySummaryResult(currentDate, datesInWeek, adjustedBudget, isSt
         ? (((totalAmount + plannedExpenseTotal) / adjustedBudget) * 100).toFixed(2)
         : "0.00";
     var categoryRankingLines = getCategoryRankingLines(budgetTargetEntries);
+    var categorySpendingIncreaseSummary = getCategorySpendingIncreaseSummary(budgetTargetEntries, datesUpToToday);
     var uncategorizedCount = countUncategorizedEntries(budgetTargetEntries);
     var aiAnalysis = analyzeExpensesWithAI(budgetTargetEntries, totalAmount, adjustedBudget, percentage, currentDate, weeklyAnalysisMode, {
         plannedExpenses: upcomingPlannedExpenses,
@@ -220,6 +225,8 @@ function handleDailySummaryResult(currentDate, datesInWeek, adjustedBudget, isSt
         body += "・なし\n";
     }
     body += "\n";
+    body += "◆ 普段より増えたカテゴリ\n";
+    body += formatCategorySpendingIncreaseSummary(categorySpendingIncreaseSummary) + "\n\n";
     body += "詳細:\n";
     dataEntries.forEach(function (entry) {
         body += "・" + formatDate(entry.date) + " - " + entry.name + ": " + entry.amount + "円\n";
