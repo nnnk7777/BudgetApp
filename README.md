@@ -86,7 +86,7 @@ npm ci
 ## 開発・デプロイ方法
 
 -   `main` 宛てのPRを作成・再オープン・更新すると、[stg.yml](./.github/workflows/stg.yml) がstg用GASプロジェクトへビルド・プッシュし、`GAS_DEPLOYMENT_ID_STG` で指定した既存デプロイをコミット件名付きの新バージョンへ更新します。外部forkからのPRは対象外です。
--   `main` 宛てのPRがマージされると、[prod.yml](./.github/workflows/prod.yml) がProd用GASプロジェクトへビルド・プッシュし、`GAS_DEPLOYMENT_ID_PROD` で指定した既存デプロイをコミット件名付きの新バージョンへ更新します。
+-   `main` へコミットがpushされると、[prod.yml](./.github/workflows/prod.yml) がProd用GASプロジェクトへビルド・プッシュし、`GAS_DEPLOYMENT_ID_PROD` で指定した既存デプロイをコミット件名付きの新バージョンへ更新します。PRマージ時も、mainへ反映されたマージコミットにCI実行結果が紐づきます。
 -   Web APIとして使うGASの公開設定は [appsscript.json](./src/config/appsscript.json) で管理します。`webapp` 設定を含めたマニフェストをCIがpushするため、既存の `/exec` URL を維持して更新できます。
 -   ローカルでGAS成果物だけを確認する場合は `make build` を実行します。
 -   ローカルからGASへ反映する場合は、clasp設定後に `make build-and-push` を実行します。
