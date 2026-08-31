@@ -37,6 +37,25 @@ test('特別費AI判定は承認した行だけを予算対象外にする', () 
     assert.equal(context.calculateApprovedSpecialExpenseTotal(review), 60000);
 });
 
+test('保存済みの承認済み特別費だけを履歴比較の予算対象外にする', () => {
+    const context = loadSpecialExpenseAi({
+        PropertiesService: {
+            getScriptProperties: () => ({
+                getProperty: () => JSON.stringify({
+                    '2026-2-10|特別費|福岡旅行の宿泊費|60000': { approved: true, reason: '旅行費' },
+                    '2026-2-11|特別費|イヤホン|20000': { approved: false, reason: '通常支出' }
+                })
+            })
+        }
+    });
+    const travel = makeEntry(10, '特別費', '福岡旅行の宿泊費', 60000);
+    const gadget = makeEntry(11, '特別費', 'イヤホン', 20000);
+
+    const entries = context.getBudgetTargetEntriesWithCachedSpecialExpenseDecisions([travel, gadget]);
+
+    assert.equal(JSON.stringify(entries.map((entry) => entry.name)), JSON.stringify(['イヤホン']));
+});
+
 test('特別費AI判定は不完全な応答を予算対象に残す', () => {
     const context = loadSpecialExpenseAi({});
     const travel = makeEntry(10, '特別費', '福岡旅行の宿泊費', 60000);
