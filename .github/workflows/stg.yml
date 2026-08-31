@@ -88,6 +88,10 @@ jobs:
                       echo "GAS_DEPLOYMENT_ID_STG Secret が未設定です。"
                       exit 1
                   }
+                  clasp list-deployments | grep -F -- "- $GAS_DEPLOYMENT_ID " > /dev/null || {
+                      echo "GAS_DEPLOYMENT_ID_STG が、このstg GASプロジェクトのアクティブなデプロイIDではありません。"
+                      exit 1
+                  }
 
             - name: アプリのビルドとstg環境GASへのプッシュ
               run: make build-and-push
@@ -95,6 +99,5 @@ jobs:
             - name: stg環境のGASデプロイを新バージョンへ更新
               run: |
                   COMMIT_SUBJECT="$(git log -1 --format=%s)"
-                  clasp create-deployment \
-                    --deploymentId "$GAS_DEPLOYMENT_ID" \
+                  clasp update-deployment "$GAS_DEPLOYMENT_ID" \
                     --description "$COMMIT_SUBJECT"

@@ -86,6 +86,10 @@ jobs:
                       echo "GAS_DEPLOYMENT_ID_PROD Secret が未設定です。"
                       exit 1
                   }
+                  clasp list-deployments | grep -F -- "- $GAS_DEPLOYMENT_ID " > /dev/null || {
+                      echo "GAS_DEPLOYMENT_ID_PROD が、このProd GASプロジェクトのアクティブなデプロイIDではありません。"
+                      exit 1
+                  }
 
             - name: アプリのビルドとGASへのプッシュ
               run: make build-and-push
@@ -93,6 +97,5 @@ jobs:
             - name: Prod環境のGASデプロイを新バージョンへ更新
               run: |
                   COMMIT_SUBJECT="$(git log -1 --format=%s)"
-                  clasp create-deployment \
-                    --deploymentId "$GAS_DEPLOYMENT_ID" \
+                  clasp update-deployment "$GAS_DEPLOYMENT_ID" \
                     --description "$COMMIT_SUBJECT"
