@@ -127,6 +127,7 @@ action に渡せる値は以下のとおりです。
 | `monthly_text` | 月次サマリだけを文字列で返します。 |
 | `add` | 支出レコードを追加します。 |
 | `categories` | カテゴリ一覧を返します。 |
+| `list_today_expenses` | 今日の日付に紐づく支出一覧を返します。AI分析や予算計算は行いません。 |
 | `list_uncategorized` | カテゴリ未設定の支出一覧を返します。 |
 | `autofill_uncategorized` | OpenAIを優先し、失敗時はGeminiでカテゴリを推定して高信頼のものだけ自動反映します。 |
 
@@ -145,6 +146,30 @@ action に渡せる値は以下のとおりです。
 ```
 
 `amount` を優先して使用します。互換入力として `price` または `cost` も指定できます。
+
+`list_today_expenses` の場合は、以下のような body を渡してください。
+
+```json
+{
+    "action": "list_today_expenses",
+    "hash": "<ハッシュとして利用する値を設定>"
+}
+```
+
+成功時は、今日の日付に紐づく支出のカテゴリ・名称・金額を返します。対象がない場合の `items` は空配列です。
+
+```json
+{
+    "ok": true,
+    "items": [
+        {
+            "category": "交通費",
+            "name": "電車",
+            "amount": 639
+        }
+    ]
+}
+```
 
 `list_uncategorized` の場合は、以下のような body を渡してください。
 
@@ -174,5 +199,5 @@ action に渡せる値は以下のとおりです。
 
 ## 手動実行
 
--   GASの実行画面では [0_manualEntryPoints.js](./scripts/entrypoints/0_manualEntryPoints.js) のサマリ・未分類支出操作を実行できます。
+-   GASの実行画面では [0_manualEntryPoints.js](./scripts/entrypoints/0_manualEntryPoints.js) のサマリ・当日支出一覧・未分類支出操作を実行できます。
 -   [1_reapplySheetStyle.js](./scripts/entrypoints/1_reapplySheetStyle.js) の `reapplySheetStyleManual` は、現在開いているスプレッドシートの書式・入力規則・条件付き書式をクリアしてから再構築します。

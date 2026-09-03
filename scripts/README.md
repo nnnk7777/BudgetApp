@@ -42,7 +42,7 @@ flowchart LR
     Manual --> Reapply["シートスタイル再適用"]
     Parse --> Dispatch["action振り分け"]
     Dispatch --> Summary["サマリ生成"]
-    Dispatch --> Add["支出追加・カテゴリ取得"]
+    Dispatch --> Add["支出追加・当日支出・カテゴリ取得"]
     Dispatch --> Uncategorized["未分類支出の一覧・補完"]
     Summary --> Sheet["スプレッドシート・カレンダー取得"]
     Summary --> AI["OpenAI優先<br/>Geminiフォールバック"]
@@ -61,7 +61,7 @@ flowchart LR
 | --- | --- | --- |
 | Web API | `doPost` | [handleApi.js](./entrypoints/handleApi.js)、[apiCommon.js](./entrypoints/apiCommon.js) |
 | 日次・週次・月次サマリ | API、時間トリガー、手動実行 | [expenseSummary.js](./application/expenseSummary.js)、[monthlySummary.js](./application/monthlySummary.js)、[summaryMessageFormatter.js](./formatting/summaryMessageFormatter.js) |
-| 支出追加・カテゴリ取得 | API | [addExpenseRecord.js](./application/addExpenseRecord.js)、[fetchCategories.js](./application/fetchCategories.js) |
+| 支出追加・当日支出・カテゴリ取得 | API | [addExpenseRecord.js](./application/addExpenseRecord.js)、[listTodayExpenses.js](./application/listTodayExpenses.js)、[fetchCategories.js](./application/fetchCategories.js) |
 | 未分類支出の補完 | API、手動実行 | [uncategorizedExpenses.js](./application/uncategorizedExpenses.js)、[categorySuggestionAi.js](./infrastructure/ai/categorySuggestionAi.js) |
 | シートスタイル再適用 | 手動実行 | [1_reapplySheetStyle.js](./entrypoints/1_reapplySheetStyle.js)、[src/layout/main.ts](../src/layout/main.ts) |
 
@@ -79,7 +79,7 @@ flowchart LR
 
 ### [entrypoints/0_manualEntryPoints.js](./entrypoints/0_manualEntryPoints.js)
 
--   GAS の UI から手動実行しやすいエントリポイントだけをまとめたファイル。
+-   GAS の UI から、サマリ、当日支出一覧、未分類支出などを手動実行するエントリポイントをまとめたファイル。
 
 ### [entrypoints/1_reapplySheetStyle.js](./entrypoints/1_reapplySheetStyle.js)
 
@@ -104,6 +104,11 @@ flowchart LR
 
 -   `categories` アクションによって実行される。
 -   `categories.js` 内のデータから名称一覧を返す。
+
+### [application/listTodayExpenses.js](./application/listTodayExpenses.js)
+
+-   `list_today_expenses` アクションによって実行される。
+-   実行時日付に紐づく支出のカテゴリ・名称・金額だけを返す。手動実行時は同じJSONをGASの実行ログにも出力する。
 
 ### [application/expenseSummary.js](./application/expenseSummary.js)
 
