@@ -46,7 +46,9 @@ function fetchCategoriesManual() {
 
 // action: list_today_expenses
 function listTodayExpensesManual() {
-    return listTodayExpenses();
+    var result = listTodayExpenses();
+    Logger.log(result);
+    return result;
 }
 
 // action: list_uncategorized

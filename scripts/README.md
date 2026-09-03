@@ -108,7 +108,7 @@ flowchart LR
 ### [application/listTodayExpenses.js](./application/listTodayExpenses.js)
 
 -   `list_today_expenses` アクションによって実行される。
--   実行時日付に紐づく支出のカテゴリ・名称・金額だけを返す。
+-   実行時日付に紐づく支出のカテゴリ・名称・金額だけを返す。手動実行時は同じJSONをGASの実行ログにも出力する。
 
 ### [application/expenseSummary.js](./application/expenseSummary.js)
 
