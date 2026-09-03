@@ -9,6 +9,7 @@ var ApiActions = Object.freeze({
     MONTHLY_MAIL: 'monthly_mail',
     ADD: 'add',
     CATEGORIES: 'categories',
+    LIST_TODAY_EXPENSES: 'list_today_expenses',
     LIST_UNCATEGORIZED: 'list_uncategorized',
     AUTOFILL_UNCATEGORIZED: 'autofill_uncategorized'
 });
@@ -49,6 +50,8 @@ function dispatchApiAction(data) {
             return handleAddExpenseAction(data.item);
         case ApiActions.CATEGORIES:
             return fetchCategories();
+        case ApiActions.LIST_TODAY_EXPENSES:
+            return listTodayExpenses();
         case ApiActions.LIST_UNCATEGORIZED:
             return listUncategorizedExpenses();
         case ApiActions.AUTOFILL_UNCATEGORIZED:
