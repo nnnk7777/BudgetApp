@@ -44,6 +44,11 @@ function fetchCategoriesManual() {
     return fetchCategories();
 }
 
+// action: list_today_expenses
+function listTodayExpensesManual() {
+    return listTodayExpenses();
+}
+
 // action: list_uncategorized
 function listUncategorizedExpensesManual() {
     return listUncategorizedExpenses();

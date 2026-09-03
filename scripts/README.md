@@ -79,7 +79,7 @@ flowchart LR
 
 ### [entrypoints/0_manualEntryPoints.js](./entrypoints/0_manualEntryPoints.js)
 
--   GAS の UI から手動実行しやすいエントリポイントだけをまとめたファイル。
+-   GAS の UI から、サマリ、当日支出一覧、未分類支出などを手動実行するエントリポイントをまとめたファイル。
 
 ### [entrypoints/1_reapplySheetStyle.js](./entrypoints/1_reapplySheetStyle.js)
 

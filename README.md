@@ -199,5 +199,5 @@ action に渡せる値は以下のとおりです。
 
 ## 手動実行
 
--   GASの実行画面では [0_manualEntryPoints.js](./scripts/entrypoints/0_manualEntryPoints.js) のサマリ・未分類支出操作を実行できます。
+-   GASの実行画面では [0_manualEntryPoints.js](./scripts/entrypoints/0_manualEntryPoints.js) のサマリ・当日支出一覧・未分類支出操作を実行できます。
 -   [1_reapplySheetStyle.js](./scripts/entrypoints/1_reapplySheetStyle.js) の `reapplySheetStyleManual` は、現在開いているスプレッドシートの書式・入力規則・条件付き書式をクリアしてから再構築します。
