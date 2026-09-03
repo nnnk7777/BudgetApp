@@ -17,6 +17,27 @@ function getCalendarEventsInRange(startDate, endDate) {
     return calendar.getEvents(startDate, endDate);
 }
 
+function getJapaneseHolidayEventsInRange(startDate, endDate) {
+    var holidayCalendar;
+
+    if (typeof CalendarApp === 'undefined') {
+        Logger.log("CalendarApp is unavailable in this runtime.");
+        return null;
+    }
+
+    try {
+        holidayCalendar = CalendarApp.getCalendarById(JAPANESE_HOLIDAY_CALENDAR_ID);
+        if (!holidayCalendar) {
+            Logger.log("日本の祝日カレンダーが見つかりません: " + JAPANESE_HOLIDAY_CALENDAR_ID);
+            return null;
+        }
+        return holidayCalendar.getEvents(startDate, endDate);
+    } catch (error) {
+        Logger.log("日本の祝日カレンダー取得に失敗: " + error);
+        return null;
+    }
+}
+
 function upsertWeeklyBudgetCarryoverMemo(baseDate, difference, adjustedBudget, totalAmount, dateRangeStr) {
     if (typeof CalendarApp === 'undefined') {
         Logger.log("CalendarApp is unavailable in this runtime.");
