@@ -124,6 +124,13 @@ flowchart LR
 -   `list_uncategorized` アクションによって未分類支出の一覧を返す。
 -   `autofill_uncategorized` アクションによって、OpenAI を優先し失敗時は Gemini でカテゴリ候補を推定して高信頼のものだけ更新する。
 
+## domain
+
+### [domain/commuteExpense.js](./domain/commuteExpense.js)
+
+-   月・水・木の出社日に、祝日と全休・午前休・午後休・半休などの予定を除外して通勤費を予定支出へ追加する。
+-   休日出勤系の予定は休暇判定より優先し、当日の「交通費」カテゴリかつ名称に「通勤」を含む記録だけを通勤費見込みから差し引く。
+
 ## domain/ai
 
 ### [domain/ai/expenseSummaryPrompts.js](./domain/ai/expenseSummaryPrompts.js)
@@ -181,7 +188,7 @@ flowchart LR
 
 ### [infrastructure/gas/calendarRepository.js](./infrastructure/gas/calendarRepository.js)
 
--   Google カレンダー取得、前週予算差分メモの保存/取得、カレンダー関連の Script Properties 読み取りを担当する。
+-   Google カレンダーと日本の祝日カレンダーの取得、前週予算差分メモの保存/取得、カレンダー関連の Script Properties 読み取りを担当する。
 
 ### [infrastructure/gas/uncategorizedExpenseRepository.js](./infrastructure/gas/uncategorizedExpenseRepository.js)
 
