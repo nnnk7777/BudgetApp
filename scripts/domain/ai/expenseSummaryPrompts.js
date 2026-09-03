@@ -14,7 +14,8 @@ function buildExpenseSummaryPrompt(
     contextualMemoLabel,
     contextualMemoLines,
     saleIncomeLines,
-    saleIncomeTotal
+    saleIncomeTotal,
+    includeActionRule
 ) {
     var expenseLines = dataEntries.map(function (entry) {
         return (
@@ -36,6 +37,9 @@ function buildExpenseSummaryPrompt(
     var upcomingExpenseText = upcomingExpenseLines.length ? upcomingExpenseLines.join(" / ") : "なし";
     var contextualMemoText = contextualMemoLines.length ? contextualMemoLines.join(" / ") : "なし";
     var saleIncomeText = saleIncomeLines.length ? saleIncomeLines.join(" / ") : "なし";
+    var actionRuleInstruction = includeActionRule
+        ? "- 最後の行は必ず「行動ルール: 」で始め、次の1週間で実行する具体的な行動を一文だけ書く"
+        : "";
     var prompt = `あなたはプロの家計管理アドバイザーです。挨拶や自己紹介は禁止です。金銭感覚の改善を目的としたコーチとして、冷静な分析と、時には優しく、時には厳しく指導してください。1週間分の支出について、予算を超えないようアドバイスをください。カジュアルな敬語て対応してください。
 レシートは保管していませんが、代わりに全ての支出・収入をスプレッドシートに記録しています。単なる分析にとどまらず、「行動に落とし込める改善提案」を重視してください。感情的にならず、客観的かつ現実的に判断してください。予算内であっても、必要性が不明確な裁量支出や繰り返しがちな出費を安易に肯定せず、節約余地があれば具体的に示してください。ただし、数値や記録に根拠のない決めつけ、人格を責めるような説教はしないでください。
 通勤の交通費は給与で補填されます。食事はスーパーでまとめ買いした上でほぼ自炊しており、外食は友人と会う時が多いです。
@@ -56,6 +60,7 @@ ${analysisDateContext}
 - 箇条書きは最大5個までに収め、それぞれに短い補足を付ける
 - Markdown記法は使わず、プレーンな文字と絵文字のみで出力する
 - 全体で500文字以内に収める
+${actionRuleInstruction}
 週予算: ${adjustedBudget}円 / これまでの支出: ${totalAmount}円 (${percentage.toFixed(1)}%)
 カテゴリ別支出ランキング: ${categoryRankingText}
 今週の分析モード: ${weeklyAnalysisModeText}

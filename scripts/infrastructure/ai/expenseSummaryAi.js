@@ -5,6 +5,7 @@ function analyzeExpensesWithAI(dataEntries, totalAmount, adjustedBudget, percent
     var plannedExpenseLabel = analysisOptions.plannedExpenseLabel || "今後の予定メモ";
     var contextualMemoLabel = analysisOptions.contextualMemoLabel || "予定の補助メモ";
     var saleIncomeEntries = analysisOptions.saleIncomeEntries || [];
+    var includeActionRule = analysisOptions.includeActionRule === true;
     var upcomingExpenseLines = plannedExpenses.map(function (entry) {
         return formatDate(entry.date) + " [" + entry.title + "] " + entry.memo;
     });
@@ -36,7 +37,8 @@ function analyzeExpensesWithAI(dataEntries, totalAmount, adjustedBudget, percent
         contextualMemoLabel,
         contextualMemoLines,
         saleIncomeLines,
-        saleIncomeTotal
+        saleIncomeTotal,
+        includeActionRule
     );
 
     Logger.log("AI分析プロンプト：");
