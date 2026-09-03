@@ -85,7 +85,9 @@ function getPlannedExpensesInRange(startDate, endDate) {
 }
 
 function getCalendarMemoEntriesInRange(startDate, endDate) {
-    var events = getCalendarEventsInRange(startDate, endDate);
+    var normalizedStartDate = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
+    var events = getCalendarEventsInRange(normalizedStartDate, endDate);
+    var automaticCommuteExpenses = getAutomaticCommutePlannedExpenses(normalizedStartDate, endDate, events);
     var calendarMemos = [];
     Logger.log(
         "予定支出検索: start=" +
@@ -124,6 +126,7 @@ function getCalendarMemoEntriesInRange(startDate, endDate) {
         return entry.intent === "contextual_note" || entry.intent === "reservation_info";
     });
     var userNoteMemos = buildUserNoteMemos(calendarMemos);
+    plannedExpenses = plannedExpenses.concat(automaticCommuteExpenses);
     plannedExpenses = filterRecordedPlannedExpenses(plannedExpenses);
 
     calendarMemos = plannedExpenses.concat(contextualMemos, userNoteMemos);
@@ -143,9 +146,16 @@ function filterRecordedPlannedExpenses(plannedExpenses) {
 
     var actualEntries = getExpenseEntriesForDates(buildExpenseComparisonDates(plannedExpenses));
 
-    return plannedExpenses.filter(function (plannedExpense) {
-        var candidateEntries = findRecordedExpenseCandidates(plannedExpense, actualEntries);
-        var shouldExclude = shouldExcludePlannedExpense(plannedExpense, candidateEntries);
+    return plannedExpenses.map(function (plannedExpense) {
+        var candidateEntries;
+        var shouldExclude;
+
+        if (plannedExpense.source === AUTOMATIC_COMMUTE_EXPENSE_SOURCE) {
+            return adjustAutomaticCommuteExpenseForRecordedEntries(plannedExpense, actualEntries);
+        }
+
+        candidateEntries = findRecordedExpenseCandidates(plannedExpense, actualEntries);
+        shouldExclude = shouldExcludePlannedExpense(plannedExpense, candidateEntries);
 
         if (shouldExclude) {
             Logger.log(
@@ -158,7 +168,9 @@ function filterRecordedPlannedExpenses(plannedExpenses) {
             );
         }
 
-        return !shouldExclude;
+        return shouldExclude ? null : plannedExpense;
+    }).filter(function (plannedExpense) {
+        return plannedExpense !== null;
     });
 }
 
