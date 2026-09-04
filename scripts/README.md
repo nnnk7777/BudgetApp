@@ -136,6 +136,7 @@ flowchart LR
 ### [domain/ai/expenseSummaryPrompts.js](./domain/ai/expenseSummaryPrompts.js)
 
 -   日次・週次サマリー、カレンダーメモの意図分類・整形、節制モード判定などで使う AI プロンプト生成を担当する。
+-   週次サマリーでは同じ AI 応答の末尾に、一つの行動ルールを固定形式で含める。
 
 ### [domain/ai/monthlySummaryPrompt.js](./domain/ai/monthlySummaryPrompt.js)
 
@@ -211,6 +212,7 @@ flowchart LR
 ### [formatting/summaryMessageFormatter.js](./formatting/summaryMessageFormatter.js)
 
 -   日次・週次サマリーの本文生成と `mail` / `text` の分岐を担当する。
+-   日次の裁量枠、翌週の裁量見込み、週次 AI 応答から抽出した一つの行動ルールを表示する。
 
 ### [formatting/monthlySummaryFormatter.js](./formatting/monthlySummaryFormatter.js)
 

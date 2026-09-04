@@ -1,10 +1,12 @@
 function handleWeeklySummaryResult(dateRangeStr, totalAmount, dataEntries, difference, percentage, adjustedBudget, isStaging, action, currentDate) {
-    var nextWeekCalendarMemos = getCalendarMemoEntriesInRange(getNextWeekStartDate(currentDate), getWeekAfterNextStartDate(currentDate));
+    var nextWeekStartDate = getNextWeekStartDate(currentDate);
+    var nextWeekCalendarMemos = getCalendarMemoEntriesInRange(nextWeekStartDate, getWeekAfterNextStartDate(currentDate));
     var nextWeekPlannedExpenses = filterPlannedExpenseMemos(nextWeekCalendarMemos);
     var nextWeekContextualMemos = filterContextualCalendarMemos(nextWeekCalendarMemos);
     var nextWeekExpenseLines = formatUpcomingPlannedExpenseLines(nextWeekPlannedExpenses);
     var nextWeekContextualMemoLines = formatUpcomingPlannedExpenseLines(nextWeekContextualMemos);
     var nextWeekPlannedExpenseTotal = calculatePlannedExpenseTotal(nextWeekPlannedExpenses);
+    var nextWeekBudget = getWeeklyBudget();
     var saleIncomeEntries = getSaleIncomeEntriesForDates(getDatesInWeek(currentDate));
     var saleIncomeTotal = calculateTotalAmount(saleIncomeEntries);
     var weeklyBudgetCarryoverMemo = getWeeklyBudgetCarryoverMemoForWeek(currentDate);
@@ -78,6 +80,7 @@ function handleWeeklySummaryResult(dateRangeStr, totalAmount, dataEntries, diffe
         body += "・" + formatDate(entry.date) + " - " + entry.name + ": " + entry.amount + "円\n";
     });
     body += "\n";
+    body += buildNextWeekBudgetOutlookSection(nextWeekBudget, nextWeekPlannedExpenseTotal) + "\n\n";
     body += "◆ 来週の支出予定\n";
     if (nextWeekExpenseLines.length) {
         body += "合計見込み: " + nextWeekPlannedExpenseTotal + "円\n";
@@ -97,9 +100,11 @@ function handleWeeklySummaryResult(dateRangeStr, totalAmount, dataEntries, diffe
         plannedExpenseLabel: "来週の予定支出",
         contextualMemos: nextWeekContextualMemos,
         contextualMemoLabel: "来週のユーザー補足メモ",
-        saleIncomeEntries: saleIncomeEntries
+        saleIncomeEntries: saleIncomeEntries,
+        includeActionRule: true
     });
-    body += buildAiSummarySection("◆ AI分析", aiAnalysis);
+    body += buildWeeklyActionRuleSection(aiAnalysis) + "\n\n";
+    body += buildAiSummarySection("◆ AI分析", removeExplicitActionRuleFromAiAnalysis(aiAnalysis));
 
     if (action === 'mail') {
         upsertWeeklyBudgetCarryoverMemo(currentDate, difference, adjustedBudget, totalAmount, dateRangeStr);
@@ -240,9 +245,11 @@ function handleDailySummaryResult(currentDate, datesInWeek, adjustedBudget, isSt
 
 function buildDailySummaryDecisionSection(options) {
     var projectedTotalAmount = options.totalAmount + options.plannedExpenseTotal;
+    var discretionaryBudget = calculateDiscretionaryBudget(options.adjustedBudget, options.totalAmount, options.plannedExpenseTotal);
     var signals = [];
     var lines = [
         "◆ 今日の判断",
+        formatDiscretionaryBudgetLine("裁量枠", discretionaryBudget),
         "・予定込み着地: " + projectedTotalAmount + "円 / " + options.adjustedBudget + "円（" + options.projectedPercentage + "%）",
         "・今週の実績: " + options.totalAmount + "円（" + options.percentage.toFixed(2) + "%）",
         "・分析モード: " + formatWeeklyAnalysisModeForMessage(options.weeklyAnalysisMode)
@@ -271,6 +278,113 @@ function buildDailySummaryDecisionSection(options) {
 
     lines.push("注意:");
     return lines.concat(signals.slice(0, 3)).join("\n");
+}
+
+function calculateDiscretionaryBudget(adjustedBudget, actualExpenseTotal, plannedExpenseTotal) {
+    var rawAmount = adjustedBudget - actualExpenseTotal - plannedExpenseTotal;
+
+    return {
+        amount: Math.max(rawAmount, 0),
+        overrunAmount: Math.max(-rawAmount, 0)
+    };
+}
+
+function formatDiscretionaryBudgetLine(label, discretionaryBudget) {
+    var line = "・" + label + ": " + discretionaryBudget.amount + "円";
+
+    if (discretionaryBudget.overrunAmount > 0) {
+        line += "（予定込みで" + discretionaryBudget.overrunAmount + "円超過見込み）";
+    }
+
+    return line;
+}
+
+function buildNextWeekBudgetOutlookSection(nextWeekBudget, nextWeekPlannedExpenseTotal) {
+    var discretionaryBudget = calculateDiscretionaryBudget(nextWeekBudget, 0, nextWeekPlannedExpenseTotal);
+
+    return [
+        "◆ 来週の見込み",
+        "・週予算: " + nextWeekBudget + "円",
+        "・予定支出: " + nextWeekPlannedExpenseTotal + "円",
+        formatDiscretionaryBudgetLine("来週の裁量見込み", discretionaryBudget)
+    ].join("\n");
+}
+
+function buildWeeklyActionRuleSection(analysisResult) {
+    var actionRule = extractActionRuleFromAiAnalysis(analysisResult);
+
+    return [
+        "◆ 今週の一つの行動ルール",
+        actionRule ? "・" + actionRule : "・AI分析から行動ルールを取得できませんでした。"
+    ].join("\n");
+}
+
+function extractActionRuleFromAiAnalysis(analysisResult) {
+    var lines;
+    var actionHeadingIndex = -1;
+    var bulletLines = [];
+    var i;
+    var match;
+
+    if (!analysisResult || !analysisResult.text) {
+        return "";
+    }
+
+    lines = String(analysisResult.text).replace(/\r\n?/g, "\n").split("\n").map(function (line) {
+        return line.trim();
+    }).filter(function (line) {
+        return line !== "";
+    });
+
+    for (i = 0; i < lines.length; i++) {
+        match = lines[i].match(/^[・-]?\s*行動ルール\s*[:：]\s*(.+)$/);
+        if (match) {
+            return normalizeActionRuleText(match[1]);
+        }
+        if (/次の行動|行動ルール/.test(lines[i])) {
+            actionHeadingIndex = i;
+        }
+        if (/^[・-]\s*/.test(lines[i])) {
+            bulletLines.push(lines[i]);
+        }
+    }
+
+    if (actionHeadingIndex !== -1) {
+        for (i = actionHeadingIndex + 1; i < lines.length; i++) {
+            if (/^[・-]\s*/.test(lines[i])) {
+                return normalizeActionRuleText(lines[i]);
+            }
+        }
+    }
+
+    return bulletLines.length ? normalizeActionRuleText(bulletLines[bulletLines.length - 1]) : "";
+}
+
+function normalizeActionRuleText(text) {
+    var normalized = String(text || "")
+        .replace(/^[・-]\s*/, "")
+        .replace(/^\*+|\*+$/g, "")
+        .trim();
+    var sentenceMatch = normalized.match(/^.*?[。！？]/);
+
+    return sentenceMatch ? sentenceMatch[0].trim() : normalized;
+}
+
+function removeExplicitActionRuleFromAiAnalysis(analysisResult) {
+    var cleanedResult = {};
+
+    if (!analysisResult || !analysisResult.text) {
+        return analysisResult;
+    }
+
+    Object.keys(analysisResult).forEach(function (key) {
+        cleanedResult[key] = analysisResult[key];
+    });
+    cleanedResult.text = String(analysisResult.text)
+        .replace(/^[・-]?\s*行動ルール\s*[:：].*$(?:\r?\n)?/gm, "")
+        .trim();
+
+    return cleanedResult;
 }
 
 function buildDailySummaryDetailsSection(options) {
