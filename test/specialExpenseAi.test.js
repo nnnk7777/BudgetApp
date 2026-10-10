@@ -15,6 +15,78 @@ function makeEntry(day, category, name, amount) {
     return { date: new Date(2026, 1, day), category, name, amount };
 }
 
+test('ふるさと納税だけならAIとキャッシュ保存なしで予算対象外にし、実支出には残す', () => {
+    const context = loadSpecialExpenseAi({
+        calculateTotalAmount: (entries) => entries.reduce((sum, entry) => sum + entry.amount, 0),
+        generatePreferredAiText: () => assert.fail('ふるさと納税はAI判定しない'),
+        PropertiesService: {
+            getScriptProperties: () => ({
+                getProperty: () => null,
+                setProperty: () => assert.fail('ふるさと納税は判定キャッシュを保存しない')
+            })
+        }
+    });
+    const donation = makeEntry(10, 'ふるさと納税', '北海道○○市', 50000);
+    const food = makeEntry(11, 'スーパー・食品など', 'スーパー', 3000);
+    const entries = [donation, food];
+    const review = context.reviewSpecialExpensesWithAI(entries);
+
+    assert.equal(review.hasCandidates, true);
+    assert.equal(review.aiResult, null);
+    assert.equal(review.approvedEntries[0].entry, donation);
+    assert.equal(review.rejectedEntries.length, 0);
+    assert.equal(context.calculateTotalAmount(entries), 53000);
+    assert.equal(context.calculateTotalAmount(context.getBudgetTargetEntries(entries, review)), 3000);
+    assert.equal(context.calculateApprovedSpecialExpenseTotal(review), 50000);
+    assert.match(context.buildSpecialExpenseReviewSection(review, '今週'), /予算対象外: 北海道○○市 50000円（ふるさと納税のため）/);
+});
+
+test('ふるさと納税と特別費が混在してもAIには特別費だけを渡し、対象期間の除外額を合算する', () => {
+    const prompts = [];
+    const context = loadSpecialExpenseAi({
+        calculateTotalAmount: (entries) => entries.reduce((sum, entry) => sum + entry.amount, 0),
+        buildSpecialExpenseReviewPrompt: (entries) => {
+            prompts.push(entries.map((entry) => entry.name));
+            return 'prompt';
+        },
+        generatePreferredAiText: () => ({ text: '0|approved|旅行費\n1|rejected|通常支出' })
+    });
+    const donation = makeEntry(10, 'ふるさと納税', 'ふるさと納税', 50000);
+    const travel = makeEntry(11, '特別費', '旅行宿泊費', 20000);
+    const gadget = makeEntry(12, '特別費', 'イヤホン', 10000);
+    const nextDonation = makeEntry(17, 'ふるさと納税', '翌週の寄附', 30000);
+    const review = context.reviewSpecialExpensesWithAI([donation, travel, gadget, nextDonation]);
+
+    assert.equal(JSON.stringify(prompts), JSON.stringify([['旅行宿泊費', 'イヤホン']]));
+    assert.equal(review.approvedEntries.length, 3);
+    assert.equal(review.rejectedEntries[0].entry, gadget);
+    assert.equal(context.calculateApprovedSpecialExpenseTotal(review), 100000);
+    assert.equal(context.calculateApprovedSpecialExpenseTotalForEntries([donation, travel, gadget], review), 70000);
+    assert.equal(context.calculateTotalAmount(context.getBudgetTargetEntries([donation, travel, gadget], review)), 10000);
+});
+
+test('履歴のふるさと納税は未キャッシュでも古い却下キャッシュがあっても除外する', () => {
+    const context = loadSpecialExpenseAi({
+        PropertiesService: {
+            getScriptProperties: () => ({
+                getProperty: () => JSON.stringify({
+                    '2026-2-10|ふるさと納税|寄附|50000': { approved: false, reason: '古い判定' }
+                })
+            })
+        }
+    });
+    const donation = makeEntry(10, 'ふるさと納税', '寄附', 50000);
+    const uncachedDonation = makeEntry(11, ' ふるさと納税 ', '寄附', 30000);
+    const special = makeEntry(12, '特別費', '未判定', 20000);
+    const food = makeEntry(13, 'スーパー・食品など', 'スーパー', 3000);
+    const entries = context.getBudgetTargetEntriesWithCachedSpecialExpenseDecisions([donation, uncachedDonation, special, food]);
+
+    assert.equal(JSON.stringify(entries.map((entry) => entry.name)), JSON.stringify(['未判定', 'スーパー']));
+    const review = context.reviewSpecialExpensesWithAI([donation, uncachedDonation]);
+    assert.equal(review.approvedEntries.length, 2);
+    assert.equal(review.aiResult, null);
+});
+
 test('特別費AI判定は承認した行だけを予算対象外にする', () => {
     const context = loadSpecialExpenseAi({
         calculateTotalAmount: (entries) => entries.reduce((sum, entry) => sum + entry.amount, 0)
