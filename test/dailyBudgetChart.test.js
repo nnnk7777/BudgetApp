@@ -64,7 +64,7 @@ test('予算グラフのタイトルは通常支出と承認済み特別費を�
 
     assert.equal(
         chart.buildWeeklySummaryMonthlyChartTitle(59400, 160000, new Date(2026, 1, 10), 50000),
-        '今月の実支出 59400円 / 160000円（37.1%）\n通常 9400円（5.9%）｜ 特別費 50000円（31.3%）　｜　2/10時点の目安 35.7%'
+        '今月の実支出 59400円 / 160000円（37.1%）\n通常 9400円（5.9%）｜ 予算対象外 50000円（31.3%）　｜　2/10時点の目安 35.7%'
     );
 });
 
@@ -191,7 +191,7 @@ test('月次メール本文は月次予算グラフを先頭に置く', () => {
 
     assert.match(html, /^<img src="cid:monthlySummaryBudgetChart"/);
     assert.match(html, /今月の実支出 193000円 \/ 193000円/);
-    assert.match(html, /特別費 100000円/);
+    assert.match(html, /予算対象外 100000円/);
     assert.match(html, /月次本文/);
 });
 

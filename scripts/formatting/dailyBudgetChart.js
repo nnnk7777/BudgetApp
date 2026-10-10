@@ -71,7 +71,7 @@ function buildBudgetChartTitleWithSpecialExpense(totalAmount, adjustedBudget, pe
         return title;
     }
 
-    return title + "\n通常 " + normalExpenseTotal + "円（" + normalPercentage.toFixed(1) + "%）｜ 特別費 " + specialExpenseTotal + "円（" + specialPercentage.toFixed(1) + "%）";
+    return title + "\n通常 " + normalExpenseTotal + "円（" + normalPercentage.toFixed(1) + "%）｜ 予算対象外 " + specialExpenseTotal + "円（" + specialPercentage.toFixed(1) + "%）";
 }
 
 function getDailyBudgetChartScalePercentage(totalAmount, adjustedBudget) {
@@ -95,7 +95,7 @@ function getBudgetChartStackSegments(totalAmount, normalExpenseTotal, specialExp
         { key: "normalWithin", label: "通常支出（予算内）", amount: normalAmounts.withinBudget, color: getDailyBudgetChartTheme(normalExpenseTotal, adjustedBudget).color },
         { key: "normalOver", label: "通常支出（100〜150%）", amount: normalAmounts.overBudget, color: getDailyBudgetChartTheme(normalExpenseTotal, adjustedBudget).overBudgetColor },
         { key: "normalCritical", label: "通常支出（150%超）", amount: normalAmounts.criticalOverBudget, color: "#6b1512" },
-        { key: "special", label: "承認済み特別費", amount: specialExpenseTotal, color: "#c8baff" },
+        { key: "special", label: "予算対象外支出", amount: specialExpenseTotal, color: "#c8baff" },
         { key: "remaining", label: "残り", amount: Math.max(adjustedBudget - totalAmount, 0), color: "#e8eaed" }
     ];
     var markerAmount = getBudgetChartMarkerAmount(adjustedBudget, scalePercentage);

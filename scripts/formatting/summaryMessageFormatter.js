@@ -45,7 +45,7 @@ function handleWeeklySummaryResult(dateRangeStr, totalAmount, dataEntries, diffe
     body += "+++ 💸 予算サマリー 💸 +++\n";
     body += dateRangeStr + " の予算対象支出: " + totalAmount + " 円\n";
     body += dateRangeStr + " の実支出合計: " + actualWeeklyTotalAmount + " 円\n";
-    body += "今月の承認済み特別費: " + approvedSpecialExpenseTotal + " 円\n";
+    body += "今月の予算対象外支出: " + approvedSpecialExpenseTotal + " 円\n";
     body += "\n";
     body += "予算に対して\n";
     body += "・予算対象支出: " + percentageStr + "%\n";
@@ -265,7 +265,7 @@ function buildDailySummaryDecisionSection(options) {
         signals.push("・未分類の支出: " + options.uncategorizedCount + "件");
     }
     if (options.approvedSpecialExpenseTotal > 0) {
-        signals.push("・今週の承認済み特別費: " + options.approvedSpecialExpenseTotal + "円");
+        signals.push("・今週の予算対象外支出: " + options.approvedSpecialExpenseTotal + "円");
     }
     (options.categorySpendingIncreaseSummary.increases || []).forEach(function (entry) {
         signals.push("・" + entry.category + ": 同曜日時点の平均より +" + entry.difference + "円");
