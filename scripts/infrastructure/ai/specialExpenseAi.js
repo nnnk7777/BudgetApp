@@ -34,7 +34,7 @@ function reviewSpecialExpensesWithAI(entries) {
 
         var cachedDecision = cachedDecisions[getSpecialExpenseEntryKey(entry)];
 
-        if (cachedDecision) {
+        if (cachedDecision && hasSpecialExpenseDecisionReason(cachedDecision.reason)) {
             decisions.push({
                 entry: entry,
                 approved: cachedDecision.approved,
@@ -44,6 +44,7 @@ function reviewSpecialExpensesWithAI(entries) {
             return;
         }
 
+        delete cachedDecisions[getSpecialExpenseEntryKey(entry)];
         uncachedCandidates.push(entry);
     });
 
@@ -108,7 +109,7 @@ function reviewUncachedSpecialExpensesWithAI(candidates) {
 function generateSpecialExpenseReviewText(candidates, options) {
     return generatePreferredAiText(buildSpecialExpenseReviewPrompt(candidates), {
         temperature: 0,
-        maxOutputTokens: Math.max(80, candidates.length * 40)
+        maxOutputTokens: Math.max(256, candidates.length * 100)
     }, options);
 }
 
@@ -133,15 +134,17 @@ function parseSpecialExpenseReviewResponse(text, candidates) {
         var parts = line.trim().split("|");
         var index = parseInt(parts[0], 10);
         var status = String(parts[1] || "").trim().toLowerCase();
+        var reason = parts.slice(2).join("|").trim();
 
-        if (isNaN(index) || !candidates[index] || (status !== "approved" && status !== "rejected")) {
+        if (isNaN(index) || !candidates[index] || (status !== "approved" && status !== "rejected") ||
+            !hasSpecialExpenseDecisionReason(reason) || Array.from(reason).length > 20) {
             return;
         }
 
         decisionByIndex[index] = {
             entry: candidates[index],
             approved: status === "approved",
-            reason: parts.slice(2).join("|").trim() || "理由なし",
+            reason: reason,
             hasAiDecision: true
         };
     });
@@ -151,11 +154,16 @@ function parseSpecialExpenseReviewResponse(text, candidates) {
     });
 }
 
+function hasSpecialExpenseDecisionReason(reason) {
+    var text = String(reason || "").trim();
+    return text !== "" && text !== "理由なし";
+}
+
 function createUnresolvedSpecialExpenseDecision(entry) {
     return {
         entry: entry,
         approved: false,
-        reason: "AI判定を取得できなかったため",
+        reason: "AIの判定・理由を取得できなかったため",
         hasAiDecision: false
     };
 }
@@ -228,7 +236,7 @@ function getBudgetTargetEntriesWithCachedSpecialExpenseDecisions(entries) {
             return false;
         }
         var cachedDecision = cachedDecisions[getSpecialExpenseEntryKey(entry)];
-        return !(cachedDecision && cachedDecision.approved);
+        return !(cachedDecision && cachedDecision.approved && hasSpecialExpenseDecisionReason(cachedDecision.reason));
     });
 }
 
@@ -257,10 +265,10 @@ function buildSpecialExpenseReviewSection(specialExpenseReview, label) {
     }
 
     specialExpenseReview.approvedEntries.forEach(function (decision) {
-        lines.push("・予算対象外: " + decision.entry.name + " " + decision.entry.amount + "円（" + decision.reason + "）");
+        lines.push("・予算対象外: " + decision.entry.name + " " + decision.entry.amount + "円（判定理由: " + decision.reason + "）");
     });
     specialExpenseReview.rejectedEntries.forEach(function (decision) {
-        lines.push("・予算対象に含める: " + decision.entry.name + " " + decision.entry.amount + "円（" + decision.reason + "）");
+        lines.push("・予算対象に含める: " + decision.entry.name + " " + decision.entry.amount + "円（判定理由: " + decision.reason + "）");
     });
 
     return lines.join("\n") + "\n";
