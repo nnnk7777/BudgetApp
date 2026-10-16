@@ -2,6 +2,7 @@ var SPECIAL_EXPENSE_CATEGORY = "特別費";
 var FURUSATO_TAX_CATEGORY = "ふるさと納税";
 var SPECIAL_EXPENSE_REVIEW_CACHE_PROPERTY = "SPECIAL_EXPENSE_REVIEW_CACHE";
 var SPECIAL_EXPENSE_OPENAI_RETRY_COUNT = 2;
+var SPECIAL_EXPENSE_REVIEW_POLICY_VERSION = 2;
 
 function reviewSpecialExpensesWithAI(entries) {
     var candidates = entries.filter(function (entry) {
@@ -34,7 +35,7 @@ function reviewSpecialExpensesWithAI(entries) {
 
         var cachedDecision = cachedDecisions[getSpecialExpenseEntryKey(entry)];
 
-        if (cachedDecision && hasSpecialExpenseDecisionReason(cachedDecision.reason)) {
+        if (isCurrentSpecialExpenseDecision(cachedDecision)) {
             decisions.push({
                 entry: entry,
                 approved: cachedDecision.approved,
@@ -159,6 +160,11 @@ function hasSpecialExpenseDecisionReason(reason) {
     return text !== "" && text !== "理由なし";
 }
 
+function isCurrentSpecialExpenseDecision(decision) {
+    return decision && decision.policyVersion === SPECIAL_EXPENSE_REVIEW_POLICY_VERSION &&
+        hasSpecialExpenseDecisionReason(decision.reason);
+}
+
 function createUnresolvedSpecialExpenseDecision(entry) {
     return {
         entry: entry,
@@ -202,7 +208,8 @@ function cacheSpecialExpenseReviewDecisions(decisions, cachedDecisions) {
 
         cache[getSpecialExpenseEntryKey(decision.entry)] = {
             approved: decision.approved,
-            reason: decision.reason
+            reason: decision.reason,
+            policyVersion: SPECIAL_EXPENSE_REVIEW_POLICY_VERSION
         };
     });
 
@@ -236,7 +243,7 @@ function getBudgetTargetEntriesWithCachedSpecialExpenseDecisions(entries) {
             return false;
         }
         var cachedDecision = cachedDecisions[getSpecialExpenseEntryKey(entry)];
-        return !(cachedDecision && cachedDecision.approved && hasSpecialExpenseDecisionReason(cachedDecision.reason));
+        return !(isCurrentSpecialExpenseDecision(cachedDecision) && cachedDecision.approved);
     });
 }
 

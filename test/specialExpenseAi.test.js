@@ -114,8 +114,8 @@ test('保存済みの承認済み特別費だけを履歴比較の予算対象�
         PropertiesService: {
             getScriptProperties: () => ({
                 getProperty: () => JSON.stringify({
-                    '2026-2-10|特別費|福岡旅行の宿泊費|60000': { approved: true, reason: '旅行費' },
-                    '2026-2-11|特別費|イヤホン|20000': { approved: false, reason: '通常支出' }
+                    '2026-2-10|特別費|福岡旅行の宿泊費|60000': { approved: true, reason: '旅行費', policyVersion: 2 },
+                    '2026-2-11|特別費|イヤホン|20000': { approved: false, reason: '通常支出', policyVersion: 2 }
                 })
             })
         }
@@ -291,7 +291,7 @@ test('理由なしのキャッシュを再判定し、全試行で理由が得�
         let calls = 0;
         const entry = makeEntry(10, '特別費', '機器の買い替え', 10549);
         const key = '2026-2-10|特別費|機器の買い替え|10549';
-        let cache = { [key]: { approved: true, reason } };
+        let cache = { [key]: { approved: true, reason, policyVersion: 2 } };
         const context = loadSpecialExpenseAi({
             calculateTotalAmount: entries => entries.reduce((sum, item) => sum + item.amount, 0),
             buildSpecialExpenseReviewPrompt: () => 'prompt',
@@ -316,7 +316,7 @@ test('保存済みの理由なしは短い理由を取得して更新し、次�
     let calls = 0;
     const entry = makeEntry(10, '特別費', '機器の買い替え', 10549);
     const key = '2026-2-10|特別費|機器の買い替え|10549';
-    let cache = { [key]: { approved: true, reason: '理由なし' } };
+    let cache = { [key]: { approved: true, reason: '理由なし', policyVersion: 2 } };
     const context = loadSpecialExpenseAi({
         buildSpecialExpenseReviewPrompt: () => 'prompt',
         generatePreferredAiText: () => { calls += 1; return { text: '0|approved|故障による必須機器の交換' }; },
@@ -330,4 +330,42 @@ test('保存済みの理由なしは短い理由を取得して更新し、次�
     context.reviewSpecialExpensesWithAI([entry]);
     assert.equal(calls, 1);
     assert.equal(context.getBudgetTargetEntriesWithCachedSpecialExpenseDecisions([entry]).length, 0);
+});
+
+test('旧基準の却下・承認を全文の事情付きで再判定し、新基準の結果だけを再利用する', () => {
+    const router = makeEntry(10, '特別費', 'Amazon（Wifiルーター、LANケーブル：JCOM解約に伴い機器を返却しなきゃなので購入', 10549);
+    const gadget = makeEntry(11, '特別費', '高速ルーターが欲しいので買い替え', 20000);
+    let cache;
+    let calls = 0;
+    let prompt;
+    const context = loadSpecialExpenseAi({
+        formatDate: () => '2/10',
+        calculateTotalAmount: entries => entries.reduce((sum, entry) => sum + entry.amount, 0),
+        generatePreferredAiText: (text) => {
+            calls += 1;
+            prompt = text;
+            return { text: '0|approved|返却に伴う通信機器の再調達\n1|rejected|任意の通信機器の買い替え' };
+        },
+        PropertiesService: { getScriptProperties: () => ({
+            getProperty: () => JSON.stringify(cache),
+            setProperty: (_key, value) => { cache = JSON.parse(value); }
+        }) }
+    });
+    vm.runInNewContext(fs.readFileSync('scripts/domain/ai/specialExpensePrompt.js', 'utf8'), context);
+    cache = {
+        [context.getSpecialExpenseEntryKey(router)]: { approved: false, reason: '通信機器購入は通常費用' },
+        [context.getSpecialExpenseEntryKey(gadget)]: { approved: true, reason: '買い替え', policyVersion: 1 }
+    };
+    assert.equal(context.getBudgetTargetEntriesWithCachedSpecialExpenseDecisions([router, gadget]).length, 2);
+    const review = context.reviewSpecialExpensesWithAI([router, gadget]);
+    assert.ok(prompt.includes(router.name));
+    assert.ok(prompt.includes(gadget.name));
+    assert.equal(review.approvedEntries[0].entry, router);
+    assert.equal(review.rejectedEntries[0].entry, gadget);
+    assert.equal(context.calculateTotalAmount(context.getBudgetTargetEntries([router, gadget], review)), 20000);
+    assert.equal(cache[context.getSpecialExpenseEntryKey(router)].policyVersion, 2);
+    assert.equal(cache[context.getSpecialExpenseEntryKey(gadget)].policyVersion, 2);
+    assert.equal(context.getBudgetTargetEntriesWithCachedSpecialExpenseDecisions([router, gadget])[0], gadget);
+    context.reviewSpecialExpensesWithAI([router, gadget]);
+    assert.equal(calls, 1);
 });
