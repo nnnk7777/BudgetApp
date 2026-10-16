@@ -2,6 +2,7 @@ var SPECIAL_EXPENSE_CATEGORY = "特別費";
 var FURUSATO_TAX_CATEGORY = "ふるさと納税";
 var SPECIAL_EXPENSE_REVIEW_CACHE_PROPERTY = "SPECIAL_EXPENSE_REVIEW_CACHE";
 var SPECIAL_EXPENSE_OPENAI_RETRY_COUNT = 2;
+var SPECIAL_EXPENSE_REVIEW_POLICY_VERSION = 2;
 
 function reviewSpecialExpensesWithAI(entries) {
     var candidates = entries.filter(function (entry) {
@@ -34,7 +35,7 @@ function reviewSpecialExpensesWithAI(entries) {
 
         var cachedDecision = cachedDecisions[getSpecialExpenseEntryKey(entry)];
 
-        if (cachedDecision) {
+        if (isCurrentSpecialExpenseDecision(cachedDecision)) {
             decisions.push({
                 entry: entry,
                 approved: cachedDecision.approved,
@@ -44,6 +45,7 @@ function reviewSpecialExpensesWithAI(entries) {
             return;
         }
 
+        delete cachedDecisions[getSpecialExpenseEntryKey(entry)];
         uncachedCandidates.push(entry);
     });
 
@@ -108,7 +110,7 @@ function reviewUncachedSpecialExpensesWithAI(candidates) {
 function generateSpecialExpenseReviewText(candidates, options) {
     return generatePreferredAiText(buildSpecialExpenseReviewPrompt(candidates), {
         temperature: 0,
-        maxOutputTokens: Math.max(80, candidates.length * 40)
+        maxOutputTokens: Math.max(256, candidates.length * 100)
     }, options);
 }
 
@@ -133,15 +135,17 @@ function parseSpecialExpenseReviewResponse(text, candidates) {
         var parts = line.trim().split("|");
         var index = parseInt(parts[0], 10);
         var status = String(parts[1] || "").trim().toLowerCase();
+        var reason = parts.slice(2).join("|").trim();
 
-        if (isNaN(index) || !candidates[index] || (status !== "approved" && status !== "rejected")) {
+        if (isNaN(index) || !candidates[index] || (status !== "approved" && status !== "rejected") ||
+            !hasSpecialExpenseDecisionReason(reason) || Array.from(reason).length > 20) {
             return;
         }
 
         decisionByIndex[index] = {
             entry: candidates[index],
             approved: status === "approved",
-            reason: parts.slice(2).join("|").trim() || "理由なし",
+            reason: reason,
             hasAiDecision: true
         };
     });
@@ -151,11 +155,21 @@ function parseSpecialExpenseReviewResponse(text, candidates) {
     });
 }
 
+function hasSpecialExpenseDecisionReason(reason) {
+    var text = String(reason || "").trim();
+    return text !== "" && text !== "理由なし";
+}
+
+function isCurrentSpecialExpenseDecision(decision) {
+    return decision && decision.policyVersion === SPECIAL_EXPENSE_REVIEW_POLICY_VERSION &&
+        hasSpecialExpenseDecisionReason(decision.reason);
+}
+
 function createUnresolvedSpecialExpenseDecision(entry) {
     return {
         entry: entry,
         approved: false,
-        reason: "AI判定を取得できなかったため",
+        reason: "AIの判定・理由を取得できなかったため",
         hasAiDecision: false
     };
 }
@@ -194,7 +208,8 @@ function cacheSpecialExpenseReviewDecisions(decisions, cachedDecisions) {
 
         cache[getSpecialExpenseEntryKey(decision.entry)] = {
             approved: decision.approved,
-            reason: decision.reason
+            reason: decision.reason,
+            policyVersion: SPECIAL_EXPENSE_REVIEW_POLICY_VERSION
         };
     });
 
@@ -228,7 +243,7 @@ function getBudgetTargetEntriesWithCachedSpecialExpenseDecisions(entries) {
             return false;
         }
         var cachedDecision = cachedDecisions[getSpecialExpenseEntryKey(entry)];
-        return !(cachedDecision && cachedDecision.approved);
+        return !(isCurrentSpecialExpenseDecision(cachedDecision) && cachedDecision.approved);
     });
 }
 
@@ -257,10 +272,10 @@ function buildSpecialExpenseReviewSection(specialExpenseReview, label) {
     }
 
     specialExpenseReview.approvedEntries.forEach(function (decision) {
-        lines.push("・予算対象外: " + decision.entry.name + " " + decision.entry.amount + "円（" + decision.reason + "）");
+        lines.push("・予算対象外: " + decision.entry.name + " " + decision.entry.amount + "円（判定理由: " + decision.reason + "）");
     });
     specialExpenseReview.rejectedEntries.forEach(function (decision) {
-        lines.push("・予算対象に含める: " + decision.entry.name + " " + decision.entry.amount + "円（" + decision.reason + "）");
+        lines.push("・予算対象に含める: " + decision.entry.name + " " + decision.entry.amount + "円（判定理由: " + decision.reason + "）");
     });
 
     return lines.join("\n") + "\n";
