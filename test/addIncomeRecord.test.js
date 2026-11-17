@@ -115,6 +115,14 @@ test('日本時間の月境界で収入を登録し、既存の月次・売却�
     assert.equal(context.getSaleIncomeEntriesForDates([saleDate]).length, 2);
 });
 
+test('文字列で渡された円単位の金額を数値として保存する', () => {
+    const { post, rows } = incomeApi();
+    for (const [index, amount] of ['12000', ' １２，０００ ', '¥12,000', '12,000円'].entries()) {
+        assert.deepEqual(post({ item: { ...income, amount } }), { ok: true });
+        assert.equal(rows[index][3], 12000);
+    }
+});
+
 test('認証エラーと入力不備はシートへの書き込み前にエラーを返す', () => {
     const { post, events } = incomeApi();
     assert.match(post({ hash: 'wrong', item: income }).error, /hash/);
@@ -122,7 +130,10 @@ test('認証エラーと入力不備はシートへの書き込み前にエラ�
     assert.match(post({}).error, /item/);
     assert.match(post({ item: { ...income, title: ' ' } }).error, /title/);
     assert.match(post({ item: { ...income, category: '' } }).error, /カテゴリ/);
-    for (const amount of [0, -1, 1.5, '12000', Number.MAX_SAFE_INTEGER + 1]) {
+    for (const amount of [
+        0, -1, 1.5, '0', '1.5', '12,00', '1 200', '1200abc', '1e3',
+        null, true, [1200], Number.MAX_SAFE_INTEGER + 1, '9007199254740992'
+    ]) {
         assert.match(post({ item: { ...income, amount } }).error, /amount/);
     }
     assert.deepEqual(events, []);
