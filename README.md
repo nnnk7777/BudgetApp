@@ -129,6 +129,7 @@ action に渡せる値は以下のとおりです。
 | `weekly_text` | 週次サマリだけを文字列で返します。 |
 | `monthly_text` | 月次サマリだけを文字列で返します。 |
 | `add` | 支出レコードを追加します。 |
+| `add_income` | 収入レコードを追加します。 |
 | `categories` | カテゴリ一覧を返します。 |
 | `list_today_expenses` | 今日の日付に紐づく支出一覧を返します。AI分析や予算計算は行いません。 |
 | `list_uncategorized` | カテゴリ未設定の支出一覧を返します。 |
@@ -149,6 +150,24 @@ action に渡せる値は以下のとおりです。
 ```
 
 `amount` を優先して使用します。互換入力として `price` または `cost` も指定できます。
+
+`add_income` の場合は、以下のような body を渡してください。
+
+```json
+{
+    "action": "add_income",
+    "item": {
+        "title": "機材の売却",
+        "amount": 12000,
+        "category": "売却"
+    },
+    "hash": "<ハッシュとして利用する値を設定>"
+}
+```
+
+`item` の3項目はすべて必須です。`amount` は正の整数（円）を数値または文字列で指定できます（例: `12000`、`"12000"`、`"12,000円"`）。`category` は収入欄のプルダウンから選びます。日本時間の登録日で、該当月の収入欄に追加します。
+
+成功時は `{"ok":true}` を返します。認証エラー、入力不備、収入欄に空きがない場合などは `{"ok":false,"error":"エラーメッセージ"}` を返します。
 
 `list_today_expenses` の場合は、以下のような body を渡してください。
 
@@ -204,3 +223,10 @@ action に渡せる値は以下のとおりです。
 
 -   GASの実行画面では [0_manualEntryPoints.js](./scripts/entrypoints/0_manualEntryPoints.js) のサマリ・当日支出一覧・未分類支出操作を実行できます。
 -   [1_reapplySheetStyle.js](./scripts/entrypoints/1_reapplySheetStyle.js) の `reapplySheetStyleManual` は、現在開いているスプレッドシートの書式・入力規則・条件付き書式をクリアしてから再構築します。
+
+### 収入を登録する
+
+1. Apps Script の「プロジェクトの設定」で、スクリプト プロパティ `MANUAL_INCOME_ITEM` に `{"title":"機材の売却","amount":12000,"category":"売却"}` の形式で登録内容を設定します。
+2. GAS エディタで `addIncomeRecordManual` を選んで実行します。収入欄に1件追加され、実行ログに `{"ok":true}` が表示されます。
+
+実行するたびに設定した内容で1件登録されます。

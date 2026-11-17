@@ -51,16 +51,53 @@ function getMonthlyExpenseEntries(year, month) {
     return entries;
 }
 
-function getMonthlyIncomeEntries(year, month) {
-    var sheet = getExpenseSheet();
-    // IncomeData creates detail rows 20 through 33. The month is determined by
-    // this block's columns, so an entry must not be dropped just because its
-    // date cell contains a label such as "予定".
+function getMonthlyIncomeRange(month) {
+    // IncomeData creates detail rows 20 through 33.
     var startRow = 20;
     var endRow = 33;
     var columns = getColumnsForMonth(month);
-    var dataRange = sheet.getRange(startRow, columns.dateCol, endRow - startRow + 1, 4);
-    var data = dataRange.getValues();
+    return getExpenseSheet().getRange(startRow, columns.dateCol, endRow - startRow + 1, 4);
+}
+
+function appendMonthlyIncomeEntry(month, date, category, title, amount) {
+    var lock = LockService.getScriptLock();
+    if (!lock.tryLock(5000)) {
+        throw new Error('収入欄を使用中です。しばらくしてから再試行してください');
+    }
+
+    try {
+        var range = getMonthlyIncomeRange(month);
+        var values = range.getValues();
+        var formulas = range.getFormulas();
+        var rowIndex = values.findIndex(function (row, index) {
+            return row.every(function (cell, column) {
+                return cell === '' && formulas[index][column] === '';
+            });
+        });
+        if (rowIndex === -1) {
+            throw new Error('この月の収入欄に空きがありません');
+        }
+
+        var row = range.offset(rowIndex, 0, 1, 4);
+        var rule = row.getCell(1, 2).getDataValidation();
+        if (!rule || rule.getCriteriaType() !== SpreadsheetApp.DataValidationCriteria.VALUE_IN_LIST) {
+            throw new Error('収入欄のカテゴリ設定が見つかりません');
+        }
+        if (!rule.getCriteriaValues()[0].includes(category)) {
+            throw new Error('収入カテゴリが不正です');
+        }
+
+        // 文字列はシート上でも文字列として保存し、数式として解釈されないようにする。
+        row.setValues([["'" + date, "'" + category, "'" + title, amount]]);
+        SpreadsheetApp.flush();
+    } finally {
+        lock.releaseLock();
+    }
+}
+
+function getMonthlyIncomeEntries(year, month) {
+    // 「予定」などの日付ラベルも、その月の収入として読み取る。
+    var data = getMonthlyIncomeRange(month).getValues();
     var entries = [];
 
     data.forEach(function (row) {
