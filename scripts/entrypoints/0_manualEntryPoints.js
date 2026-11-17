@@ -39,6 +39,18 @@ function runtimeDiagnostics() {
     Logger.log(result);
 }
 
+// action: add_income
+function addIncomeRecordManual() {
+    var itemJson = PropertiesService.getScriptProperties().getProperty('MANUAL_INCOME_ITEM');
+    if (!itemJson || !itemJson.trim()) {
+        throw new Error('スクリプト プロパティ MANUAL_INCOME_ITEM に収入の JSON を設定してください');
+    }
+
+    var result = addIncomeRecord(JSON.parse(itemJson));
+    Logger.log(JSON.stringify(result));
+    return result;
+}
+
 // action: categories
 function fetchCategoriesManual() {
     return fetchCategories();

@@ -223,3 +223,10 @@ action に渡せる値は以下のとおりです。
 
 -   GASの実行画面では [0_manualEntryPoints.js](./scripts/entrypoints/0_manualEntryPoints.js) のサマリ・当日支出一覧・未分類支出操作を実行できます。
 -   [1_reapplySheetStyle.js](./scripts/entrypoints/1_reapplySheetStyle.js) の `reapplySheetStyleManual` は、現在開いているスプレッドシートの書式・入力規則・条件付き書式をクリアしてから再構築します。
+
+### 収入を登録する
+
+1. Apps Script の「プロジェクトの設定」で、スクリプト プロパティ `MANUAL_INCOME_ITEM` に `{"title":"機材の売却","amount":12000,"category":"売却"}` の形式で登録内容を設定します。
+2. GAS エディタで `addIncomeRecordManual` を選んで実行します。収入欄に1件追加され、実行ログに `{"ok":true}` が表示されます。
+
+実行するたびに設定した内容で1件登録されます。
