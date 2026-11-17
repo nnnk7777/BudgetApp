@@ -8,6 +8,7 @@ var ApiActions = Object.freeze({
     WEEKLY_MAIL: 'weekly_mail',
     MONTHLY_MAIL: 'monthly_mail',
     ADD: 'add',
+    ADD_INCOME: 'add_income',
     CATEGORIES: 'categories',
     LIST_TODAY_EXPENSES: 'list_today_expenses',
     LIST_UNCATEGORIZED: 'list_uncategorized',
@@ -24,7 +25,7 @@ function parseApiRequest(e) {
 
 function verifyApiHash(hash) {
     var scriptHash = PropertiesService.getScriptProperties().getProperty("HASH");
-    if (hash !== scriptHash) {
+    if (!scriptHash || hash !== scriptHash) {
         throw new Error('hashが一致しません');
     }
 }
@@ -48,6 +49,8 @@ function dispatchApiAction(data) {
             return calculateMonthlySummaryByUnit('mail');
         case ApiActions.ADD:
             return handleAddExpenseAction(data.item);
+        case ApiActions.ADD_INCOME:
+            return addIncomeRecord(data.item);
         case ApiActions.CATEGORIES:
             return fetchCategories();
         case ApiActions.LIST_TODAY_EXPENSES:
